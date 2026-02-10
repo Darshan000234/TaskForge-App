@@ -29,8 +29,8 @@ const App = () => {
   ]
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'>
-      {/* Navbar */}
+    <div className='min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900'>
+
       <nav className={`fixed top-0 left-0 right-0 ${scrolled ? 'bg-slate-900/95 shadow-lg' : 'bg-slate-900/80'} backdrop-blur-md border-b border-slate-700/50 z-50 transition-all duration-300`}>
         <div className='max-w-7xl mx-auto px-6 py-4 flex justify-between items-center'>
           <div className='text-2xl font-bold text-white cursor-pointer'>
@@ -46,7 +46,6 @@ const App = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className='pt-32 pb-20 px-6'>
         <div className='max-w-7xl mx-auto flex items-center gap-12'>
           <div className='flex-1 space-y-6'>
@@ -71,7 +70,7 @@ const App = () => {
           </div>
           <div className='flex-1'>
             <div
-              className='bg-gradient-to-br from-slate-800 to-slate-900 p-2 rounded-2xl shadow-2xl
+              className='bg-linear-to-br from-slate-800 to-slate-900 p-2 rounded-2xl shadow-2xl
                         border border-slate-700/50
                         animate-float
                         hover:scale-[1.02]
@@ -89,7 +88,6 @@ const App = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section id='features' className='py-20 px-6 bg-slate-800/30'>
         <div className='max-w-7xl mx-auto'>
           <h2 className='text-4xl font-bold text-white text-center mb-16'>
@@ -111,13 +109,13 @@ const App = () => {
           </div>
         </div>
       </section>
-      {/* View Demo */}
+
       <section id='demo' className='py-20 px-6'>
         <div className='flex justify-center text-white'>
             a
         </div>
       </section>
-      {/* Tech Stack Section */}
+
       <section id='tech' className='py-20 px-6'>
         <div className='max-w-7xl mx-auto'>
           <h2 className='text-4xl font-bold text-white text-center mb-16'>
@@ -135,7 +133,7 @@ const App = () => {
           </div>
         </div>
       </section>
-      {/* Footer */}
+
       <footer className='py-12 px-6 border-t border-slate-800 bg-slate-900/50'>
         <div className='max-w-7xl mx-auto text-center'>
           <p className='text-slate-400 mb-4'>
