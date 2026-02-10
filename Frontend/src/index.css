@@ -1,0 +1,28 @@
+@import "tailwindcss";
+:root {
+  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+               "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+html,body {
+  background-color: black;
+  scroll-behavior: smooth;
+  font-family: var(--font-sans);
+}
+
+.rounded-img {
+  border-radius: 12px;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
