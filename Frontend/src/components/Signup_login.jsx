@@ -1,27 +1,29 @@
 import React from 'react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
+import { useGoogleLogin } from '@react-oauth/google';
 import google from '../assets/img/google.png';
-import { Eye, EyeOff } from "lucide-react";
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
+const URL = import.meta.env.VITE_URL;
 const Signup_login = () => {
-  const [Check,setCheck] = useState(1);
+  const [Check, setCheck] = useState(1);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
-  const [White,setWhite] = useState(true);
-  const [show, setShow] = useState(false);
+  const [White, setWhite] = useState(true);
   const [errors, setErrors] = useState({
-    Password:'Password must be at least 8 characters and include letters, numbers, and special characters'
+    Password: 'Password must be at least 8 characters and include letters, numbers, and special characters'
   });
 
   const validateEmail = email => /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
   const validatePassword = password => /^(?=.*[A-Za-z])(?=.*[\d])(?=.*[!@#$%&*^]).{8,}$/.test(password);
 
-  const handleCheck = (check) =>{
+  const handleCheck = (check) => {
     setCheck(check);
     setFormData({
       fullName: '',
@@ -30,51 +32,78 @@ const Signup_login = () => {
       confirmPassword: ''
     });
     setErrors({});
-    if(check === 1){
-      setErrors({Password:'Password must be at least 8 characters and include letters, numbers, and special characters'});
+    if (check === 1) {
+      setErrors({ Password: 'Password must be at least 8 characters and include letters, numbers, and special characters' });
       setWhite(true);
     }
   };
 
   const handleChange = (e) => {
-    const { name, value} = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setErrors(prev => ({...prev,[name]: ''}));
+    setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const validateLogin = () => {
     const newErrors = {};
-    if(!formData.email.trim()) newErrors.email = 'Email is required';
-    else if(!validateEmail(formData.email)) newErrors.email = 'Email must be a valid Gmail address';
-    if(!formData.password.trim()) newErrors.Password = 'Password is required';
-    else if(!validatePassword(formData.password)) newErrors.Password = 'Password must be at least 8 characters and include letters, numbers, and special characters';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!validateEmail(formData.email)) newErrors.email = 'Email must be a valid Gmail address';
+    if (!formData.password.trim()) newErrors.Password = 'Password is required';
+    else if (!validatePassword(formData.password)) newErrors.Password = 'Password must be at least 8 characters and include letters, numbers, and special characters';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
 
   const validateSignup = () => {
     const newErrors = {};
-    if(!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
-    if(!formData.email.trim()) newErrors.email = 'Email is required';
-    else if(!validateEmail(formData.email)) newErrors.email = 'Email must be a valid Gmail address';
-    if(!formData.password.trim()) newErrors.Password = 'Password is required';
-    else if(!validatePassword(formData.password)) newErrors.Password = 'Password must be at least 8 characters and include letters, numbers, and special characters';
-    if(!formData.confirmPassword.trim()) newErrors.confirmPassword = 'Please confirm your password';
-    if(formData.confirmPassword !== formData.password) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!validateEmail(formData.email)) newErrors.email = 'Email must be a valid Gmail address';
+    if (!formData.password.trim()) newErrors.Password = 'Password is required';
+    else if (!validatePassword(formData.password)) newErrors.Password = 'Password must be at least 8 characters and include letters, numbers, and special characters';
+    if (!formData.confirmPassword.trim()) newErrors.confirmPassword = 'Please confirm your password';
+    if (formData.confirmPassword !== formData.password) newErrors.confirmPassword = 'Passwords do not match';
     console.log(errors.Password);
-    if(errors.Password) setWhite(false);
+    if (errors.Password) setWhite(false);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
 
-  const handleSubmit = (e, type) => {
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (response) =>{
+      try {
+        const token = response.access_token;
+        await axios.post(`${URL}/user/googleauth`,{token}, {withCredentials:true});
+        toast.dismiss();
+        toast.success('Logged in with Google successfully!');
+      } catch (error) {
+        toast.dismiss();
+        toast.error(error.response?.data?.message || error.message);
+      }
+    },
+    onError: () => toast.error('Google login failed. Please try again.'),
+  });
+  const handleSubmit = async (e, type) => {
     e.preventDefault();
     const isValid = type === 'signup' ? validateSignup() : validateLogin();
-    if(!isValid) return;
-    console.log('valid form data:', formData);
+    if (!isValid) return;
+    try {
+      const endpoint = type === 'signup' ? '/signup' : '/login';
+      const payload = type === 'signup' ? {
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password
+      } : {
+        email: formData.email,
+        password: formData.password
+      };
+      await axios.post(`${URL}${endpoint}`, payload, { withCredentials: true });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'An error occurred. Please try again.');
+    }
   };
 
-  const formVariants ={
+  const formVariants = {
     initial: { opacity: 0, y: 30 },
     animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
     exit: { opacity: 0, y: -25, transition: { duration: 0.3, ease: "easeIn" } },
@@ -86,15 +115,15 @@ const Signup_login = () => {
       <div className='w-lg p-8 bg-[#1a1a1a] border border-gray-700 rounded-2xl shadow-xl relative overflow-hidden'>
         <div className='flex justify-center mb-4 space-x-4'>
           <button
-            onClick={()=> handleCheck(1)}
+            onClick={() => handleCheck(1)}
             className={`w-48 h-12 cursor-pointer rounded-full font-semibold text-lg  transition-all duration-300 ${Check === 1
               ? 'bg-linear-to-r from-blue-500 to-purple-500 text-white shadow-lg'
               : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}>
             Sign Up
           </button>
-          <button 
-            onClick={()=> handleCheck(0)}
+          <button
+            onClick={() => handleCheck(0)}
             className={`w-48 h-12 cursor-pointer rounded-full font-semibold text-lg  transition-all duration-300 ${Check === 0
               ? 'bg-linear-to-r from-blue-500 to-purple-500 text-white shadow-lg'
               : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
@@ -148,7 +177,7 @@ const Signup_login = () => {
                   autoComplete="new-password"
                   className="w-full p-3 rounded-lg bg-gray-800 text-white placeholder-gray-400 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
                 />
-                {errors.Password && <p className={`${White ? 'text-gray-400':'text-red-500'} text-sm mt-1`}>{errors.Password}</p>}
+                {errors.Password && <p className={`${White ? 'text-gray-400' : 'text-red-500'} text-sm mt-1`}>{errors.Password}</p>}
               </div>
 
               <div className="w-full">
