@@ -3,6 +3,7 @@ import {BrowserRouter as Router, Routes, Route} from 'react-router-dom'
 import {Toaster} from 'react-hot-toast'
 import Home from './components/Home.jsx'
 import Signup_login from './components/Signup_login.jsx'
+import Dashboard from './components/Dashboard/Dashboard.jsx'
 
 const App = () => {
   return (
@@ -24,6 +25,7 @@ const App = () => {
       <Routes>
         <Route path='/' element={<Home />} /> 
         <Route path='/Signup_login' element={<Signup_login />} />
+        <Route path='/user/Dashboard' element={<Dashboard />} />
       </Routes>
     </Router>
   )

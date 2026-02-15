@@ -1,6 +1,10 @@
-const bcrypt = require('bcrypt');
-const prisma = require('../config/prisma.js');
-const generateToken = require('../utils/generateTokens.js');
+import bcrypt from 'bcrypt';
+import axios from 'axios';
+// const prisma = require('../config/prisma.js');
+import prisma from '../config/prisma.js';
+// const generateToken = require('../utils/generateTokens.js');
+import { generateAccessToken, generateRefreshToken } from '../utils/generateTokens.js';
+// import redis  from '../config/redis.js';
 
 const URL = process.env.GOOGLE_URL;
 
@@ -14,17 +18,18 @@ export const registerUser = async (req, res) => {
     await prisma.user.create({
         data: { name, email, password: hashed }
     });
-    const accesstoken = generateToken.generateAccessToken(user);
-    const refreshtoken = generateToken.generateRefreshToken(user);
+    const accesstoken = generateAccessToken(user);
+    const { id, refreshToken } = generateRefreshToken(newUser);
+    // await redis.set(id, user.id, 'EX', 7 * 24 * 60 * 60);
 
-    res.cookie('refreshToken', refreshtoken, {
+    res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: false,
-        samesite: 'strict',
+        sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    res.json({ accesstoken , message: "User created successfully" });
+    res.json({ accesstoken, message: "User created successfully" });
 };
 
 export const LoginUser = async (req, res) => {
@@ -35,32 +40,33 @@ export const LoginUser = async (req, res) => {
     const vaild = await bcrypt.compare(password, user.password);
     if (!vaild) return res.status(400).json({ message: "invaild credentials" });
 
-    const accesstoken = generateToken.generateAccessToken(user);
-    const refreshtoken = generateToken.generateRefreshToken(user);
+    const accesstoken = generateAccessToken(user);
+    const { id, refreshToken } = generateRefreshToken(newUser);
 
-    res.cookie('refreshToken', refreshtoken, {
+    res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: false,
-        samesite: 'strict',
+        sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    res.json({ accesstoken , message: "Login successful" });
+    res.json({ accesstoken, message: "Login successful" });
 };
 
 export const google = async (req, res) => {
     try {
-        const token = req.body;
+        const { token } = req.body;
         if (!token) return res.status(400).json({ message: "token is required" });
         const { data } = await axios.get(`${URL}`,
-            { headers: { Authorization: `Beared ${token}` } }
+            { headers: { Authorization: `Bearer ${token}` } }
         );
-        const {sub,email,name} = data;
+        
+        const { sub, email, name } = data;
         let message = "Login Successful";
         let user = await prisma.user.findUnique({ where: { email } });
-        if(!user){
+        if (!user) {
             user = await prisma.user.create({
-                data : {
+                data: {
                     name: name,
                     email: email,
                     googleId: sub,
@@ -69,20 +75,20 @@ export const google = async (req, res) => {
                 }
             });
             message = "SignUp Successful";
-        }
-        const accesstoken = generateToken.generateAccessToken(user);
-        const refreshtoken = generateToken.generateRefreshToken(user);
 
-        res.cookie('refreshToken', refreshtoken, {
+        }
+        const accesstoken = generateAccessToken(user);
+        const { refreshToken } = generateRefreshToken(user);
+        res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: false,
-            samesite: 'strict',
+            sameSite: 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        res.json({ accesstoken , message});
+        res.json({ accesstoken, message });
     } catch (error) {
-        res.status(500).json({ message: "Google authentication failed",error:error.message });
+        res.status(500).json({ message: "Google authentication failed", error: error.message });
     }
 };
 

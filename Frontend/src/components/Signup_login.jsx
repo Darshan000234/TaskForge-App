@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { use } from 'react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import google from '../assets/img/google.png';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const URL = import.meta.env.VITE_URL;
 const Signup_login = () => {
@@ -16,6 +17,7 @@ const Signup_login = () => {
     confirmPassword: ''
   });
   const [White, setWhite] = useState(true);
+  const navigate = useNavigate(); 
   const [errors, setErrors] = useState({
     Password: 'Password must be at least 8 characters and include letters, numbers, and special characters'
   });
@@ -76,6 +78,7 @@ const Signup_login = () => {
         await axios.post(`${URL}/user/googleauth`,{token}, {withCredentials:true});
         toast.dismiss();
         toast.success('Logged in with Google successfully!');
+        navigate('/user/dashboard');
       } catch (error) {
         toast.dismiss();
         toast.error(error.response?.data?.message || error.message);
@@ -97,7 +100,7 @@ const Signup_login = () => {
         email: formData.email,
         password: formData.password
       };
-      await axios.post(`${URL}${endpoint}`, payload, { withCredentials: true });
+      await axios.post(`${URL}/user${endpoint}`, payload, { withCredentials: true });
     } catch (error) {
       toast.error(error.response?.data?.message || 'An error occurred. Please try again.');
     }
