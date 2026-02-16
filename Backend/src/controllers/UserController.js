@@ -1,25 +1,24 @@
 import bcrypt from 'bcrypt';
 import axios from 'axios';
-// const prisma = require('../config/prisma.js');
 import prisma from '../config/prisma.js';
-// const generateToken = require('../utils/generateTokens.js');
 import { generateAccessToken, generateRefreshToken } from '../utils/generateTokens.js';
-// import redis  from '../config/redis.js';
 
 const URL = process.env.GOOGLE_URL;
 
 export const registerUser = async (req, res) => {
-    const { name, email, password } = req.body;
+    console.log(req.body);
+    
+    const { fullName, email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     if (user) {
         return res.status(400).json({ message: "User already exists" });
     }
     const hashed = await bcrypt.hash(password, 10);
     await prisma.user.create({
-        data: { name, email, password: hashed }
+        data: { name:fullName, email, password: hashed }
     });
     const accesstoken = generateAccessToken(user);
-    const { id, refreshToken } = generateRefreshToken(newUser);
+    const refreshToken = generateRefreshToken(user);
     // await redis.set(id, user.id, 'EX', 7 * 24 * 60 * 60);
 
     res.cookie('refreshToken', refreshToken, {
@@ -28,7 +27,7 @@ export const registerUser = async (req, res) => {
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
-
+    // console.log('User created successfully');
     res.json({ accesstoken, message: "User created successfully" });
 };
 
@@ -41,7 +40,7 @@ export const LoginUser = async (req, res) => {
     if (!vaild) return res.status(400).json({ message: "invaild credentials" });
 
     const accesstoken = generateAccessToken(user);
-    const { id, refreshToken } = generateRefreshToken(newUser);
+    const refreshToken = generateRefreshToken(user);
 
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
@@ -93,6 +92,7 @@ export const google = async (req, res) => {
 };
 
 export const LogoutUser = async (req, res) => {
+    console.log('come');
     res.clearCookie('refreshToken');
     res.json({ message: "Logged out" });
 };
