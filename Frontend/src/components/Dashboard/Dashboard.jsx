@@ -8,32 +8,37 @@ import {
   ChevronRight,
   Search,
   Clock,
-  AlertTriangle,
-  CheckCircle,
-  User,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import plus from '../../assets/img/plus.png';
-import folder_open_regular from '../../assets/img/folder_open_regular.png';
+import folder from '../../assets/img/folder.png';
+import blue_folder from '../../assets/img/blue_folder.png';
+import checked from '../../assets/img/checked.png';
+import purple_team from '../../assets/img/purple_team.png';
+import orange_warn from '../../assets/img/orange_warn.png';
+import white_folder from '../../assets/img/white_folder.png'
+import user from '../../assets/img/user.png';
+import warning from '../../assets/img/warning.png';
+import clock from '../../assets/img/clock.png';
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: "Dashboard" },
-  { icon: <Folder size={20} />, label: "Projects" },
+  { icon: white_folder, label: "Projects", isImage: true },
   { icon: <Users size={20} />, label: "Team" },
   { icon: <Settings size={20} />, label: "Settings" },
 ];
 
 const stats = [
-  { title: "Total Projects", icon: <Folder size={22} /> },
-  { title: "Completed Projects", icon: <CheckCircle size={22} /> },
-  { title: "My Tasks", icon: <User size={22} /> },
-  { title: "Overdue", icon: <AlertTriangle size={22} /> },
+  { title: "Total Projects", icon: blue_folder, cs: "rounded-xl bg-blue-500/10 bg-opacity-20", w: "w-8.5" },
+  { title: "Completed Projects", icon: checked, cs: "rounded-xl bg-emerald-500/10 bg-opacity-20", w: "w-7" },
+  { title: "My Tasks", icon: purple_team, cs: "rounded-xl bg-purple-500/10 bg-opacity-20", w: "w-7" },
+  { title: "Overdue", icon: orange_warn, cs: "rounded-xl bg-amber-500/10 bg-opacity-20", w: "w-7" }
 ];
 
 const sideCards = [
-  { title: "My Tasks", color: "bg-green-600" },
-  { title: "Overdue", color: "bg-red-600" },
-  { title: "In Progress", color: "bg-blue-600" },
+  { title: "My Tasks", cs: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400", src: user },
+  { title: "Overdue", cs: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400", src: warning },
+  { title: "In Progress", cs: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400", src: clock },
 ];
 
 export default function Dashboard() {
@@ -72,7 +77,10 @@ export default function Dashboard() {
               whileHover={{ scale: 1.02 }}
               className="h-13 flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-[#222225] cursor-pointer"
             >
-              {item.icon}
+              {item.isImage
+                ? <img className="w-7" src={item.icon} alt="" />
+                : item.icon
+              }
               {!collapsed && item.label}
             </motion.div>
           ))}
@@ -133,9 +141,10 @@ export default function Dashboard() {
                   to-zinc-900/10
                   border border-zinc-800
                   rounded-xl
-                  px-8 py-7
+                  px-8 py-5
                   flex items-center justify-between
                   text-[14px] leading-5
+                  hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
                 "
               >
                 <div>
@@ -143,13 +152,13 @@ export default function Dashboard() {
                     {item.title}
                   </p>
 
-                  <h3 className="text-[24px] leading-7.5 mt-3 text-white">
+                  <h3 className="py-2 text-[30px] leading-9 font-bold text-white">
                     0
                   </h3>
                 </div>
 
-                <div className="w-12 h-12 bg-[#232326] rounded-lg flex items-center justify-center">
-                  {item.icon}
+                <div className={`w-15 h-15 ${item.cs} flex items-center justify-center`}>
+                  <img className={`${item.w}`} src={item.icon} alt="" />
                 </div>
               </div>
             ))}
@@ -157,72 +166,112 @@ export default function Dashboard() {
 
 
           {/* Main Grid */}
+          {/* Main Grid */}
           <div className="grid grid-cols-3 gap-10">
-            <div className="col-span-2 bg-[#151518] border border-gray-800 rounded-[5px] p-10 h-95 flex flex-col items-center justify-center text-gray-400">
-              <img className="px-4 py-4 w-20 h-20 bg-[#27272a] rounded-full" src={folder_open_regular} alt="" />
-              <p className="mt-6">No projects yet</p>
-              <button className="mt-4 flex items-center gap-2 px-7 py-3 text-[16px] rounded bg-linear-to-br from-blue-500 to-blue-600 text-white space-x-2 hover:opacity-90 transition">
-                Create your First Project
-              </button>
+
+            {/* LEFT COLUMN (2 cols) */}
+            <div className="col-span-2 space-y-10">
+
+              {/* Project Overview */}
+              <div className="
+      bg-linear-to-br 
+      from-zinc-800/60 
+      to-zinc-900/20
+      border border-zinc-800
+      rounded-xl
+      overflow-hidden
+      hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
+    ">
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+                  <h3 className="text-white text-[14px]">Project Overview</h3>
+                  <button className="text-zinc-400 text-[14px] hover:text-white transition">
+                    View all →
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="h-90 flex flex-col items-center justify-center text-zinc-400 ">
+                  <img
+                    className="w-20 h-20 p-4 bg-[#27272a] rounded-full"
+                    src={folder}
+                    alt=""
+                  />
+                  <p className="mt-6">No projects yet</p>
+                  <button className="mt-4 px-6 py-3 text-[14px] rounded bg-linear-to-br from-blue-500 to-blue-600 text-white hover:opacity-90 transition">
+                    Create your First Project
+                  </button>
+                </div>
+              </div>
+
+              {/* Recent Activity */}
+              <div className="
+      bg-linear-to-br 
+      from-zinc-800/60 
+      to-zinc-900/20
+      border border-zinc-800
+      rounded-xl
+      overflow-hidden
+      hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
+    ">
+                <div className="px-6 py-4 border-b border-zinc-800">
+                  <h3 className="text-white text-[14px]">Recent Activity</h3>
+                </div>
+
+                <div className="h-60 flex items-center justify-center text-zinc-400">
+                  <img
+                    className="w-16 h-16 p-3 bg-[#27272a] rounded-full"
+                    src={clock}
+                    alt=""
+                  />
+                  <p className="ml-4">No recent activity</p>
+                </div>
+              </div>
+
             </div>
 
-            <div className="space-y-8">
-  {sideCards.map((item, i) => (
-    <div
-      key={i}
-      className="
-        bg-linear-to-br 
-        from-zinc-800/60 
-        to-zinc-900/20
-        border border-zinc-800
-        rounded-xl
-        overflow-hidden
-      "
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-        
-        <div className="flex items-center gap-3">
-          {/* Icon Box */}
-          <div className="w-9 h-9 rounded-lg bg-[#232326] flex items-center justify-center">
-            {/* Put your icon here */}
-          </div>
 
-          <h4 className="text-[14px] leading-5 text-white">
-            {item.title}
-          </h4>
-        </div>
+            {/* RIGHT COLUMN */}
+            <div className="space-y-10">
+              {sideCards.map((item, i) => (
+                <div
+                  key={i}
+                  className="
+          bg-linear-to-br 
+          from-zinc-800/60 
+          to-zinc-900/20
+          border border-zinc-800
+          rounded-xl
+          overflow-hidden
+          hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
+        "
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-[#232326] flex items-center justify-center">
+                        <img className="w-5" src={item.src} alt="" />
+                      </div>
 
-        {/* Badge */}
-        <span
-          className={`
-            text-[12px]
-            px-3 py-0.75
-            rounded-md
-            ${item.color}
-            text-white
-          `}
-        >
-          0
-        </span>
-      </div>
+                      <h4 className="text-white text-[14px]">
+                        {item.title}
+                      </h4>
+                    </div>
 
-      {/* Body */}
-      <div className="py-10 flex items-center justify-center">
-        <p className="text-zinc-400 text-[14px] leading-5">
-          No {item.title.toLowerCase()}
-        </p>
-      </div>
-    </div>
-  ))}
-</div>
+                    <span className={`px-3 py-0.75 rounded-md text-xs font-medium ${item.cs}`}>
+                      0
+                    </span>
+                  </div>
 
-          </div>
+                  {/* Body */}
+                  <div className="h-auto flex items-center justify-center text-zinc-400 text-[14px] p-4 py-10">
+                    No {item.title.toLowerCase()}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-          {/* Recent Activity */}
-          <div className="bg-[#151518] border border-gray-800 rounded-xl p-10 h-60 flex items-center justify-center text-gray-400">
-            <Clock size={40} />
-            <p className="ml-4">No recent activity</p>
           </div>
 
         </div>
