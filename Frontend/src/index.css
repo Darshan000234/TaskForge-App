@@ -1,18 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
 
 /* :root {
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
                "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 } */
 
+@layer base {
+  body {
+    font-family: "Outfit";
+  }
+}
 html,body {
   background-color: #09090b;
   scroll-behavior: smooth;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 20px;
 }
 
 .rounded-img {

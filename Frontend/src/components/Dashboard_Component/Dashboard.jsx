@@ -1,34 +1,15 @@
-import { useState } from "react";
-import {
-  LayoutDashboard,
-  Folder,
-  Users,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Clock,
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import plus from '../../assets/img/plus.png';
 import folder from '../../assets/img/folder.png';
 import blue_folder from '../../assets/img/blue_folder.png';
 import checked from '../../assets/img/checked.png';
 import purple_team from '../../assets/img/purple_team.png';
 import orange_warn from '../../assets/img/orange_warn.png';
-import white_folder from '../../assets/img/white_folder.png'
 import user from '../../assets/img/user.png';
 import warning from '../../assets/img/warning.png';
 import clock from '../../assets/img/clock.png';
 
-const navItems = [
-  { icon: <LayoutDashboard size={20} />, label: "Dashboard" },
-  { icon: white_folder, label: "Projects", isImage: true },
-  { icon: <Users size={20} />, label: "Team" },
-  { icon: <Settings size={20} />, label: "Settings" },
-];
-
-const stats = [
+const Dashboard = () => {
+  const stats = [
   { title: "Total Projects", icon: blue_folder, cs: "rounded-xl bg-blue-500/10 bg-opacity-20", w: "w-8.5" },
   { title: "Completed Projects", icon: checked, cs: "rounded-xl bg-emerald-500/10 bg-opacity-20", w: "w-7" },
   { title: "My Tasks", icon: purple_team, cs: "rounded-xl bg-purple-500/10 bg-opacity-20", w: "w-7" },
@@ -40,77 +21,9 @@ const sideCards = [
   { title: "Overdue", cs: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400", src: warning },
   { title: "In Progress", cs: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400", src: clock },
 ];
-
-export default function Dashboard() {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
-    <div className="text-white min-h-screen flex">
-
-      {/* SIDEBAR */}
-      <motion.aside
-        animate={{ width: collapsed ? 120 : 280 }}
-        transition={{ duration: 0.35 }}
-        className="fixed left-0 top-0 h-screen bg-[#18181b] border-r border-gray-800 flex flex-col"
-      >
-        <div className="mt-8 px-6 pb-8 border-b border-gray-800">
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-              >
-                <h1 className="text-[16px]">coinwise</h1>
-                <p className="text-[12px] text-gray-400 mt-1">
-                  1 workspace
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <nav className="flex-1 px-6 py-8 space-y-4">
-          {navItems.map((item, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ scale: 1.02 }}
-              className="h-13 flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-[#222225] cursor-pointer"
-            >
-              {item.isImage
-                ? <img className="w-7" src={item.icon} alt="" />
-                : item.icon
-              }
-              {!collapsed && item.label}
-            </motion.div>
-          ))}
-        </nav>
-
-        <div className="px-6 pb-6">
-          <button onClick={() => setCollapsed(!collapsed)}>
-            {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-          </button>
-        </div>
-      </motion.aside>
-
-      {/* MAIN */}
-      <motion.div
-        animate={{ marginLeft: collapsed ? 120 : 280 }}
-        transition={{ duration: 0.35 }}
-        className="flex-1"
-      >
-        {/* NAVBAR */}
-        <div className="h-20 flex items-center justify-between px-12 border-b border-gray-800 bg-[#18181b] sticky top-0 z-10">
-          <div className="flex items-center gap-3 bg-[#232326] px-4 py-2 rounded-lg w-105">
-            <Search size={18} className="text-gray-400" />
-            <input
-              placeholder="Search projects, tasks..."
-              className="bg-transparent outline-none w-full"
-            />
-          </div>
-        </div>
-
-        {/* CONTENT */}
+    <div>
+      {/* CONTENT */}
         <div className="px-20 pt-12 pb-16 space-y-15">
 
           {/* Header */}
@@ -273,9 +186,9 @@ export default function Dashboard() {
             </div>
 
           </div>
-
         </div>
-      </motion.div>
     </div>
-  );
+  )
 }
+
+export default Dashboard;

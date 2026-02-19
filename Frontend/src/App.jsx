@@ -1,9 +1,13 @@
 import React from 'react'
-import {BrowserRouter as Router, Routes, Route} from 'react-router-dom'
-import {Toaster} from 'react-hot-toast'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import Home from './components/Home.jsx'
 import Signup_login from './components/Signup_login.jsx'
-import Dashboard from './components/Dashboard/Dashboard.jsx'
+import DashboardLayout from "./components/DashboardLayout.jsx";
+import Dashboard from "./components/Dashboard_Component/Dashboard.jsx";
+import Projects from "./components/Dashboard_Component/Projects.jsx";
+import Team from "./components/Dashboard_Component/Team.jsx";
+import Settings from "./components/Dashboard_Component/Settings.jsx";
 
 const App = () => {
   return (
@@ -12,7 +16,7 @@ const App = () => {
         position="top-right"
         toastOptions={{
           duration: 3000,
-          style:{
+          style: {
             background: '#1f2937',
             color: '#f9fafb',
             fontSize: '14px',
@@ -23,9 +27,14 @@ const App = () => {
         }}
       />
       <Routes>
-        <Route path='/' element={<Home />} /> 
+        <Route path='/' element={<Home />} />
         <Route path='/Signup_login' element={<Signup_login />} />
-        <Route path='/user/Dashboard' element={<Dashboard />} />
+        <Route path="/user/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="projects" element={<Projects />} />
+          <Route path="team" element={<Team />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
       </Routes>
     </Router>
   )
