@@ -4,10 +4,10 @@ import { Toaster } from 'react-hot-toast'
 import Home from './components/Home.jsx'
 import Signup_login from './components/Signup_login.jsx'
 import DashboardLayout from "./components/DashboardLayout.jsx";
-import Dashboard from "./components/Dashboard_Component/Dashboard.jsx";
-import Projects from "./components/Dashboard_Component/Projects.jsx";
-import Team from "./components/Dashboard_Component/Team.jsx";
-import Settings from "./components/Dashboard_Component/Settings.jsx";
+import Dashboard from "./components/Home_Component/Dashboard.jsx";
+import Projects from "./components/Home_Component/Projects.jsx";
+import Team from "./components/Home_Component/Team.jsx";
+import Settings from "./components/Home_Component/Settings.jsx";
 
 const App = () => {
   return (

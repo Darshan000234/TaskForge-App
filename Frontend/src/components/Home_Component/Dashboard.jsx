@@ -64,12 +64,10 @@ const sideCards = [
                   <p className="text-zinc-400">
                     {item.title}
                   </p>
-
                   <h3 className="py-2 text-[30px] leading-9 font-bold text-white">
                     0
                   </h3>
                 </div>
-
                 <div className={`w-15 h-15 ${item.cs} flex items-center justify-center`}>
                   <img className={`${item.w}`} src={item.icon} alt="" />
                 </div>
