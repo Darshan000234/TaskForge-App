@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import userRoute from './routes/UserRoute.js';
+import orgRoute from './routes/OrgRoute.js';
 
 dotenv.config();
 const app = express();
@@ -18,7 +19,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use('/user', userRoute);
-
+app.use('/org', orgRoute);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);

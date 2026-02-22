@@ -21,3 +21,27 @@ model User {
   authProvider AuthProvider @default(local)
   createdAt    DateTime     @default(now())
 }
+
+model org {
+  id           Int          @id @default(autoincrement())
+  name         String
+  userId       Int 
+  user_email   String
+  createdAt    DateTime     @default(now())
+}
+
+model project {
+  id           Int          @id @default(autoincrement())
+  userId       Int 
+  user_email   String
+  org_id       Int
+  createdAt    DateTime     @default(now())
+}
+
+model task {
+  id           Int          @id @default(autoincrement())
+  userId       Int 
+  user_email   String
+  project_id   Int
+  createdAt    DateTime     @default(now())
+}

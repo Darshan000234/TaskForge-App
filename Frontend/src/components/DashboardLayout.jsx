@@ -29,6 +29,37 @@ const DashboardLayout = () => {
     setShow(newState ? false : show);
   };
 
+  const orgList = [
+    {
+      id: "org_1",
+      name: "Coinwise",
+      role: "Admin",
+      membersCount: 8,
+      createdAt: "2025-01-12",
+
+    },
+    {
+      id: "org_2",
+      name: "TaskForge Labs",
+      role: "Admin",
+      membersCount: 14,
+      createdAt: "2024-11-05",
+    },
+    {
+      id: "org_3",
+      name: "GreenTech Collective",
+      role: "Admin",
+      membersCount: 22,
+      createdAt: "2024-06-18",
+    },
+    {
+      id: "org_4",
+      name: "DevOps Studio",
+      role: "Admin",
+      membersCount: 5,
+      createdAt: "2025-02-01",
+    }
+  ];
 
   return (
     <div className="text-white min-h-screen flex">
@@ -42,9 +73,9 @@ const DashboardLayout = () => {
       >
         <div className="m-4 relative h-10">
           <button onClick={(e) => {
-                      e.stopPropagation();
-                      setShow(!show);
-                    }} className="w-full flex items-center justify-between p-3 h-auto text-left rounded hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer">
+            e.stopPropagation();
+            setShow(!show);
+          }} className="w-full flex items-center justify-between p-3 h-auto text-left rounded hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer">
 
             <AnimatePresence>
               {!collapsed && (
@@ -91,6 +122,7 @@ const DashboardLayout = () => {
 
           {/* WORKSPACE DROPDOWN */}
           {show && !collapsed && (
+
             <div className="absolute left-0 mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50">
 
               <div className="px-4 pt-4 pb-2">
@@ -102,21 +134,21 @@ const DashboardLayout = () => {
               <div className="px-2 pb-2">
                 <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
 
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={building}
-                      alt="coinwise"
-                      className="w-8 h-8 rounded shadow"
-                    />
+                  <div class="flex-1 min-w-0">
 
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        coinwise
-                      </p>
-                      <p className="text-xs text-zinc-400">
-                        1 members
-                      </p>
+                    <p class="font-semibold text-gray-800 dark:text-white text-sm truncate">
+                      Coinwise
+                    </p>
+
+                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      Role: Admin
+                    </p>
+
+                    <div class="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
+                      <span>Members: 8</span>
+                      <span>Created: 12 Jan 2025</span>
                     </div>
+
                   </div>
 
                   <svg
@@ -162,9 +194,9 @@ const DashboardLayout = () => {
           ))}
         </nav>
 
-        <div className="px-6 pb-6">
+        <div className="px-8 pb-6 cursor-pointer">
           <button onClick={toggleDrawer}>
-            {collapsed ? <img className="w-5" src={plus} alt="plus"/>: <img className="w-5" src={minus} alt="minus"/>}
+            {collapsed ? <img className="w-5 cursor-pointer" src={plus} alt="plus" /> : <img className="w-5 " src={minus} alt="minus" />}
           </button>
         </div>
       </motion.aside>
