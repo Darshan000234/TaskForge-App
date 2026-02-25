@@ -11,6 +11,8 @@ import building from '../assets/img/building.png';
 import { Link, Outlet } from 'react-router-dom';
 import plus from '../assets/img/plus1.png';
 import minus from '../assets/img/minus.png';
+import invite from '../assets/img/inbox.png';
+import audit from '../assets/img/audit.png';
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/user/dashboard" },
@@ -134,17 +136,17 @@ const DashboardLayout = () => {
               <div className="px-2 pb-2">
                 <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
 
-                  <div class="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0">
 
-                    <p class="font-semibold text-gray-800 dark:text-white text-sm truncate">
+                    <p className="font-semibold text-gray-800 dark:text-white text-sm truncate">
                       Coinwise
                     </p>
 
-                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                       Role: Admin
                     </p>
 
-                    <div class="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
+                    <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
                       <span>Members: 8</span>
                       <span>Created: 12 Jan 2025</span>
                     </div>
@@ -180,23 +182,132 @@ const DashboardLayout = () => {
             </div>
           )}
         </div>
-        <nav className="flex-1 px-6 py-8 space-y-2">
-          {navItems.map((item, i) => (
-            <Link key={i} to={item.path}>
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="h-10 flex items-center gap-3 px-2 rounded-lg hover:bg-[#222225] cursor-pointer"
+        <nav
+          className={`flex-1 py-8 space-y-2 ${collapsed ? "px-2" : "px-6"
+            }`}
+        >
+          {/* MAIN NAV */}
+          <div>
+            {navItems.map((item, i) => (
+              <Link key={i} to={item.path}>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  title={collapsed ? item.label : ""}
+                  className={`
+            h-10 rounded-lg hover:bg-[#222225] cursor-pointer
+            flex items-center
+            ${collapsed ? "justify-center" : "gap-3 px-2"}
+          `}
+                >
+                  {item.icon}
+                  {!collapsed && (
+                    <span className="text-[16px]">{item.label}</span>
+                  )}
+                </motion.div>
+              </Link>
+            ))}
+          </div>
+
+          {/* SECOND SECTION */}
+          <div className="mt-14 flex flex-col gap-4">
+
+            {/* My Tasks */}
+            <div
+              title={collapsed ? "My Tasks" : ""}
+              className={`
+        h-10 rounded-lg hover:bg-[#222225] cursor-pointer
+        flex items-center
+        ${collapsed ? "justify-center" : "gap-3 px-2"}
+      `}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
               >
-                {item.icon}
-                {!collapsed && item.label}
-              </motion.div>
-            </Link>
-          ))}
+                <path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344" />
+                <path d="m9 11 3 3L22 4" />
+              </svg>
+
+              {!collapsed && (
+                <span className="text-[16px] font-medium text-zinc-300">
+                  My Tasks
+                </span>
+              )}
+            </div>
+
+            {/* Projects */}
+            <div
+              title={collapsed ? "Projects" : ""}
+              className={`
+        h-10 rounded-lg hover:bg-[#222225] cursor-pointer
+        flex items-center
+        ${collapsed
+                  ? "justify-center"
+                  : "justify-between px-2"
+                }
+      `}
+            >
+              {!collapsed && (
+                <span className="text-[16px] text-gray-400 uppercase tracking-wide">
+                  Projects
+                </span>
+              )}
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+            </div>
+
+            {/* Audit */}
+            <div
+              title={collapsed ? "Audit" : ""}
+              className={`
+        h-10 rounded-lg hover:bg-[#222225] cursor-pointer
+        flex items-center
+        ${collapsed ? "justify-center" : "gap-3 px-2"}
+      `}
+            >
+              <img src={audit} className="w-5 h-5" />
+              {!collapsed && (
+                <span className="text-[16px] font-medium text-zinc-300">
+                  Audit
+                </span>
+              )}
+            </div>
+            <div
+              title={collapsed ? "Invites" : ""}
+              className={`
+        h-10 rounded-lg hover:bg-[#222225] cursor-pointer
+        flex items-center
+        ${collapsed ? "justify-center" : "gap-3 px-2"}
+      `}
+            >
+              <img src={invite} className="w-5 h-5" />
+              {!collapsed && (
+                <span className="text-[16px] font-medium text-zinc-300">
+                  Invites
+                </span>
+              )}
+            </div>
+            
+          </div>
         </nav>
 
         <div className="px-8 pb-6 cursor-pointer">
           <button onClick={toggleDrawer}>
-            {collapsed ? <img className="w-5 cursor-pointer" src={plus} alt="plus" /> : <img className="w-5 " src={minus} alt="minus" />}
+            {collapsed ? <img className="w-6 cursor-pointer" src={plus} alt="plus" /> : <img className="w-5 cursor-pointer" src={minus} alt="minus" />}
           </button>
         </div>
       </motion.aside>
@@ -207,7 +318,6 @@ const DashboardLayout = () => {
         transition={{ duration: 0.35 }}
         className="flex-1"
       >
-        {/* NAVBAR */}
         <div className="h-20 flex items-center justify-between px-12 border-b border-gray-800 bg-[#18181b] sticky top-0 z-10">
           <div className="flex items-center gap-3 bg-[#232326] px-4 py-2 rounded-lg w-105 hover:border border-blue-400">
             <Search size={18} className="text-gray-400" />

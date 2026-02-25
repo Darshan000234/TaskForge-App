@@ -32,16 +32,21 @@ model org {
 
 model project {
   id           Int          @id @default(autoincrement())
+  name         String
   userId       Int 
   user_email   String
   org_id       Int
+  assigned_to  Int
   createdAt    DateTime     @default(now())
 }
 
 model task {
   id           Int          @id @default(autoincrement())
+  name         String
   userId       Int 
   user_email   String
   project_id   Int
+  org_id       Int 
+  assigned_to  Int
   createdAt    DateTime     @default(now())
 }
