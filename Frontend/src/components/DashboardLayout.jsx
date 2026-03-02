@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Folder,
@@ -12,7 +12,8 @@ import { Link, Outlet } from 'react-router-dom';
 import plus from '../assets/img/plus1.png';
 import minus from '../assets/img/minus.png';
 import invite from '../assets/img/inbox.png';
-import audit from '../assets/img/audit.png';
+// import audit from '../assets/img/audit.png';
+import toast from "react-hot-toast";
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/user/dashboard" },
@@ -21,47 +22,28 @@ const navItems = [
   { icon: <Settings size={20} />, label: "Settings", path: "/user/dashboard/settings" },
 ];
 
+const URL = import.meta.env.VITE_URL;
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [show, setShow] = useState(false);
+  const [orgs,setOrgs] = useState([]);
 
+  useEffect(async () => {
+    try {
+      const org = await axios.get(`${URL}/app/orgs`,{withCredentials:true});
+      setOrgs(org.data);
+    } catch (error) {
+      toast.error(error.message || "Failed to fetch organizations");
+    }
+  }, [])
+  
   const toggleDrawer = () => {
     const newState = !collapsed;
     setCollapsed(newState);
     setShow(newState ? false : show);
   };
 
-  const orgList = [
-    {
-      id: "org_1",
-      name: "Coinwise",
-      role: "Admin",
-      membersCount: 8,
-      createdAt: "2025-01-12",
-
-    },
-    {
-      id: "org_2",
-      name: "TaskForge Labs",
-      role: "Admin",
-      membersCount: 14,
-      createdAt: "2024-11-05",
-    },
-    {
-      id: "org_3",
-      name: "GreenTech Collective",
-      role: "Admin",
-      membersCount: 22,
-      createdAt: "2024-06-18",
-    },
-    {
-      id: "org_4",
-      name: "DevOps Studio",
-      role: "Admin",
-      membersCount: 5,
-      createdAt: "2025-02-01",
-    }
-  ];
+  
 
   return (
     <div className="text-white min-h-screen flex">
@@ -271,7 +253,7 @@ const DashboardLayout = () => {
             </div>
 
             {/* Audit */}
-            <div
+            {/* <div
               title={collapsed ? "Audit" : ""}
               className={`
         h-10 rounded-lg hover:bg-[#222225] cursor-pointer
@@ -285,7 +267,7 @@ const DashboardLayout = () => {
                   Audit
                 </span>
               )}
-            </div>
+            </div> */}
             <div
               title={collapsed ? "Invites" : ""}
               className={`

@@ -12,6 +12,12 @@ enum AuthProvider {
   google
 }
 
+enum Status {
+  pending
+  accepted 
+  rejected
+}
+
 model User {
   id           Int          @id @default(autoincrement())
   name         String
@@ -49,4 +55,14 @@ model task {
   org_id       Int 
   assigned_to  Int
   createdAt    DateTime     @default(now())
+}
+
+model teaminvitation {
+  id           Int          @id @default(autoincrement()) 
+  sender_id    Int 
+  receiver_id  Int 
+  status       Status       @default(pending)             
+  createdAt    DateTime     @default(now())               
+
+  @@unique([sender_id,receiver_id]) 
 }
