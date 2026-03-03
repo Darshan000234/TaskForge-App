@@ -4,7 +4,6 @@ node_modules/
 # Environment files
 *.env
 Google_OAuth.json
-vision-project-key.json
 
 # Build output
 dist/

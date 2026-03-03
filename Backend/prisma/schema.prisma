@@ -30,10 +30,13 @@ model User {
 
 model org {
   id           Int          @id @default(autoincrement())
-  name         String
+  name         String       
   userId       Int 
   user_email   String
+  member_count Int 
+  proj_count   Int 
   createdAt    DateTime     @default(now())
+  @@unique([userId,name])
 }
 
 model project {
@@ -63,6 +66,8 @@ model teaminvitation {
   receiver_id  Int 
   status       Status       @default(pending)             
   createdAt    DateTime     @default(now())               
-
+  org_id       Int 
   @@unique([sender_id,receiver_id]) 
 }
+
+

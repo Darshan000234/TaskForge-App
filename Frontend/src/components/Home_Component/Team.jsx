@@ -1,17 +1,26 @@
 import { Search, Users, Activity, Shield } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import axios from "axios";
+import api from "../../api/api.js";
 
 const URL = import.meta.env.VITE_URL;
-const Team = ({orgid}) => {
-  const [members,setMembers] = useState([]);
-
+const Team = ({ orgid }) => {
+  const [members, setMembers] = useState([]);
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
   const getMembers = async () => {
     try {
-      const response = await axios.get(`${URL}/app/org/${orgid}/members`,{withCredentials:true}); 
-    }catch (error) {
+      const response = await api.get(`/org/${orgid}/members`);
+    } catch (error) {
       toast.error(error.message || "Failed to fetch team members");
+    }
+  }
+
+  const inviteMember = async () => {
+    try {
+      const response = await api.post(`/org/${orgid}/invite`, { email: inviteEmail });
+    } catch (error) {
+      toast.error(error.message || "Failed to send invitation");
     }
   }
   return (
@@ -24,7 +33,7 @@ const Team = ({orgid}) => {
           </p>
         </div>
 
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium">
+        <button onClick={() => setShowInvite(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer">
           <Users size={18} />
           Invite Member
         </button>
@@ -113,6 +122,49 @@ const Team = ({orgid}) => {
           </tbody>
         </table>
       </div>
+
+      {showInvite && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 w-full max-w-md text-zinc-200">
+
+            <div className="mb-4">
+              <h2 className="text-xl font-bold">Invite Team Member</h2>
+              <p className="text-sm text-zinc-400">
+                Inviting to workspace
+              </p>
+            </div>
+
+            <form onSubmit={inviteMember()} className="space-y-4">
+              <div>
+                <label className="text-sm">Email</label>
+                <input
+                  onChange={(e)=> setInviteEmail(e.target.value)}
+                  type="email"
+                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 py-2 px-3 text-sm"
+                  placeholder="Enter email"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowInvite(false)}
+                  className="px-4 py-2 rounded border border-zinc-700"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700"
+                >
+                  Send Invitation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

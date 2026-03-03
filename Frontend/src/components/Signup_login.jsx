@@ -76,9 +76,10 @@ const Signup_login = () => {
     onSuccess: async (response) => {
       try {
         const token = response.access_token;
-        await axios.post(`${URL}/user/googleauth`, { token }, { withCredentials: true });
+        const acctoken = await axios.post(`${URL}/user/googleauth`, { token }, { withCredentials: true });
         toast.dismiss();
         toast.success('Logged in with Google successfully!');
+        localStorage.setItem('accessToken', acctoken.data.accesstoken);
         navigate('/user/dashboard');
       } catch (error) {
         toast.dismiss();
@@ -103,9 +104,9 @@ const Signup_login = () => {
         password: formData.password
       };
       console.log('sended');
-      await axios.post(`${URL}/user${endpoint}`, payload, { withCredentials: true });
+      const token = await axios.post(`${URL}/user${endpoint}`, payload, { withCredentials: true });
       console.log('not arrive');
-
+      localStorage.setItem('accessToken', token.data.accesstoken);
       navigate('/user/dashboard');
       toast.success(type === 'signup' ? 'Signup successful!' : 'Login successful!');
     } catch (error) {

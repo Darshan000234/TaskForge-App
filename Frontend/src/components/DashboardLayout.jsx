@@ -14,6 +14,7 @@ import minus from '../assets/img/minus.png';
 import invite from '../assets/img/inbox.png';
 // import audit from '../assets/img/audit.png';
 import toast from "react-hot-toast";
+import api from "../api/api.js";
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/user/dashboard" },
@@ -27,14 +28,20 @@ const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [show, setShow] = useState(false);
   const [orgs,setOrgs] = useState([]);
+  const [activeorg, setactiveOrg] = useState(null);
 
-  useEffect(async () => {
-    try {
-      const org = await axios.get(`${URL}/app/orgs`,{withCredentials:true});
-      setOrgs(org.data);
-    } catch (error) {
-      toast.error(error.message || "Failed to fetch organizations");
-    }
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      try {
+        const org = await api.get("/orgs");
+        setOrgs(org.data);
+        setactiveOrg(org.data[0]);
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Failed to fetch organizations");
+      }
+    };
+
+    fetchOrgs();
   }, [])
   
   const toggleDrawer = () => {
@@ -115,13 +122,14 @@ const DashboardLayout = () => {
                 </p>
               </div>
 
-              <div className="px-2 pb-2">
+              {orgs.map((item)=> (
+                <div className="px-2 pb-2">
                 <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
 
                   <div className="flex-1 min-w-0">
 
                     <p className="font-semibold text-gray-800 dark:text-white text-sm truncate">
-                      Coinwise
+                      {item.name}
                     </p>
 
                     <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
@@ -129,10 +137,14 @@ const DashboardLayout = () => {
                     </p>
 
                     <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
-                      <span>Members: 8</span>
-                      <span>Created: 12 Jan 2025</span>
+                      <span>Members: {item.member_count}</span>
+                      <span>Created: {new Date(item.createdAt).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric"
+                          })}
+                      </span>
                     </div>
-
                   </div>
 
                   <svg
@@ -150,7 +162,7 @@ const DashboardLayout = () => {
                     />
                   </svg>
                 </div>
-              </div>
+              </div>))}
 
               <div className="border-t border-zinc-800" />
 
@@ -190,10 +202,8 @@ const DashboardLayout = () => {
             ))}
           </div>
 
-          {/* SECOND SECTION */}
           <div className="mt-14 flex flex-col gap-4">
 
-            {/* My Tasks */}
             <div
               title={collapsed ? "My Tasks" : ""}
               className={`
@@ -221,7 +231,6 @@ const DashboardLayout = () => {
               )}
             </div>
 
-            {/* Projects */}
             <div
               title={collapsed ? "Projects" : ""}
               className={`
@@ -251,23 +260,6 @@ const DashboardLayout = () => {
                 <path d="m12 5 7 7-7 7" />
               </svg>
             </div>
-
-            {/* Audit */}
-            {/* <div
-              title={collapsed ? "Audit" : ""}
-              className={`
-        h-10 rounded-lg hover:bg-[#222225] cursor-pointer
-        flex items-center
-        ${collapsed ? "justify-center" : "gap-3 px-2"}
-      `}
-            >
-              <img src={audit} className="w-5 h-5" />
-              {!collapsed && (
-                <span className="text-[16px] font-medium text-zinc-300">
-                  Audit
-                </span>
-              )}
-            </div> */}
             <div
               title={collapsed ? "Invites" : ""}
               className={`
@@ -309,7 +301,7 @@ const DashboardLayout = () => {
             />
           </div>
         </div>
-        <Outlet /> {/* render child route here this is production based route handling*/}
+        <Outlet props={orgid} /> {/* render child route here this is production based route handling*/}
       </motion.div>
     </div>
   );

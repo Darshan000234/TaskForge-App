@@ -8,7 +8,7 @@ import user from '../../assets/img/user.png';
 import warning from '../../assets/img/warning.png';
 import clock from '../../assets/img/clock.png';
 
-const Dashboard = () => {
+const Dashboard = ({orgid}) => {
   const stats = [
   { title: "Total Projects", icon: blue_folder, cs: "rounded-xl bg-blue-500/10 bg-opacity-20", w: "w-8.5" },
   { title: "Completed Projects", icon: checked, cs: "rounded-xl bg-emerald-500/10 bg-opacity-20", w: "w-7" },
