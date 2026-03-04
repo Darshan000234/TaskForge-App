@@ -1,3 +1,5 @@
+import { io } from "socket.io-client";
+import { useEffect } from "react";
 import plus from '../../assets/img/plus.png';
 import folder from '../../assets/img/folder.png';
 import blue_folder from '../../assets/img/blue_folder.png';
@@ -7,14 +9,32 @@ import orange_warn from '../../assets/img/orange_warn.png';
 import user from '../../assets/img/user.png';
 import warning from '../../assets/img/warning.png';
 import clock from '../../assets/img/clock.png';
+import { useOutletContext } from "react-router-dom";
 
-const Dashboard = ({orgid}) => {
+const URL = import.meta.env.VITE_URL;
+const Dashboard = ({}) => {
+
+  useEffect(() => {
+    const socket = io(URL,{
+      auth : {
+        token : localStorage.getItem("accessToken")
+      }
+    })
+    socket.on("connect",()=>{
+      console.log("Connected to Socket.IO server");
+    });
+    return () => {
+      socket.disconnect();
+    }
+  }, [])
+  
+
   const stats = [
-  { title: "Total Projects", icon: blue_folder, cs: "rounded-xl bg-blue-500/10 bg-opacity-20", w: "w-8.5" },
-  { title: "Completed Projects", icon: checked, cs: "rounded-xl bg-emerald-500/10 bg-opacity-20", w: "w-7" },
-  { title: "My Tasks", icon: purple_team, cs: "rounded-xl bg-purple-500/10 bg-opacity-20", w: "w-7" },
-  { title: "Overdue", icon: orange_warn, cs: "rounded-xl bg-amber-500/10 bg-opacity-20", w: "w-7" }
-];
+    { title: "Total Projects", icon: blue_folder, cs: "rounded-xl bg-blue-500/10 bg-opacity-20", w: "w-8.5" },
+    { title: "Completed Projects", icon: checked, cs: "rounded-xl bg-emerald-500/10 bg-opacity-20", w: "w-7" },
+    { title: "My Tasks", icon: purple_team, cs: "rounded-xl bg-purple-500/10 bg-opacity-20", w: "w-7" },
+    { title: "Overdue", icon: orange_warn, cs: "rounded-xl bg-amber-500/10 bg-opacity-20", w: "w-7" }
+  ];
 
 const sideCards = [
   { title: "My Tasks", cs: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400", src: user },

@@ -60,13 +60,14 @@ export const deleteOrganization = async (req, res) => {
 
 export const DataOrganization = async (req, res) => {
     const { id } = req.user;
-    // console.log(id);
+    
     try {
         const data = await prisma.org.findMany({
             where : {
                 userId : id
             }
         });
+        // console.log(data);
         res.status(200).json(data);
     } catch (error) {
         res.status(400).json({ message: "something went wrong" });

@@ -2,15 +2,21 @@ import { Search, Users, Activity, Shield } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import api from "../../api/api.js";
+import { useOutletContext } from "react-router-dom";
 
 const URL = import.meta.env.VITE_URL;
-const Team = ({ orgid }) => {
+const Team = () => {
   const [members, setMembers] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const { orgId } = useOutletContext();
+
   const getMembers = async () => {
     try {
-      const response = await api.get(`/org/${orgid}/members`);
+      // console.log(orgId);
+
+      const response = await api.get(`/org/${orgId}/members`);
+      setMembers(response.data);
     } catch (error) {
       toast.error(error.message || "Failed to fetch team members");
     }
@@ -18,7 +24,7 @@ const Team = ({ orgid }) => {
 
   const inviteMember = async () => {
     try {
-      const response = await api.post(`/org/${orgid}/invite`, { email: inviteEmail });
+      
     } catch (error) {
       toast.error(error.message || "Failed to send invitation");
     }

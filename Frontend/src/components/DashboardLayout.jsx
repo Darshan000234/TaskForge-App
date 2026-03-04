@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Folder,
@@ -28,19 +28,19 @@ const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [show, setShow] = useState(false);
   const [orgs,setOrgs] = useState([]);
-  const [activeorg, setactiveOrg] = useState(null);
+  const [activeorg, setactiveOrg] = useState({});
 
   useEffect(() => {
     const fetchOrgs = async () => {
       try {
         const org = await api.get("/orgs");
         setOrgs(org.data);
-        setactiveOrg(org.data[0]);
+        setactiveOrg(org.data?.[0] || null);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
       }
     };
-
+    
     fetchOrgs();
   }, [])
   
@@ -51,7 +51,6 @@ const DashboardLayout = () => {
   };
 
   
-
   return (
     <div className="text-white min-h-screen flex">
 
@@ -301,7 +300,7 @@ const DashboardLayout = () => {
             />
           </div>
         </div>
-        <Outlet props={orgid} /> {/* render child route here this is production based route handling*/}
+        <Outlet context={{ orgId: activeorg?.id }}/> {/* render child route here this is production based route handling*/}
       </motion.div>
     </div>
   );
