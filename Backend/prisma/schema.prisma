@@ -41,7 +41,7 @@ model org {
 
 model project {
   id           Int          @id @default(autoincrement())
-  name         String
+  name         String 
   userId       Int 
   user_email   String
   org_id       Int
@@ -62,12 +62,13 @@ model task {
 
 model teaminvitation {
   id           Int          @id @default(autoincrement()) 
-  sender_id    Int 
-  receiver_id  Int 
+  sender_email    String 
+  receiver_email  String 
   status       Status       @default(pending)             
   createdAt    DateTime     @default(now())               
-  org_id       Int 
-  @@unique([sender_id,receiver_id]) 
+  @@unique([sender_email,receiver_email]) 
 }
+
+
 
 

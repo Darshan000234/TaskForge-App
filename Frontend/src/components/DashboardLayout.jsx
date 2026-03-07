@@ -11,8 +11,7 @@ import building from '../assets/img/building.png';
 import { Link, Outlet } from 'react-router-dom';
 import plus from '../assets/img/plus1.png';
 import minus from '../assets/img/minus.png';
-import invite from '../assets/img/inbox.png';
-// import audit from '../assets/img/audit.png';
+import notification from '../assets/img/inbox.png';
 import toast from "react-hot-toast";
 import api from "../api/api.js";
 
@@ -267,11 +266,11 @@ const DashboardLayout = () => {
         ${collapsed ? "justify-center" : "gap-3 px-2"}
       `}
             >
-              <img src={invite} className="w-5 h-5" />
+              <img src={notification} className="w-5 h-5" />
               {!collapsed && (
-                <span className="text-[16px] font-medium text-zinc-300">
-                  Invites
-                </span>
+                <Link to="/user/dashboard/notification" className="text-[16px] font-medium text-zinc-300">
+                  Notification
+                </Link>
               )}
             </div>
             

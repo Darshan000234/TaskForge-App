@@ -8,6 +8,7 @@ import Dashboard from "./components/Home_Component/Dashboard.jsx";
 import Projects from "./components/Home_Component/Projects.jsx";
 import Team from "./components/Home_Component/Team.jsx";
 import Settings from "./components/Home_Component/Settings.jsx";
+import Notification from "./components/Home_Component/Notification.jsx";
 
 const App = () => {
   return (
@@ -34,6 +35,7 @@ const App = () => {
           <Route path="projects" element={<Projects />} />
           <Route path="team" element={<Team />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="notification" element={<Notification />} />
         </Route>
       </Routes>
     </Router>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import api from "../../api/api.js";
 import { useOutletContext } from "react-router-dom";
+import socket from "../../socket/socket.js";
 
 const URL = import.meta.env.VITE_URL;
 const Team = () => {
@@ -13,8 +14,6 @@ const Team = () => {
 
   const getMembers = async () => {
     try {
-      // console.log(orgId);
-
       const response = await api.get(`/org/${orgId}/members`);
       setMembers(response.data);
     } catch (error) {
@@ -22,13 +21,14 @@ const Team = () => {
     }
   }
 
-  const inviteMember = async () => {
-    try {
-      
-    } catch (error) {
-      toast.error(error.message || "Failed to send invitation");
-    }
-  }
+  const inviteMember = (e) => {
+    e.preventDefault();
+
+    socket.emit("invite_user", { email: inviteEmail });
+    console.log("invite sent", inviteEmail);
+    setInviteEmail("");
+    setShowInvite(false);
+  };
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
       <div className="flex items-start justify-between">
@@ -140,7 +140,7 @@ const Team = () => {
               </p>
             </div>
 
-            <form onSubmit={inviteMember()} className="space-y-4">
+            <form onSubmit={inviteMember} className="space-y-4">
               <div>
                 <label className="text-sm">Email</label>
                 <input
