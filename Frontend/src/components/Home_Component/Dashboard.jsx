@@ -11,18 +11,6 @@ import clock from '../../assets/img/clock.png';
 import socket from '../../socket/socket';
 
 const Dashboard = ({ }) => {
-
-  useEffect(() => {
-    socket.auth = {
-      token: localStorage.getItem("accessToken")
-    };
-
-    socket.connect();
-
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
   const stats = [
     { title: "Total Projects", icon: blue_folder, cs: "rounded-xl bg-blue-500/10 bg-opacity-20", w: "w-8.5" },
     { title: "Completed Projects", icon: checked, cs: "rounded-xl bg-emerald-500/10 bg-opacity-20", w: "w-7" },

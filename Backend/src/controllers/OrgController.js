@@ -73,3 +73,19 @@ export const DataOrganization = async (req, res) => {
         res.status(400).json({ message: "something went wrong" });
     }
 };
+
+export const DataOrganizationMembers = async (req, res) => {
+    const id = req.params.id;
+    // console.log(id);
+    try {
+        const data  = await prisma.teaminvitation.findMany({
+            where : {
+                org_id : id
+            }
+        });
+        // console.log(data);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(400).json({ message: "something went wrong" });
+    }
+}

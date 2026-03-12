@@ -2,7 +2,7 @@ import prisma from "../config/prisma.js";
 
 export const inviteData = async (req, res) => {
     const { email } = req.user;
-    console.log(email);
+    // console.log(email);
 
     try {
         const data = await prisma.teaminvitation.findMany({

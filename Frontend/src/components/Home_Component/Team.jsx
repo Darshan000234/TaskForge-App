@@ -1,8 +1,8 @@
 import { Search, Users, Activity, Shield } from "lucide-react";
-import { useState } from "react";
+import { useState , useEffect } from "react";
 import toast from "react-hot-toast";
 import api from "../../api/api.js";
-import { useOutletContext } from "react-router-dom";
+// import { useOutletContext } from "react-router-dom";
 import socket from "../../socket/socket.js";
 
 const URL = import.meta.env.VITE_URL;
@@ -10,22 +10,27 @@ const Team = () => {
   const [members, setMembers] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const { orgId } = useOutletContext();
+  const orgId = Number(localStorage.getItem("org_id"));
 
-  const getMembers = async () => {
-    try {
-      const response = await api.get(`/org/${orgId}/members`);
-      setMembers(response.data);
-    } catch (error) {
-      toast.error(error.message || "Failed to fetch team members");
+  useEffect(() => {
+    const getMembers = async () => {
+      try {
+        const response = await api.get(`/orgs/${orgId}/members`);
+        setMembers(response.data);
+      } catch (error) {
+        toast.error(error.message || "Failed to fetch team members");
+      }
     }
-  }
+    
+    getMembers();
+  }, []);
 
   const inviteMember = (e) => {
     e.preventDefault();
-
-    socket.emit("invite_user", { email: inviteEmail });
-    console.log("invite sent", inviteEmail);
+    
+    console.log("sended");
+    console.log(socket.connected);
+    socket.emit("invite_user", { email: inviteEmail, org_id: orgId })
     setInviteEmail("");
     setShowInvite(false);
   };
@@ -97,30 +102,29 @@ const Team = () => {
             <tr className="text-left">
               <th className="px-6 py-4 font-medium">Name</th>
               <th className="px-6 py-4 font-medium">Email</th>
-              <th className="px-6 py-4 font-medium">Role</th>
+              <th className="px-6 py-4 font-medium">Status</th>
             </tr>
           </thead>
 
           <tbody>
-            {members.map((member) => (
+            {members.map((member,index) => (
               <tr
                 key={member.id}
                 className="border-b border-zinc-800 hover:bg-zinc-900/40 transition"
               >
                 <td className="px-6 py-4 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-xs">
-                    CD
+                  {index+1}
                   </div>
-                  {member.name}
                 </td>
 
                 <td className="px-6 py-4 text-zinc-300">
-                  {member.email}
+                  {member.receiver_email}
                 </td>
 
                 <td className="px-6 py-4">
                   <span className="px-3 py-1 text-xs rounded-md bg-purple-600/20 text-purple-400 font-medium">
-                    {member.role}
+                    {member.status}
                   </span>
                 </td>
               </tr>
@@ -144,7 +148,7 @@ const Team = () => {
               <div>
                 <label className="text-sm">Email</label>
                 <input
-                  onChange={(e)=> setInviteEmail(e.target.value)}
+                  onChange={(e) => setInviteEmail(e.target.value)}
                   type="email"
                   className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 py-2 px-3 text-sm"
                   placeholder="Enter email"

@@ -38,11 +38,10 @@ const io = new Server(server, {
   }
 });
 
-
 // SOCKET AUTH
 io.use(async (socket, next) => {
   try {
-    // console.log("use");
+    console.log("use");
     const token = socket.handshake.auth.token;
     // console.log(token);
     if (!token) return next(new Error("Unauthorized"));
@@ -52,8 +51,6 @@ io.use(async (socket, next) => {
     const user = await prisma.user.findUnique({
       where: { email: decoded.email }
     });
-
-    if (user.email === "desaledarshan007@gmail.com" ) console.log("ok");
     
     if (!user) return next(new Error("User not found"));
 
@@ -76,26 +73,28 @@ io.use(async (socket, next) => {
 // SOCKET EVENTS
 io.on("connection", (socket) => {
 
-  // console.log("user connected:", socket.id);
-  // console.log("user:", socket.user.email);
+  console.log("user connected:", socket.id);
+  console.log("user:", socket.user.email);
 
-  socket.on("invite_user", async ({ email }) => {
+  socket.on("invite_user", async ({ email , org_id }) => {
 
-    // console.log("invite receive");
+    console.log("invite receive");
     try {
       
+      console.log("come");
       if (socket.user.email === email) {
         return socket.emit("invite_error", {
           message: "User not found"
         });
       }
-      
+      console.log(1);
       const existingInvite = await prisma.teaminvitation.findUnique({
         where: {
-           sender_email_receiver_email: {
-                sender_email: socket.user.email,
-                receiver_email: email
-            }
+          sender_email_receiver_email_org_id: {
+            sender_email: socket.user.email,
+            receiver_email: email,
+            org_id: org_id
+          }
         }
       });
 
@@ -111,20 +110,17 @@ io.on("connection", (socket) => {
         });
       }
 
-      await prisma.teaminvitation.create({
+      const invite = await prisma.teaminvitation.create({
         data: {
           sender_email: socket.user.email,
           receiver_email: email,
-          status: "pending"
+          org_id: org_id,
+          status: "pending",
+          message: `${socket.user.name} has invited you to join the organization`
         }
       });
-      console.log("invite sent through socket");
-      io.to(email).emit("invite_received", {
-        data : {
-          sender_email: socket.user.name,
-          status: "pending"
-        }
-      });
+
+      io.to(email).emit("invite_received", invite);
 
     } catch (err) {
       console.error(err);
@@ -133,7 +129,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("user disconnected:", socket.id);
+    // console.log("user disconnected:", socket.id);
   });
 
 });

@@ -14,6 +14,7 @@ import minus from '../assets/img/minus.png';
 import notification from '../assets/img/inbox.png';
 import toast from "react-hot-toast";
 import api from "../api/api.js";
+import socket from "../socket/socket.js";
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/user/dashboard" },
@@ -27,8 +28,17 @@ const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [show, setShow] = useState(false);
   const [orgs,setOrgs] = useState([]);
-  const [activeorg, setactiveOrg] = useState({});
+  const [activeorg, setactiveOrg] = useState(null);
+  useEffect(() => {
+    socket.auth = {
+      token: localStorage.getItem("accessToken")
+    };
 
+    socket.connect();
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
   useEffect(() => {
     const fetchOrgs = async () => {
       try {
@@ -39,10 +49,15 @@ const DashboardLayout = () => {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
       }
     };
-    
     fetchOrgs();
   }, [])
   
+  useEffect(() => {
+    if (activeorg?.id) {
+      console.log(activeorg?.id);
+      localStorage.setItem("org_id", activeorg?.id);
+    }
+  },[activeorg]);
   const toggleDrawer = () => {
     const newState = !collapsed;
     setCollapsed(newState);
@@ -258,21 +273,23 @@ const DashboardLayout = () => {
                 <path d="m12 5 7 7-7 7" />
               </svg>
             </div>
+            <Link to="/user/dashboard/notification">
             <div
               title={collapsed ? "Invites" : ""}
               className={`
-        h-10 rounded-lg hover:bg-[#222225] cursor-pointer
+        h-10 rounded-lg hover:bg-[#222225] cursor-pointer text-[16px] font-medium text-zinc-300
         flex items-center
         ${collapsed ? "justify-center" : "gap-3 px-2"}
       `}
             >
               <img src={notification} className="w-5 h-5" />
               {!collapsed && (
-                <Link to="/user/dashboard/notification" className="text-[16px] font-medium text-zinc-300">
-                  Notification
-                </Link>
-              )}
+                  <span>
+                    Notification
+                  </span> 
+                )}
             </div>
+                </Link>
             
           </div>
         </nav>

@@ -64,9 +64,12 @@ model teaminvitation {
   id           Int          @id @default(autoincrement()) 
   sender_email    String 
   receiver_email  String 
+  org_id       Int
+  message      String 
   status       Status       @default(pending)             
   createdAt    DateTime     @default(now())               
-  @@unique([sender_email,receiver_email]) 
+  @@unique([sender_email, receiver_email, org_id])
+  @@index([receiver_email])
 }
 
 
