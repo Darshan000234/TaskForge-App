@@ -36,7 +36,15 @@ model org {
   member_count Int 
   proj_count   Int 
   createdAt    DateTime     @default(now())
-  @@unique([userId,name])
+  @@index([userId])
+  @@index([id])
+}
+
+model org_member {
+  id          Int           @id @default(autoincrement())
+  org_id      Int  
+  member_id   Int  
+  @@index([member_id])        
 }
 
 model project {
@@ -68,7 +76,7 @@ model teaminvitation {
   message      String 
   status       Status       @default(pending)             
   createdAt    DateTime     @default(now())               
-  @@unique([sender_email, receiver_email, org_id])
+  @@unique([receiver_email, org_id])
   @@index([receiver_email])
 }
 

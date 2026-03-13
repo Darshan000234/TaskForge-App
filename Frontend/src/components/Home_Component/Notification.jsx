@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 
 const Notification = () => {
   const [notifications, setNotifications] = useState([]);
-
+  const orgId = localStorage.getItem("org_id");
   useEffect(() => {
     const fetchInvites = async () => {
       try {
@@ -31,7 +31,7 @@ const Notification = () => {
 
   const acceptInvite = async (id) => {
     try {
-      await api.post(`/invite/${id}/accept`);
+      socket.emit("accept_invite", { invite_id: id , org_id: Number(orgId)});
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       toast.success("Joined workspace");
     } catch (err) {
@@ -96,7 +96,7 @@ const Notification = () => {
               {/* Accept */}
               <button
                 onClick={() => acceptInvite(invite.id)}
-                className="w-24 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 active:scale-95  text-[15px] font-medium transition-all"
+                className="w-24 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-green-500 active:scale-95  text-[15px] font-medium transition-all cursor-pointer"
               >
                 <Check size={13} />
                 Accept
@@ -105,7 +105,7 @@ const Notification = () => {
               {/* Reject */}
               <button
                 onClick={() => rejectInvite(invite.id)}
-                className="w-24 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-red-600 active:scale-95 text-[15px] font-medium text-zinc-300 hover:text-white transition-all"
+                className="w-24 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-red-600 active:scale-95 text-[15px] font-medium text-zinc-300 hover:text-white transition-all cursor-pointer"
               >
                 <X size={13} />
                 Reject

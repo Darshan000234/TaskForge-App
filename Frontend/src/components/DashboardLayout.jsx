@@ -54,10 +54,11 @@ const DashboardLayout = () => {
   
   useEffect(() => {
     if (activeorg?.id) {
-      console.log(activeorg?.id);
+      // console.log(activeorg?.id);
       localStorage.setItem("org_id", activeorg?.id);
     }
   },[activeorg]);
+  
   const toggleDrawer = () => {
     const newState = !collapsed;
     setCollapsed(newState);

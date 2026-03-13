@@ -1,5 +1,5 @@
 import { Search, Users, Activity, Shield } from "lucide-react";
-import { useState , useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import toast from "react-hot-toast";
 import api from "../../api/api.js";
 // import { useOutletContext } from "react-router-dom";
@@ -10,7 +10,7 @@ const Team = () => {
   const [members, setMembers] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const orgId = Number(localStorage.getItem("org_id"));
+  const orgId = localStorage.getItem("org_id");
 
   useEffect(() => {
     const getMembers = async () => {
@@ -21,16 +21,33 @@ const Team = () => {
         toast.error(error.message || "Failed to fetch team members");
       }
     }
-    
+
     getMembers();
+  }, []);
+
+  useEffect(() => {
+    const handlestatuschange = (data) => {
+      setMembers((prevmember) => {
+        return prevmember.map((member) => {
+          if (member.id === data.id) {
+            return { ...member, status: data.status }
+          }
+          return member;
+        })
+      })
+    }
+    socket.on("invite_accepted", handlestatuschange);
+    return () => {
+      socket.off("invite_accepted", handlestatuschange);
+    }
   }, []);
 
   const inviteMember = (e) => {
     e.preventDefault();
-    
+
     console.log("sended");
     console.log(socket.connected);
-    socket.emit("invite_user", { email: inviteEmail, org_id: orgId })
+    socket.emit("invite_user", { email: inviteEmail, org_id: Number(orgId) })
     setInviteEmail("");
     setShowInvite(false);
   };
@@ -107,14 +124,14 @@ const Team = () => {
           </thead>
 
           <tbody>
-            {members.map((member,index) => (
+            {members.map((member, index) => (
               <tr
                 key={member.id}
                 className="border-b border-zinc-800 hover:bg-zinc-900/40 transition"
               >
                 <td className="px-6 py-4 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-xs">
-                  {index+1}
+                    {index + 1}
                   </div>
                 </td>
 

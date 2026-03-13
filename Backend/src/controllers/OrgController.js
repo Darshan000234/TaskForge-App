@@ -75,7 +75,7 @@ export const DataOrganization = async (req, res) => {
 };
 
 export const DataOrganizationMembers = async (req, res) => {
-    const id = req.params.id;
+    const id = Number(req.params.id);
     // console.log(id);
     try {
         const data  = await prisma.teaminvitation.findMany({
@@ -86,6 +86,7 @@ export const DataOrganizationMembers = async (req, res) => {
         // console.log(data);
         res.status(200).json(data);
     } catch (error) {
+        console.log(error);
         res.status(400).json({ message: "something went wrong" });
     }
 }

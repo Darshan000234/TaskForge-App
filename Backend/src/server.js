@@ -41,7 +41,7 @@ const io = new Server(server, {
 // SOCKET AUTH
 io.use(async (socket, next) => {
   try {
-    console.log("use");
+    // console.log("use");
     const token = socket.handshake.auth.token;
     // console.log(token);
     if (!token) return next(new Error("Unauthorized"));
@@ -73,25 +73,24 @@ io.use(async (socket, next) => {
 // SOCKET EVENTS
 io.on("connection", (socket) => {
 
-  console.log("user connected:", socket.id);
-  console.log("user:", socket.user.email);
+  // console.log("user connected:", socket.id);
+  // console.log("user:", socket.user.email);
 
   socket.on("invite_user", async ({ email , org_id }) => {
 
-    console.log("invite receive");
+    // console.log("invite receive");
     try {
       
-      console.log("come");
+      // console.log("come");
       if (socket.user.email === email) {
         return socket.emit("invite_error", {
           message: "User not found"
         });
       }
-      console.log(1);
+      // console.log(1);
       const existingInvite = await prisma.teaminvitation.findUnique({
         where: {
-          sender_email_receiver_email_org_id: {
-            sender_email: socket.user.email,
+          receiver_email_org_id: {
             receiver_email: email,
             org_id: org_id
           }
@@ -109,16 +108,33 @@ io.on("connection", (socket) => {
           message: "User already a member of the organization"
         });
       }
-
-      const invite = await prisma.teaminvitation.create({
-        data: {
-          sender_email: socket.user.email,
-          receiver_email: email,
-          org_id: org_id,
-          status: "pending",
-          message: `${socket.user.name} has invited you to join the organization`
-        }
-      });
+      
+      const invite = null;
+      if(existingInvite && existingInvite.status === "rejected") {
+        invite = await prisma.teaminvitation.update({
+            where : {
+              receiver_email_org_id : {
+                receiver_email: email,
+                org_id: org_id
+              }
+            },
+            data : {
+              sender_email: socket.user.email,
+              status: "pending",
+              message: `${socket.user.name} has invited you to join the organization`
+            }
+        });
+      }else{
+        invite = await prisma.teaminvitation.create({
+          data: {
+            sender_email: socket.user.email,
+            receiver_email: email,
+            org_id: org_id,
+            status: "pending",
+            message: `${socket.user.name} has invited you to join the organization`
+          }
+        });
+      }
 
       io.to(email).emit("invite_received", invite);
 
@@ -128,6 +144,18 @@ io.on("connection", (socket) => {
 
   });
 
+  socket.on("accept_invite", async ({ invite_id, org_id }) => {
+    try {
+      await prisma.teaminvitation.update({
+        where: { id: invite_id, org_id: org_id },
+        data: { status: "accepted" }
+      });
+      console.log("invite accepted");
+      socket.emit("invite_accepted", { id : invite_id, status: "accepted" });
+    }catch (err){
+      console.error(err);
+    }
+  });
   socket.on("disconnect", () => {
     // console.log("user disconnected:", socket.id);
   });
