@@ -3,6 +3,7 @@ import socket from "../../socket/socket.js";
 import { Bell, Check, X } from "lucide-react";
 import api from "../../api/api.js";
 import toast from "react-hot-toast";
+import { i } from "framer-motion/client";
 
 const Notification = () => {
   const [notifications, setNotifications] = useState([]);
@@ -29,20 +30,20 @@ const Notification = () => {
     return () => socket.off("invite_received", handleInvite);
   }, []);
 
-  const acceptInvite = async (id) => {
+  const acceptInvite = async (invite) => {
     try {
-      socket.emit("accept_invite", { invite_id: id , org_id: Number(orgId)});
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      socket.emit("accept_invite", { invite_id: invite.id });
+      setNotifications((prev) => prev.filter((n) => n.id !== invite.id));
       toast.success("Joined workspace");
     } catch (err) {
       toast.error("Failed to accept invite");
     }
   };
 
-  const rejectInvite = async (id) => {
+  const rejectInvite = async (invite) => {
     try {
-      await api.post(`/orgs/invite/${id}/reject`);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      socket.emit("reject_invite", { invite_id: invite.id });
+      setNotifications((prev) => prev.filter((n) => n.id !== invite.id));
       toast.success("Invite rejected");
     } catch (err) {
       toast.error("Failed to reject invite");
@@ -81,9 +82,8 @@ const Notification = () => {
           {notifications.map((invite, index) => (
             <div
               key={invite.id}
-              className={`grid grid-cols-[1fr_auto_auto] gap-4 items-center px-5 py-4 hover:bg-zinc-900/60 transition-colors ${
-                index !== notifications.length - 1 ? "border-b border-zinc-800" : ""
-              }`}
+              className={`grid grid-cols-[1fr_auto_auto] gap-4 items-center px-5 py-4 hover:bg-zinc-900/60 transition-colors ${index !== notifications.length - 1 ? "border-b border-zinc-800" : ""
+                }`}
             >
               {/* Message */}
               <div>
@@ -95,7 +95,7 @@ const Notification = () => {
 
               {/* Accept */}
               <button
-                onClick={() => acceptInvite(invite.id)}
+                onClick={() => acceptInvite(invite)}
                 className="w-24 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-green-500 active:scale-95  text-[15px] font-medium transition-all cursor-pointer"
               >
                 <Check size={13} />
@@ -104,7 +104,7 @@ const Notification = () => {
 
               {/* Reject */}
               <button
-                onClick={() => rejectInvite(invite.id)}
+                onClick={() => rejectInvite(invite)}
                 className="w-24 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-red-600 active:scale-95 text-[15px] font-medium text-zinc-300 hover:text-white transition-all cursor-pointer"
               >
                 <X size={13} />

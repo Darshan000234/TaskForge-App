@@ -21,7 +21,6 @@ const Team = () => {
         toast.error(error.message || "Failed to fetch team members");
       }
     }
-
     getMembers();
   }, []);
 
@@ -36,18 +35,31 @@ const Team = () => {
         })
       })
     }
+
+    const handlemember = (data) => {
+      setMembers((prevmember) => {
+        return [data, ...prevmember]
+      })
+    }
+
     socket.on("invite_accepted", handlestatuschange);
+    socket.on("invite_rejected", handlestatuschange);
+    socket.on("invite_received", handlemember);
     return () => {
       socket.off("invite_accepted", handlestatuschange);
+      socket.off("invite_rejected", handlestatuschange);
+      socket.off("invite_received", handlemember);
     }
   }, []);
 
-  const inviteMember = (e) => {
-    e.preventDefault();
-
-    console.log("sended");
-    console.log(socket.connected);
-    socket.emit("invite_user", { email: inviteEmail, org_id: Number(orgId) })
+  const inviteMember = ({Email,id}) => {
+    console.log(id);
+    if(id){
+      setMembers((prevmember) => prevmember.filter((n) => n.id !== id));
+    }
+    console.log(members);
+    
+    socket.emit("invite_user", { email: Email, org_id: Number(orgId) })
     setInviteEmail("");
     setShowInvite(false);
   };
@@ -139,10 +151,18 @@ const Team = () => {
                   {member.receiver_email}
                 </td>
 
-                <td className="px-6 py-4">
-                  <span className="px-3 py-1 text-xs rounded-md bg-purple-600/20 text-purple-400 font-medium">
-                    {member.status}
+                <td className="px-6 py-4 flex items-center gap-3">
+                  <span className={`px-3 py-1 rounded-md font-medium ${member.status === "rejected" ? "bg-red-600/20 text-red-400" : "bg-purple-600/20 text-purple-400"}`}>
+                      {member.status}
                   </span>
+                  {member.status === "rejected" && (
+                    <button
+                      onClick={() => inviteMember({Email: member.receiver_email,id: member.id})}
+                      className="px-3 py-1 rounded-md bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 transition font-medium"
+                    >
+                      Resend
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -161,7 +181,10 @@ const Team = () => {
               </p>
             </div>
 
-            <form onSubmit={inviteMember} className="space-y-4">
+            <form onSubmit={(e)=> {
+              e.preventDefault();
+              inviteMember({Email: inviteEmail,id: 0})
+            }} className="space-y-4">
               <div>
                 <label className="text-sm">Email</label>
                 <input

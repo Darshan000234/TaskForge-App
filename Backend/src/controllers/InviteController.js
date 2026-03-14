@@ -18,6 +18,3 @@ export const inviteData = async (req, res) => {
     }
 }
 
-// export const acceptInvite = async (req, res) => {
-
-// }
