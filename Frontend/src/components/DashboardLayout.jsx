@@ -29,22 +29,24 @@ const DashboardLayout = () => {
   const [show, setShow] = useState(false);
   const [orgs,setOrgs] = useState([]);
   const [activeorg, setactiveOrg] = useState(null);
+
   useEffect(() => {
     socket.auth = {
       token: localStorage.getItem("accessToken")
     };
-
     socket.connect();
     return () => {
       socket.disconnect();
     };
   }, []);
+
   useEffect(() => {
     const fetchOrgs = async () => {
       try {
         const org = await api.get("/orgs");
         setOrgs(org.data);
         setactiveOrg(org.data?.[0] || null);
+        console.log(org.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
       }
@@ -54,11 +56,24 @@ const DashboardLayout = () => {
   
   useEffect(() => {
     if (activeorg?.id) {
-      // console.log(activeorg?.id);
-      localStorage.setItem("org_id", activeorg?.id);
+      localStorage.setItem("orgId", activeorg?.id);
+      // console.log(activeorg.id);
     }
   },[activeorg]);
   
+  useEffect(() => {
+    const handleJoinOrg = (data) => {
+      setOrgs((prevOrgs) => [...prevOrgs, data.org]);
+    }
+    socket.on("joined_org",handleJoinOrg);
+    // console.log();
+    if(!activeorg && orgs) setactiveOrg(orgs[0]);
+    return () => {
+      socket.off("joined_org",handleJoinOrg);
+    }
+  }, [])
+  
+
   const toggleDrawer = () => {
     const newState = !collapsed;
     setCollapsed(newState);
@@ -137,7 +152,7 @@ const DashboardLayout = () => {
               </div>
 
               {orgs.map((item)=> (
-                <div className="px-2 pb-2">
+                <div key={item.id} className="px-2 pb-2">
                 <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
 
                   <div className="flex-1 min-w-0">
@@ -147,7 +162,7 @@ const DashboardLayout = () => {
                     </p>
 
                     <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      Role: Admin
+                      Role: {item.role}
                     </p>
 
                     <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
@@ -191,13 +206,11 @@ const DashboardLayout = () => {
           )}
         </div>
         <nav
-          className={`flex-1 py-8 space-y-2 ${collapsed ? "px-2" : "px-6"
-            }`}
+          className={`flex-1 py-8 space-y-2 ${collapsed ? "px-2" : "px-6"}`}
         >
-          {/* MAIN NAV */}
           <div>
-            {navItems.map((item, i) => (
-              <Link key={i} to={item.path}>
+            {navItems.map((item) => (
+              <Link key={item.path} to={item.path}>
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   title={collapsed ? item.label : ""}

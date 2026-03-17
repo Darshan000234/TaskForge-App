@@ -2,14 +2,13 @@ import prisma from '../config/prisma.js';
 
 export const addOrganization = async (req, res) => {
     const { name } = req.body;
-    const { id, email } = req.user;
+    const { id } = req.user;
     try {
         // console.log(name);
         await prisma.org.create({
             data : {
                 name: name,
                 userId: id,
-                user_email: email,
                 member_count: 0,
                 proj_count: 0
             }
@@ -60,17 +59,46 @@ export const deleteOrganization = async (req, res) => {
 
 export const DataOrganization = async (req, res) => {
     const { id } = req.user;
-    
+
     try {
-        const data = await prisma.org.findMany({
-            where : {
-                userId : id
+        const ownedOrgs = await prisma.org.findMany({
+            where: { userId: id },
+            select: {
+                id: true,
+                name: true,
+                member_count: true,
+                proj_count: true,
+                role: true,
+                createdAt: true
             }
         });
-        // console.log(data);
+
+        const memberOrgs = await prisma.org_member.findMany({
+            where: { member_id: id },
+            include: {
+                org: {
+                    select: {
+                        id: true,
+                        name: true,
+                        member_count: true,
+                        proj_count: true,
+                        createdAt: true
+                    }
+                }
+            }
+        });
+
+        const memberData = memberOrgs.map(item => ({
+            ...item.org,
+            role: "member"
+        }));
+
+
+        const data = [...memberData, ...ownedOrgs];
         res.status(200).json(data);
     } catch (error) {
-        res.status(400).json({ message: "something went wrong" });
+        console.error(error);
+        res.status(500).json({ message: "Something went wrong" });
     }
 };
 

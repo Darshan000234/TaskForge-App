@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import plus from '../../assets/img/plus.png';
 import folder from '../../assets/img/folder.png';
 import blue_folder from '../../assets/img/blue_folder.png';
@@ -8,7 +7,6 @@ import orange_warn from '../../assets/img/orange_warn.png';
 import user from '../../assets/img/user.png';
 import warning from '../../assets/img/warning.png';
 import clock from '../../assets/img/clock.png';
-import socket from '../../socket/socket';
 
 const Dashboard = ({ }) => {
   const stats = [

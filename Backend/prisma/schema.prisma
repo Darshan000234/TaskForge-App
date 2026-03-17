@@ -32,26 +32,35 @@ model org {
   id           Int          @id @default(autoincrement())
   name         String       
   userId       Int 
-  user_email   String
   member_count Int 
   proj_count   Int 
+  role         String       @default("admin")
   createdAt    DateTime     @default(now())
-  @@index([userId])
+
+  members      org_member[]
+  
+  @@index([userId]) 
   @@index([id])
 }
 
 model org_member {
-  id          Int           @id @default(autoincrement())
-  org_id      Int  
-  member_id   Int  
-  @@index([member_id])        
+  id           Int    @id @default(autoincrement())
+  org_id       Int
+  member_id    Int
+  member_email String
+  role         String @default("member")
+
+  org          org    @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  
+  @@index([member_id])
+  @@unique([member_id,org_id])
+  @@index([org_id])
 }
 
 model project {
   id           Int          @id @default(autoincrement())
   name         String 
-  userId       Int 
-  user_email   String
+  userId       Int
   org_id       Int
   assigned_to  Int
   createdAt    DateTime     @default(now())
@@ -61,7 +70,6 @@ model task {
   id           Int          @id @default(autoincrement())
   name         String
   userId       Int 
-  user_email   String
   project_id   Int
   org_id       Int 
   assigned_to  Int
@@ -70,14 +78,15 @@ model task {
 
 model teaminvitation {
   id           Int          @id @default(autoincrement()) 
-  sender_email    String 
-  receiver_email  String 
+  sender_id    Int 
+  receiver_id  Int
+  receiver_email String 
   org_id       Int
   message      String 
   status       Status       @default(pending)             
   createdAt    DateTime     @default(now())               
-  @@unique([receiver_email, org_id])
-  @@index([receiver_email])
+  @@unique([receiver_id, org_id])
+  @@index([receiver_id])
 }
 
 

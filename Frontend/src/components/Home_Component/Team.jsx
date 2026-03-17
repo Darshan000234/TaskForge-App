@@ -10,18 +10,20 @@ const Team = () => {
   const [members, setMembers] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const orgId = localStorage.getItem("org_id");
-
+  const orgId = localStorage.getItem("orgId");
+  
+  
   useEffect(() => {
     const getMembers = async () => {
       try {
         const response = await api.get(`/orgs/${orgId}/members`);
         setMembers(response.data);
+        console.log(response.data);
       } catch (error) {
         toast.error(error.message || "Failed to fetch team members");
       }
     }
-    getMembers();
+    if(orgId) getMembers();
   }, []);
 
   useEffect(() => {
@@ -38,28 +40,40 @@ const Team = () => {
 
     const handlemember = (data) => {
       setMembers((prevmember) => {
+
         return [data, ...prevmember]
       })
     }
 
+    const handledata = (data) => {
+      if(orgId == data.org.id) {
+        setMembers(data.invite);
+      }
+    }
     socket.on("invite_accepted", handlestatuschange);
     socket.on("invite_rejected", handlestatuschange);
-    socket.on("invite_received", handlemember);
+    socket.on("sender_invite", handlemember);
+    socket.on("joined_org",handledata);
     return () => {
       socket.off("invite_accepted", handlestatuschange);
       socket.off("invite_rejected", handlestatuschange);
-      socket.off("invite_received", handlemember);
+      socket.off("sender_invite", handlemember);
+      socket.off("joined_org",handledata);
     }
   }, []);
 
   const inviteMember = ({Email,id}) => {
     console.log(id);
     if(id){
-      setMembers((prevmember) => prevmember.filter((n) => n.id !== id));
+      setMembers((prevmember) => prevmember.map((n) => 
+      {
+        if(n.status=="rejected") n.status = "pending"
+        return n;
+      } 
+      ));
     }
-    console.log(members);
     
-    socket.emit("invite_user", { email: Email, org_id: Number(orgId) })
+    socket.emit("invite_user", { email: Email, org_id: Number(orgId) });
     setInviteEmail("");
     setShowInvite(false);
   };
