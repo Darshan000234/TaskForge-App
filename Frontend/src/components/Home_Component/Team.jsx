@@ -5,25 +5,25 @@ import api from "../../api/api.js";
 // import { useOutletContext } from "react-router-dom";
 import socket from "../../socket/socket.js";
 
-const URL = import.meta.env.VITE_URL;
 const Team = () => {
   const [members, setMembers] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const orgId = localStorage.getItem("orgId");
+  const org = JSON.parse(localStorage.getItem("org"));
   
   
   useEffect(() => {
     const getMembers = async () => {
       try {
-        const response = await api.get(`/orgs/${orgId}/members`);
+        // console.log(orgId);
+        const response = await api.get(`/orgs/${org.id}/members`);
         setMembers(response.data);
         console.log(response.data);
       } catch (error) {
         toast.error(error.message || "Failed to fetch team members");
       }
     }
-    if(orgId) getMembers();
+    if(org.id) getMembers();
   }, []);
 
   useEffect(() => {
@@ -46,7 +46,7 @@ const Team = () => {
     }
 
     const handledata = (data) => {
-      if(orgId == data.org.id) {
+      if(org.id == data.org.id) {
         setMembers(data.invite);
       }
     }
@@ -73,7 +73,7 @@ const Team = () => {
       ));
     }
     
-    socket.emit("invite_user", { email: Email, org_id: Number(orgId) });
+    socket.emit("invite_user", { email: Email, org_id: Number(org.id) });
     setInviteEmail("");
     setShowInvite(false);
   };

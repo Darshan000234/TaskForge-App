@@ -10,6 +10,7 @@ import prisma from "./config/prisma.js";
 import userRoute from "./routes/User/UserRoute.js";
 import orgRoute from "./routes/Organization/OrgRoute.js";
 import inviteRoute from "./routes/User/inviteRoute.js";
+import projectRoute from "./routes/Project/projectRoute.js";
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use(cookieParser());
 app.use("/user", userRoute);
 app.use("/orgs", orgRoute);
 app.use("/invites", inviteRoute);
+app.use("/org/proj", projectRoute);
 
 const server = http.createServer(app);
 

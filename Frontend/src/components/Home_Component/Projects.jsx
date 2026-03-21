@@ -1,42 +1,13 @@
 import { useState, useEffect } from "react";
-import {  Search, Plus,ChevronDown, LayoutGrid, List} from "lucide-react";
+import { Search, Plus, ChevronDown, LayoutGrid, List } from "lucide-react";
 import ProjectRow from "./Project_Component/ProjectRow";
 import EmptyState from "./Project_Component/EmptyState";
 import ProjectCard from "./Project_Component/ProjectCard";
 import NewProjectModal from "./Project_Component/NewProjectModal";
+import api from "../../api/api.js";
 
-const MOCK_PROJECTS = [
-  {
-    id: 1, name: "Marketing Redesign", description: "Full rebrand of the marketing site including landing pages and blog.",
-    status: "active", priority: "high", createdBy: "Rahul M.", createdAt: "2025-03-01T10:00:00Z", updatedAt: "2026-03-18T08:30:00Z",
-  },
-  {
-    id: 2, name: "Backend API v2", description: "Migrate REST endpoints to GraphQL and add rate limiting.",
-    status: "active", priority: "high", createdBy: "Sneha K.", createdAt: "2025-02-15T09:00:00Z", updatedAt: "2026-03-17T14:00:00Z",
-  },
-  {
-    id: 3, name: "Mobile App MVP", description: "React Native app for iOS and Android with core task management features.",
-    status: "active", priority: "medium", createdBy: "Arjun P.", createdAt: "2025-01-20T11:00:00Z", updatedAt: "2026-03-15T10:00:00Z",
-  },
-  {
-    id: 4, name: "Analytics Dashboard", description: "Internal dashboard for tracking org-level metrics and team performance.",
-    status: "completed", priority: "medium", createdBy: "Rahul M.", createdAt: "2025-03-10T08:00:00Z", updatedAt: "2026-03-10T16:00:00Z",
-  },
-  {
-    id: 5, name: "Onboarding Flow", description: "Redesign user onboarding to reduce drop-off in the first 7 days.",
-    status: "onhold", priority: "low", createdBy: "Sneha K.", createdAt: "2024-11-05T07:00:00Z", updatedAt: "2025-12-01T12:00:00Z",
-  },
-  {
-    id: 6, name: "DevOps Infra Setup", description: null,
-    status: "cancelled", priority: "low", createdBy: "Arjun P.", createdAt: "2024-09-01T06:00:00Z", updatedAt: "2025-10-20T09:00:00Z",
-  },
-];
-
-
-const STATUS_OPTIONS = ["all", "active", "completed","cancelled","onhold"];
+const STATUS_OPTIONS = ["all", "active", "completed", "cancelled", "onhold"];
 const PRIORITY_OPTIONS = ["all", "low", "medium", "high"];
-
-
 const Dropdown = ({ value, options, onChange, label }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -54,9 +25,8 @@ const Dropdown = ({ value, options, onChange, label }) => {
             <button
               key={opt}
               onClick={() => { onChange(opt); setOpen(false); }}
-              className={`cursor-pointer w-full text-left px-4 py-2 text-sm capitalize hover:bg-zinc-800 transition ${
-                value === opt ? "text-white font-medium" : "text-zinc-400"
-              }`}
+              className={`cursor-pointer w-full text-left px-4 py-2 text-sm capitalize hover:bg-zinc-800 transition ${value === opt ? "text-white font-medium" : "text-zinc-400"
+                }`}
             >
               {opt === "all" ? `All ${label}` : opt}
             </button>
@@ -78,11 +48,16 @@ const Projects = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
   const [showModal, setShowModal] = useState(false);
+  const org = JSON.parse(localStorage.getItem("org"));
 
   useEffect(() => {
     // Simulates a network fetch — swap with real api.get() call
-    const t = setTimeout(() => {
-      setProjects(MOCK_PROJECTS);
+    const t = setTimeout(async () => {
+    //  console.log(org);
+      const proj = await api.post(`/org/proj/${org.id}`, {
+        role: org.role
+      });
+      setProjects(proj.data);
       setLoading(false);
     }, 800);
     return () => clearTimeout(t);
@@ -183,7 +158,6 @@ const Projects = () => {
 
       {showModal && (
         <NewProjectModal
-          orgName="your workspace"  // replace with real org name from context/API
           onClose={() => setShowModal(false)}
           onCreated={(newProject) => {
             setProjects((prev) => [newProject, ...prev]);

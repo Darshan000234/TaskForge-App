@@ -55,8 +55,8 @@ const DashboardLayout = () => {
   }, [])
   
   useEffect(() => {
-    if (activeorg?.id) {
-      localStorage.setItem("orgId", activeorg?.id);
+    if (activeorg) {
+      localStorage.setItem("org", JSON.stringify(activeorg));
       // console.log(activeorg.id);
     }
   },[activeorg]);

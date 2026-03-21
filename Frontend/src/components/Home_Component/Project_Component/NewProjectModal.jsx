@@ -18,10 +18,10 @@ const INITIAL_FORM = {
   memberIds: [],
 };
 
-const NewProjectModal = ({ onClose, onCreated, orgName = "workspace" }) => {
+const NewProjectModal = ({ onClose, onCreated}) => {
     const [form, setForm] = useState(INITIAL_FORM);
     const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
-
+    const org = JSON.parse(localStorage.getItem("org"));
     const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
     const toggleMember = (id) => {
@@ -70,7 +70,7 @@ const NewProjectModal = ({ onClose, onCreated, orgName = "workspace" }) => {
                             <h2 className="text-xl font-bold">Create New Project</h2>
                             <p className="text-sm text-zinc-400 mt-0.5">
                                 In workspace:{" "}
-                                <span className="text-blue-400 font-medium">{orgName}</span>
+                                <span className="text-blue-400 font-medium">{org.name}</span>
                             </p>
                         </div>
                         <button

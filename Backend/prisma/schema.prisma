@@ -18,6 +18,11 @@ enum Status {
   rejected
 }
 
+enum Role {
+  manager
+  member 
+} 
+
 model User {
   id           Int          @id @default(autoincrement())
   name         String
@@ -59,11 +64,17 @@ model org_member {
 
 model project {
   id           Int          @id @default(autoincrement())
-  name         String 
-  userId       Int
+  name         String
   org_id       Int
   assigned_to  Int
+  Descirption  String 
+  status       String 
+  priority     String 
+  last_update  DateTime    @default(now()) 
+  members      proj_member[]
+
   createdAt    DateTime     @default(now())
+  @@index([org_id])
 }
 
 model task {
@@ -89,6 +100,16 @@ model teaminvitation {
   @@index([receiver_id])
 }
 
+model proj_member {
+  id           Int         @id @default(autoincrement())
+  proj_id      Int 
+  org_id       Int 
+  member_id    Int 
+  role         Role 
 
+  project      project     @relation(fields: [proj_id], references: [id], onDelete: Cascade)
+
+  @@index([org_id,member_id])
+}
 
 

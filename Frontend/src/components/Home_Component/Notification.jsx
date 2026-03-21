@@ -3,15 +3,14 @@ import socket from "../../socket/socket.js";
 import { Bell, Check, X } from "lucide-react";
 import api from "../../api/api.js";
 import toast from "react-hot-toast";
-import { i } from "framer-motion/client";
 
 const Notification = () => {
   const [notifications, setNotifications] = useState([]);
-  const orgId = localStorage.getItem("org_id");
+  const org = JSON.parse(localStorage.getItem("org"));
   useEffect(() => {
     const fetchInvites = async () => {
       try {
-        const res = await api.get("/invites");
+        const res = await api.get(`/invites/${org.id}`);
         setNotifications(res.data.data);
       } catch (err) {
         toast.error(err.message);
