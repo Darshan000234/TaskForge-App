@@ -18,7 +18,7 @@ const Team = () => {
         // console.log(orgId);
         const response = await api.get(`/orgs/${org.id}/members`);
         setMembers(response.data);
-        console.log(response.data);
+        // console.log(response.data);
       } catch (error) {
         toast.error(error.message || "Failed to fetch team members");
       }
@@ -40,7 +40,6 @@ const Team = () => {
 
     const handlemember = (data) => {
       setMembers((prevmember) => {
-
         return [data, ...prevmember]
       })
     }
@@ -63,7 +62,7 @@ const Team = () => {
   }, []);
 
   const inviteMember = ({Email,id}) => {
-    console.log(id);
+    // console.log(id);
     if(id){
       setMembers((prevmember) => prevmember.map((n) => 
       {

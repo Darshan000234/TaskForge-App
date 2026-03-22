@@ -75,8 +75,19 @@ io.on("connection", (socket) => {
   // console.log("user connected:", socket.id);
   // console.log("user:", socket.user.email);
   socket.join(`user:${socket.user.id}`);
+  socket.on("join_org",async ({org})=>{
+    const member = await prisma.org_member.findUnique({
+      where : {
+        member_email : socket.user.email
+      },
+      select : {
+        id : true
+      }
+    })
+    socket.join(`org_${member.id}`);
+  });
   socket.on("invite_user", async ({ email, org_id }) => {
-
+  
     console.log("invite receive");
     try {
       const receiver = await prisma.user.findUnique({
@@ -197,6 +208,45 @@ io.on("connection", (socket) => {
       io.to(`user:${id}`).emit("invite_rejected", { id: invite_id, status: "rejected" });
     } catch (err) {
       console.error(err);
+    }
+  });
+
+  socket.on("project_created", async ({ project, orgId }) => {
+    console.log("coming");
+    console.log(project.description);
+    try {
+      const data = await prisma.project.create({
+        data : {
+          name : project.name,
+          org_id : orgId,
+          assigned_to : project.leadId,
+          Description : project.description,
+          status : project.status,
+          priority : project.priority,
+          endDate : project.endDate 
+        }
+      })
+      console.log("going");
+      const member = await prisma.org_member.findUnique({
+        where : {
+          member_email : project.leadId
+        },
+        select : {
+          id : true,
+          member_id : true
+        }
+      })
+      await prisma.proj_member.create({
+        data : {
+          proj_id : data.id,
+          org_id : orgId,
+          member_id : member.member_id,
+          role : "manager"
+        }
+      })
+      io.to(`user_${member.id}`).emit("project_created", { project });
+    } catch (error) {
+      console.log(error);
     }
   });
 

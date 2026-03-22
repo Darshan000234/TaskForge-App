@@ -4,6 +4,7 @@ import ProjectRow from "./Project_Component/ProjectRow";
 import EmptyState from "./Project_Component/EmptyState";
 import ProjectCard from "./Project_Component/ProjectCard";
 import NewProjectModal from "./Project_Component/NewProjectModal";
+import socket from "../../socket/socket.js";
 import api from "../../api/api.js";
 
 const STATUS_OPTIONS = ["all", "active", "completed", "cancelled", "onhold"];
@@ -63,6 +64,7 @@ const Projects = () => {
     return () => clearTimeout(t);
   }, []);
 
+
   const filtered = projects.filter((p) => {
     const matchSearch = p.name?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || p.status === statusFilter;
@@ -72,9 +74,15 @@ const Projects = () => {
 
   const handleProjectClick = (projectId) => {
     console.log("Navigate to project:", projectId);
-    // navigate(`/app/orgs/${orgId}/projects/${projectId}`);
+    // socket.emit("projectcreated",{ })
   };
 
+  const handleProjectCreated = (newProject) => {
+    console.log(newProject);
+    setProjects((prev) => [newProject, ...prev]);
+    setShowModal(false);
+    socket.emit("project_created",{project : newProject, orgId : Number(org.id)});
+  }
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
       {/* Header */}
@@ -160,8 +168,7 @@ const Projects = () => {
         <NewProjectModal
           onClose={() => setShowModal(false)}
           onCreated={(newProject) => {
-            setProjects((prev) => [newProject, ...prev]);
-            setShowModal(false);
+            handleProjectCreated(newProject);
           }}
         />
       )}

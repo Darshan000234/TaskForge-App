@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import {  ChevronDown,X } from "lucide-react";
-
-const MOCK_MEMBERS = [
-  { id: 1, name: "Rahul M." },
-  { id: 2, name: "Sneha K." },
-  { id: 3, name: "Arjun P." },
-];
-
+import api from "../../../api/api.js";
 const INITIAL_FORM = {
   name: "",
   description: "",
@@ -15,30 +9,26 @@ const INITIAL_FORM = {
   startDate: "",
   endDate: "",
   leadId: "",
+  email: "",
   memberIds: [],
 };
 
 const NewProjectModal = ({ onClose, onCreated}) => {
     const [form, setForm] = useState(INITIAL_FORM);
-    const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
     const org = JSON.parse(localStorage.getItem("org"));
+    const [members,setMembers] = useState([]);
     const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
-    const toggleMember = (id) => {
-        set(
-            "memberIds",
-            form.memberIds.includes(id)
-                ? form.memberIds.filter((m) => m !== id)
-                : [...form.memberIds, id]
-        );
-    };
-
-    const selectedMemberNames = MOCK_MEMBERS.filter((m) =>
-        form.memberIds.includes(m.id)
-    )
-        .map((m) => m.name)
-        .join(", ");
-
+    useEffect(() => {
+        const getMembers = async () =>{
+            // console.log(org.id);
+            const response = await api.get(`/orgs/${org.id}/members`);
+            setMembers(response.data);
+            // console.log(response.data);
+        }
+        getMembers();
+    }, [])
+    
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!form.name.trim()) return;
@@ -46,12 +36,15 @@ const NewProjectModal = ({ onClose, onCreated}) => {
             id: Date.now(),
             name: form.name,
             description: form.description,
-            status: form.status === "planning" ? "active" : form.status,
+            status: !form.status ? "active":form.status,
             priority: form.priority,
-            createdBy: "You",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            leadId: form.leadId,
+            email : form.email,
+            startDate: form.startDate,
+            endDate: form.endDate,
+            
         });
+        console.log(form.description);
     };
 
     const inputCls =
@@ -116,10 +109,8 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                                         onChange={(e) => set("status", e.target.value)}
                                         className={selectCls}
                                     >
-                                        <option value="planning">Planning</option>
                                         <option value="active">Active</option>
                                         <option value="on_hold">On Hold</option>
-                                        <option value="archived">Archived</option>
                                     </select>
                                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                                 </div>
@@ -169,54 +160,23 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                             <div className="relative">
                                 <select
                                     value={form.leadId}
-                                    onChange={(e) => set("leadId", e.target.value)}
+                                    onChange={(e) => {
+                                        const selected = members.find(m => m.receiver_id === e.target.value);
+                                        set("leadId", selected.receiver_id);
+                                        set("email", selected.receiver_email);
+                                    }}
                                     className={selectCls}
                                 >
                                     <option value="">No lead</option>
-                                    {MOCK_MEMBERS.map((m) => (
-                                        <option key={m.id} value={m.id}>{m.name}</option>
+                                    {members.map((m,idx) => (
+                                        <option key={m.id} value={m.receiver_id}>{m.receiver_email}</option>
                                     ))}
                                 </select>
                                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                             </div>
                         </div>
 
-                        {/* Team Members — multi-select dropdown */}
-                        <div>
-                            <label className={labelCls}>Team Members</label>
-                            <div className="relative">
-                                <button
-                                    type="button"
-                                    onClick={() => setMemberDropdownOpen((o) => !o)}
-                                    className="w-full flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 py-2.5 px-3 text-sm text-left transition hover:border-zinc-500"
-                                >
-                                    <span className={selectedMemberNames ? "text-zinc-200" : "text-zinc-500"}>
-                                        {selectedMemberNames || "Add team members"}
-                                    </span>
-                                    <ChevronDown size={14} className="text-zinc-400 shrink-0" />
-                                </button>
-                                {memberDropdownOpen && (
-                                    <div className="absolute top-full mt-1 left-0 right-0 bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden z-30">
-                                        {MOCK_MEMBERS.map((m) => (
-                                            <label
-                                                key={m.id}
-                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800 transition cursor-pointer"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={form.memberIds.includes(m.id)}
-                                                    onChange={() => toggleMember(m.id)}
-                                                    className="accent-blue-500"
-                                                />
-                                                <span className="text-sm text-zinc-300">{m.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Actions */}
+                        
                         <div className="flex justify-end gap-3 pt-2">
                             <button
                                 type="button"

@@ -67,9 +67,10 @@ model project {
   name         String
   org_id       Int
   assigned_to  Int
-  Descirption  String 
+  Description  String 
   status       String 
-  priority     String 
+  priority     String
+  endDate      DateTime 
   last_update  DateTime    @default(now()) 
   members      proj_member[]
 

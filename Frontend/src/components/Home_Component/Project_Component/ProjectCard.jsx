@@ -21,7 +21,7 @@ const ProjectCard = ({project , onClick}) => {
                     {project.description || "No description"}
                 </p>
                 <div className="mt-4 pt-4 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
-                    <span className="flex text-[14px] items-center gap-1.5"><User size={12} />{project.createdBy ?? "Unknown"}</span>
+                    <span className="flex text-[14px] items-center gap-1.5"><User size={12} />{project.email ?? "Unknown"}</span>
                     <span className="flex items-center gap-1.5"><Clock size={12} />{timeAgo(project.updatedAt ?? project.createdAt)}</span>
                 </div>
             </div>

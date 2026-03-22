@@ -16,7 +16,6 @@ export const projData = async (req,res) => {
                     org_id : Number(orgid)
                 }
             });
-            console.log("inside");
         }else {
             data = await prisma.org_member.findMany({
                 where : {

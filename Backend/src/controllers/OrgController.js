@@ -110,6 +110,7 @@ export const DataOrganizationMembers = async (req, res) => {
             where : {
                 org_id : id
             }
+            
         });
         // console.log(data);
         res.status(200).json(data);

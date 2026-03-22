@@ -23,7 +23,7 @@ const navItems = [
   { icon: <Settings size={20} />, label: "Settings", path: "/user/dashboard/settings" },
 ];
 
-const URL = import.meta.env.VITE_URL;
+// const URL = import.meta.env.VITE_URL;
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [show, setShow] = useState(false);
@@ -46,7 +46,8 @@ const DashboardLayout = () => {
         const org = await api.get("/orgs");
         setOrgs(org.data);
         setactiveOrg(org.data?.[0] || null);
-        console.log(org.data);
+        // socket.emit("join_org",{ org : org.data?.[0]});
+        // console.log(org.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
       }
