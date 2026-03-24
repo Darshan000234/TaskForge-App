@@ -21,7 +21,7 @@ enum Status {
 enum Role {
   manager
   member 
-} 
+}  
 
 model User {
   id           Int          @id @default(autoincrement())
@@ -31,6 +31,8 @@ model User {
   googleId     String?      @unique
   authProvider AuthProvider @default(local)
   createdAt    DateTime     @default(now())
+
+  projectMemberships proj_member[]
 }
 
 model org {
@@ -109,8 +111,11 @@ model proj_member {
   role         Role 
 
   project      project     @relation(fields: [proj_id], references: [id], onDelete: Cascade)
+  member       User    @relation(fields: [member_id], references: [id], onDelete: Cascade)
 
-  @@index([org_id,member_id])
+  @@index([org_id, member_id])
+  @@index([proj_id])
+  @@unique([proj_id, member_id])
 }
 
 

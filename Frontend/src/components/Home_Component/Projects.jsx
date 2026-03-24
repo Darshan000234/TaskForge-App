@@ -6,6 +6,9 @@ import ProjectCard from "./Project_Component/ProjectCard";
 import NewProjectModal from "./Project_Component/NewProjectModal";
 import socket from "../../socket/socket.js";
 import api from "../../api/api.js";
+import ConfirmDeleteModal from "./Project_Component/ConfirmDeleteModal";
+import ReassignManagerModal from "./Project_Component/ReassignManagerModal";
+import { h1 } from "framer-motion/client";
 
 const STATUS_OPTIONS = ["all", "active", "completed", "cancelled", "onhold"];
 const PRIORITY_OPTIONS = ["all", "low", "medium", "high"];
@@ -50,6 +53,8 @@ const Projects = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [showModal, setShowModal] = useState(false);
   const org = JSON.parse(localStorage.getItem("org"));
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [reassignTarget, setReassignTarget] = useState(null);
 
   useEffect(() => {
     // Simulates a network fetch — swap with real api.get() call
@@ -60,11 +65,47 @@ const Projects = () => {
       });
       setProjects(proj.data);
       setLoading(false);
+      // console.log(proj.data);
     }, 800);
+    // console.log(org.id);
+    
     return () => clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    const handleProjectCreated = (data) => {
+      // console.log(data);
+      setLoading(true);
+      setProjects((prev) => [data, ...prev]);
+      setTimeout(() => {
+        setLoading(false);
+      }, 4000);
+    }
+    socket.on("project_created",handleProjectCreated);
+    return () => {
+      socket.off("project_created",handleProjectCreated);
+    }
+  }, [])
 
+  const handleDelete = async (projectId) => {
+    try {
+      await api.delete(`/org/proj/${projectId}`);
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      socket.emit("project_deleted", { projectId, orgId: Number(org.id) });
+    } catch (err) {
+      console.error("Delete failed:", err);
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleReassigned = (updatedProject) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+    );
+    setReassignTarget(null);
+    // socket.emit("reassing_project",)
+  };
   const filtered = projects.filter((p) => {
     const matchSearch = p.name?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || p.status === statusFilter;
@@ -78,10 +119,11 @@ const Projects = () => {
   };
 
   const handleProjectCreated = (newProject) => {
-    console.log(newProject);
+    // console.log(newProject);
     setProjects((prev) => [newProject, ...prev]);
     setShowModal(false);
     socket.emit("project_created",{project : newProject, orgId : Number(org.id)});
+    // console.log(projects);
   }
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
@@ -139,7 +181,13 @@ const Projects = () => {
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((project) => (
-              <ProjectCard key={project.id} project={project} onClick={() => handleProjectClick(project.id)} />
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onClick={() => handleProjectClick(project.id)}
+                onDelete={setDeleteTarget}      // <-- changed: pass project object to state
+                onReassign={setReassignTarget}
+              />
             ))}
           </div>
         ) : (
@@ -152,11 +200,18 @@ const Projects = () => {
                   <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium">Created By</th>
                   <th className="px-6 py-4 font-medium">Last Updated</th>
+                  <th className="px-6 py-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((project) => (
-                  <ProjectRow key={project.id} project={project} onClick={() => handleProjectClick(project.id)} />
+                  <ProjectRow
+                    key={project.id}
+                    project={project}
+                    onClick={() => handleProjectClick(project.id)}
+                    onDelete={setDeleteTarget}
+                    onReassign={setReassignTarget}
+                  />
                 ))}
               </tbody>
             </table>
@@ -170,6 +225,22 @@ const Projects = () => {
           onCreated={(newProject) => {
             handleProjectCreated(newProject);
           }}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          project={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+        />
+      )}
+
+      {reassignTarget && (
+        <ReassignManagerModal
+          project={reassignTarget}
+          onClose={() => setReassignTarget(null)}
+          onReassigned={handleReassigned}
         />
       )}
     </div>

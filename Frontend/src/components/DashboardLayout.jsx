@@ -44,10 +44,9 @@ const DashboardLayout = () => {
     const fetchOrgs = async () => {
       try {
         const org = await api.get("/orgs");
+        // console.log(org);
         setOrgs(org.data);
         setactiveOrg(org.data?.[0] || null);
-        // socket.emit("join_org",{ org : org.data?.[0]});
-        // console.log(org.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
       }
@@ -58,7 +57,8 @@ const DashboardLayout = () => {
   useEffect(() => {
     if (activeorg) {
       localStorage.setItem("org", JSON.stringify(activeorg));
-      // console.log(activeorg.id);
+      // console.log(activeorg);
+      socket.emit("join_org",{ org : activeorg});
     }
   },[activeorg]);
   

@@ -61,6 +61,8 @@ io.use(async (socket, next) => {
       name: user.name,
       id: user.id
     };
+    // console.log(user);
+    
     next();
 
   } catch (err) {
@@ -75,17 +77,25 @@ io.on("connection", (socket) => {
   // console.log("user connected:", socket.id);
   // console.log("user:", socket.user.email);
   socket.join(`user:${socket.user.id}`);
+
   socket.on("join_org",async ({org})=>{
     const member = await prisma.org_member.findUnique({
       where : {
-        member_email : socket.user.email
+        member_id_org_id : {
+          org_id : Number(org.id),
+          member_id : socket.user.id
+        }
       },
       select : {
         id : true
       }
     })
+    // console.log(org.id);
+    // console.log(socket.user.id);
     socket.join(`org_${member.id}`);
+    // console.log(socket.user.email);
   });
+
   socket.on("invite_user", async ({ email, org_id }) => {
   
     console.log("invite receive");
@@ -212,39 +222,44 @@ io.on("connection", (socket) => {
   });
 
   socket.on("project_created", async ({ project, orgId }) => {
-    console.log("coming");
-    console.log(project.description);
+    // console.log("coming");
+    // console.log(project.description);
     try {
+      const user = await prisma.user.findUnique({
+        where : {
+          email : project.email
+        }
+      })
       const data = await prisma.project.create({
         data : {
           name : project.name,
           org_id : orgId,
-          assigned_to : project.leadId,
+          assigned_to : user.id,
           Description : project.description,
           status : project.status,
           priority : project.priority,
-          endDate : project.endDate 
+          endDate : new Date(project.endDate) 
         }
-      })
-      console.log("going");
-      const member = await prisma.org_member.findUnique({
-        where : {
-          member_email : project.leadId
-        },
-        select : {
-          id : true,
-          member_id : true
-        }
-      })
+      });
+    
       await prisma.proj_member.create({
         data : {
           proj_id : data.id,
           org_id : orgId,
-          member_id : member.member_id,
+          member_id : user.id,
           role : "manager"
         }
       })
-      io.to(`user_${member.id}`).emit("project_created", { project });
+      const member = await prisma.org_member.findUnique({
+        where : {
+          member_id_org_id : {
+            org_id : orgId, 
+            member_id : user.id
+          }
+        }
+      })
+      // console.log(member.id);
+      io.to(`org_${member.id}`).emit("project_created", { project : data });
     } catch (error) {
       console.log(error);
     }

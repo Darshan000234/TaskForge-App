@@ -61,41 +61,21 @@ export const DataOrganization = async (req, res) => {
     const { id } = req.user;
 
     try {
-        const ownedOrgs = await prisma.org.findMany({
-            where: { userId: id },
-            select: {
-                id: true,
-                name: true,
-                member_count: true,
-                proj_count: true,
-                role: true,
-                createdAt: true
-            }
-        });
-
-        const memberOrgs = await prisma.org_member.findMany({
-            where: { member_id: id },
-            include: {
-                org: {
-                    select: {
-                        id: true,
-                        name: true,
-                        member_count: true,
-                        proj_count: true,
-                        createdAt: true
-                    }
-                }
-            }
-        });
-
-        const memberData = memberOrgs.map(item => ({
-            ...item.org,
-            role: "member"
-        }));
-
-
-        const data = [...memberData, ...ownedOrgs];
-        res.status(200).json(data);
+        const org = await prisma.$queryRaw`
+            SELECT 
+                o.id,
+                o.name,
+                o.member_count,
+                o.proj_count,
+                om.role,
+                o."createdAt"
+            FROM org_member om
+            INNER JOIN org o 
+                ON om.org_id = o.id
+            WHERE om.member_id = ${id};
+        `;
+        // console.log(org);
+        res.status(200).json( org );
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Something went wrong" });

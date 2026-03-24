@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import {  ChevronDown,X } from "lucide-react";
 import api from "../../../api/api.js";
+
 const INITIAL_FORM = {
   name: "",
   description: "",
   status: "active",
   priority: "medium",
-  startDate: "",
   endDate: "",
-  leadId: "",
   email: "",
   memberIds: [],
 };
@@ -38,13 +37,10 @@ const NewProjectModal = ({ onClose, onCreated}) => {
             description: form.description,
             status: !form.status ? "active":form.status,
             priority: form.priority,
-            leadId: form.leadId,
             email : form.email,
-            startDate: form.startDate,
-            endDate: form.endDate,
-            
+            endDate: form.endDate
         });
-        console.log(form.description);
+        // console.log(form.description);
     };
 
     const inputCls =
@@ -135,15 +131,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                         {/* Start Date + End Date */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className={labelCls}>Start Date</label>
-                                <input
-                                    type="date"
-                                    value={form.startDate}
-                                    onChange={(e) => set("startDate", e.target.value)}
-                                    className={inputCls}
-                                />
-                            </div>
-                            <div>
                                 <label className={labelCls}>End Date</label>
                                 <input
                                     type="date"
@@ -159,17 +146,13 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                             <label className={labelCls}>Project Lead</label>
                             <div className="relative">
                                 <select
-                                    value={form.leadId}
-                                    onChange={(e) => {
-                                        const selected = members.find(m => m.receiver_id === e.target.value);
-                                        set("leadId", selected.receiver_id);
-                                        set("email", selected.receiver_email);
-                                    }}
+                                    value={form.email}
+                                    onChange={(e) => set("email", e.target.value)}
                                     className={selectCls}
                                 >
                                     <option value="">No lead</option>
                                     {members.map((m,idx) => (
-                                        <option key={m.id} value={m.receiver_id}>{m.receiver_email}</option>
+                                        <option key={m.id} value={m.receiver_email}>{m.receiver_email}</option>
                                     ))}
                                 </select>
                                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
