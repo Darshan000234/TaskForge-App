@@ -18,19 +18,6 @@ const app = express();
 const port = 3000;
 const URL = process.env.CLIENT_URL;
 
-app.use(cors({
-  origin: URL,
-  credentials: true
-}));
-
-app.use(express.json());
-app.use(cookieParser());
-
-app.use("/user", userRoute);
-app.use("/orgs", orgRoute);
-app.use("/invites", inviteRoute);
-app.use("/org/proj", projectRoute);
-
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -39,6 +26,19 @@ const io = new Server(server, {
     credentials: true
   }
 });
+
+app.use(cors({
+  origin: URL,
+  credentials: true
+}));
+
+app.use(express.json());
+app.use(cookieParser());
+app.set("io",io);
+app.use("/user", userRoute);
+app.use("/orgs", orgRoute);
+app.use("/invites", inviteRoute);
+app.use("/org/proj", projectRoute);
 
 // SOCKET AUTH
 io.use(async (socket, next) => {
@@ -96,9 +96,13 @@ io.on("connection", (socket) => {
     // console.log(socket.user.email);
   });
 
+  socket.on("join_proj",async ({proj})=>{
+    socket.join(`project_${proj.id}`);
+  });
+  
   socket.on("invite_user", async ({ email, org_id }) => {
   
-    console.log("invite receive");
+    // console.log("invite receive");
     try {
       const receiver = await prisma.user.findUnique({
         where: { email }

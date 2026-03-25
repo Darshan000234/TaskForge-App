@@ -74,24 +74,34 @@ const Projects = () => {
 
   useEffect(() => {
     const handleProjectCreated = (data) => {
-      // console.log(data);
+      socket.emit('join_proj',{ proj : data});
       setLoading(true);
       setProjects((prev) => [data, ...prev]);
       setTimeout(() => {
         setLoading(false);
       }, 4000);
     }
+    const handleProjectDeleted = (data) => {
+      setLoading(true);
+      setProjects((prev)=> prev.filter((p) => p.id!==data.id));
+      setTimeout(() => {
+        setLoading(false);
+      }, 4000);
+    }
     socket.on("project_created",handleProjectCreated);
+    // socket.on("project_deleted",handleProjectDeleted);
     return () => {
       socket.off("project_created",handleProjectCreated);
+      // socket.on("project_deleted",handleProjectDeleted);
     }
   }, [])
 
   const handleDelete = async (projectId) => {
     try {
-      await api.delete(`/org/proj/${projectId}`);
+      // console.log(projectId);
+      // await api.delete(`/org/proj/${projectId}`);
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
-      socket.emit("project_deleted", { projectId, orgId: Number(org.id) });
+      // socket.emit("project_deleted", { projectId, orgId: Number(org.id) });
     } catch (err) {
       console.error("Delete failed:", err);
     } finally {
@@ -106,6 +116,7 @@ const Projects = () => {
     setReassignTarget(null);
     // socket.emit("reassing_project",)
   };
+
   const filtered = projects.filter((p) => {
     const matchSearch = p.name?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || p.status === statusFilter;
@@ -118,12 +129,11 @@ const Projects = () => {
     // socket.emit("projectcreated",{ })
   };
 
-  const handleProjectCreated = (newProject) => {
+  const handleProjectCreated =async (newProject) => {
     // console.log(newProject);
     setProjects((prev) => [newProject, ...prev]);
     setShowModal(false);
-    socket.emit("project_created",{project : newProject, orgId : Number(org.id)});
-    // console.log(projects);
+    await api.post('/org/proj/', { proj : newProject, orgid : Number(org.id)});
   }
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
@@ -185,7 +195,7 @@ const Projects = () => {
                 key={project.id}
                 project={project}
                 onClick={() => handleProjectClick(project.id)}
-                onDelete={setDeleteTarget}      // <-- changed: pass project object to state
+                onDelete={() => handleDelete(project.id)}      // <-- changed: pass project object to state
                 onReassign={setReassignTarget}
               />
             ))}
@@ -209,7 +219,7 @@ const Projects = () => {
                     key={project.id}
                     project={project}
                     onClick={() => handleProjectClick(project.id)}
-                    onDelete={setDeleteTarget}
+                    onDelete={() => handleDelete(project.id)}
                     onReassign={setReassignTarget}
                   />
                 ))}
