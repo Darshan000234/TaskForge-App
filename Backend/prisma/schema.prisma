@@ -33,6 +33,7 @@ model User {
   createdAt    DateTime     @default(now())
 
   projectMemberships proj_member[]
+  projectAssigner    project[]
 }
 
 model org {
@@ -75,6 +76,8 @@ model project {
   endDate      DateTime 
   last_update  DateTime    @default(now()) 
   members      proj_member[]
+
+  member       User    @relation(fields: [assigned_to], references: [id], onDelete: Cascade)
 
   createdAt    DateTime     @default(now())
   @@index([org_id])

@@ -27,6 +27,7 @@ const io = new Server(server, {
   }
 });
 
+app.set("io",io);
 app.use(cors({
   origin: URL,
   credentials: true
@@ -34,7 +35,6 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
-app.set("io",io);
 app.use("/user", userRoute);
 app.use("/orgs", orgRoute);
 app.use("/invites", inviteRoute);
@@ -72,8 +72,15 @@ io.use(async (socket, next) => {
 
 
 // SOCKET EVENTS
-io.on("connection", (socket) => { 
- 
+io.on("connection", async (socket) => { 
+  const userId = socket.user.id;
+  const projects = await prisma.proj_member.findMany({
+    where: { member_id: userId }
+  });
+
+  projects.forEach(p => {
+    socket.join(`project_${p.proj_id}`);
+  });
   // console.log("user connected:", socket.id);
   // console.log("user:", socket.user.email);
   socket.join(`user:${socket.user.id}`);
@@ -91,12 +98,12 @@ io.on("connection", (socket) => {
       }
     })
     // console.log(org.id);
-    // console.log(socket.user.id);
-    socket.join(`org_${member.id}`);
     // console.log(socket.user.email);
+    socket.join(`org_${member.id}`);
   });
 
   socket.on("join_proj",async ({proj})=>{
+    console.log(socket.user.email);
     socket.join(`project_${proj.id}`);
   });
   

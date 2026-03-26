@@ -54,18 +54,18 @@ const ProjectRow = ({ project, onClick, onDelete, onReassign }) => {
 
       {/* Actions column */}
       <td className="px-5 py-4">
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
+        <div className="flex items-center gap-2">
           <button
             onClick={(e) => handleAction(e, () => onReassign(project))}
             title="Reassign Manager"
-            className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-500 hover:text-blue-400 transition"
+            className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-500 hover:text-blue-400 transition cursor-pointer"
           >
             <UserCog size={16} />
           </button>
           <button
             onClick={(e) => handleAction(e, () => onDelete(project))}
             title="Delete Project"
-            className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-500 hover:text-red-400 transition"
+            className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-500 hover:text-red-400 transition cursor-pointer"
           >
             <Trash2 size={16} />
           </button>

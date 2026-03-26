@@ -1,5 +1,5 @@
-import timeAgo from '../../../utils/timeAgo.js';
-import { FolderOpen, Clock, User, Trash2, UserCog } from "lucide-react";
+
+import { FolderOpen, User, Trash2, UserCog } from "lucide-react";
 
 const ProjectCard = ({ project, onClick, onDelete, onReassign }) => {
   const statusStyle = {
@@ -9,7 +9,7 @@ const ProjectCard = ({ project, onClick, onDelete, onReassign }) => {
     onhold:    "bg-yellow-500/15 text-yellow-400",
     cancelled: "bg-red-500/15 text-red-400",
   };
-
+  // console.log(project);
   const handleAction = (e, cb) => {
     e.stopPropagation();
     cb();
@@ -25,14 +25,14 @@ const ProjectCard = ({ project, onClick, onDelete, onReassign }) => {
         <button
           onClick={(e) => handleAction(e, () => onReassign(project))}
           title="Reassign Manager"
-          className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-blue-400 transition"
+          className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-blue-400 transition cursor-pointer"
         >
           <UserCog size={15} />
         </button>
         <button
           onClick={(e) => handleAction(e, () => onDelete(project))}
           title="Delete Project"
-          className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition"
+          className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition cursor-pointer"
         >
           <Trash2 size={15} />
         </button>

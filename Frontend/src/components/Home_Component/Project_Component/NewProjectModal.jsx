@@ -4,7 +4,7 @@ import api from "../../../api/api.js";
 
 const INITIAL_FORM = {
   name: "",
-  description: "",
+  Description: "",
   status: "active",
   priority: "medium",
   endDate: "",
@@ -32,9 +32,9 @@ const NewProjectModal = ({ onClose, onCreated}) => {
         e.preventDefault();
         if (!form.name.trim()) return;
         onCreated({
-            id: Date.now(),
+            id: '',
             name: form.name,
-            description: form.description,
+            Description: form.Description,
             status: !form.status ? "active":form.status,
             priority: form.priority,
             email : form.email,
@@ -87,8 +87,8 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                         <div>
                             <label className={labelCls}>Description</label>
                             <textarea
-                                value={form.description}
-                                onChange={(e) => set("description", e.target.value)}
+                                value={form.Description}
+                                onChange={(e) => set("Description", e.target.value)}
                                 placeholder="Describe your project"
                                 rows={2}
                                 className={`${inputCls} resize-y overflow-auto min-h-15 max-h-50`}

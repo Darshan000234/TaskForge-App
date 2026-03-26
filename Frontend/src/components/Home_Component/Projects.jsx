@@ -74,34 +74,36 @@ const Projects = () => {
 
   useEffect(() => {
     const handleProjectCreated = (data) => {
-      socket.emit('join_proj',{ proj : data});
+      console.log(data);
+      const project = data.project;
       setLoading(true);
-      setProjects((prev) => [data, ...prev]);
+      setProjects((prev) => [project, ...prev]);
       setTimeout(() => {
         setLoading(false);
       }, 4000);
+      socket.emit('join_proj',{ proj : project});
     }
     const handleProjectDeleted = (data) => {
+      console.log(data.id);
       setLoading(true);
+      // const project = data.id;
       setProjects((prev)=> prev.filter((p) => p.id!==data.id));
       setTimeout(() => {
         setLoading(false);
       }, 4000);
     }
     socket.on("project_created",handleProjectCreated);
-    // socket.on("project_deleted",handleProjectDeleted);
+    socket.on("project_deleted",handleProjectDeleted);
     return () => {
       socket.off("project_created",handleProjectCreated);
-      // socket.on("project_deleted",handleProjectDeleted);
+      socket.on("project_deleted",handleProjectDeleted);
     }
   }, [])
 
   const handleDelete = async (projectId) => {
     try {
-      // console.log(projectId);
-      // await api.delete(`/org/proj/${projectId}`);
+      await api.delete(`/org/proj/${projectId}`);
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
-      // socket.emit("project_deleted", { projectId, orgId: Number(org.id) });
     } catch (err) {
       console.error("Delete failed:", err);
     } finally {
@@ -114,7 +116,6 @@ const Projects = () => {
       prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
     );
     setReassignTarget(null);
-    // socket.emit("reassing_project",)
   };
 
   const filtered = projects.filter((p) => {
@@ -130,10 +131,15 @@ const Projects = () => {
   };
 
   const handleProjectCreated =async (newProject) => {
-    // console.log(newProject);
-    setProjects((prev) => [newProject, ...prev]);
+    console.log(newProject);
     setShowModal(false);
-    await api.post('/org/proj/', { proj : newProject, orgid : Number(org.id)});
+    setLoading(true);
+    const data = await api.post('/org/proj/', { proj : newProject, orgid : Number(org.id)});
+    // console.log(data.data.project);
+    setProjects((prev) => [data.data.project, ...prev]);
+    setTimeout(() => {
+      setLoading(false);
+    }, 4000);
   }
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
@@ -195,8 +201,8 @@ const Projects = () => {
                 key={project.id}
                 project={project}
                 onClick={() => handleProjectClick(project.id)}
-                onDelete={() => handleDelete(project.id)}      // <-- changed: pass project object to state
-                onReassign={setReassignTarget}
+                onDelete={() => setDeleteTarget(project)}  
+                onReassign={() => setReassignTarget(project)}
               />
             ))}
           </div>
@@ -219,8 +225,8 @@ const Projects = () => {
                     key={project.id}
                     project={project}
                     onClick={() => handleProjectClick(project.id)}
-                    onDelete={() => handleDelete(project.id)}
-                    onReassign={setReassignTarget}
+                    onDelete={() => handleDelete(project)}
+                    onReassign={() => setReassignTarget(project)}
                   />
                 ))}
               </tbody>
