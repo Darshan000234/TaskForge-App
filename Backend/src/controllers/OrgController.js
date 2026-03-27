@@ -2,10 +2,10 @@ import prisma from '../config/prisma.js';
 
 export const addOrganization = async (req, res) => {
     const { name } = req.body;
-    const { id } = req.user;
+    const { id,email } = req.user; 
     try {
         // console.log(name);
-        await prisma.org.create({
+        const org = await prisma.org.create({
             data : {
                 name: name,
                 userId: id,
@@ -13,7 +13,15 @@ export const addOrganization = async (req, res) => {
                 proj_count: 0
             }
         });
-        res.status(201).json({ message: "create successfully" });
+        await prisma.org_member.create({
+            data : {
+                org_id : org.id,
+                member_id : id,
+                member_email : email,
+                role : "admin"
+            }
+        });
+        res.status(201).json(org);
     } catch (error) {
          if (error.code === "P2002") {
             return res.status(400).json({
@@ -62,22 +70,15 @@ export const DataOrganization = async (req, res) => {
 
     try {
         const org = await prisma.$queryRaw`
-            SELECT 
-                o.id,
-                o.name,
-                o.member_count,
-                o.proj_count,
-                om.role,
-                o."createdAt"
-            FROM org_member om
-            INNER JOIN org o 
-                ON om.org_id = o.id
-            WHERE om.member_id = ${id};
-        `;
+        SELECT o.id, o.name, o.member_count, o.proj_count, om.role, o."createdAt" 
+        FROM org_member om 
+        INNER JOIN org o 
+        ON om.org_id = o.id 
+        WHERE om.member_id = ${id}`;
         // console.log(org);
         res.status(200).json( org );
     } catch (error) {
-        console.error(error);
+        console.error(error , "dataorganization");
         res.status(500).json({ message: "Something went wrong" });
     }
 };
@@ -92,10 +93,27 @@ export const DataOrganizationMembers = async (req, res) => {
             }
             
         });
-        // console.log(data);
         res.status(200).json(data);
     } catch (error) {
         console.log(error);
         res.status(400).json({ message: "something went wrong" });
+    }
+}
+
+export const activeOrgs = async(req,res) => {
+    const id  = req.params.id;
+    const userID = req.user.id;
+    try {
+        await prisma.user.update({
+            where : {
+                id : userID
+            },
+            data : {
+                activeOrgs : id
+            }
+        });
+        res.status(200).json( id );
+    } catch (error) {
+        res.status(400).json({ message: "something went wrong"});
     }
 }

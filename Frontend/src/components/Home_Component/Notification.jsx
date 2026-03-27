@@ -10,7 +10,7 @@ const Notification = () => {
   useEffect(() => {
     const fetchInvites = async () => {
       try {
-        const res = await api.get(`/invites/${org.id}`);
+        const res = await api.get(`/invites/`);
         setNotifications(res.data.data);
       } catch (err) {
         toast.error(err.message);

@@ -6,6 +6,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import prisma from "./config/prisma.js";
+import { userSockets } from "./utils/userSockets.js";
 
 import userRoute from "./routes/User/UserRoute.js";
 import orgRoute from "./routes/Organization/OrgRoute.js";
@@ -27,7 +28,7 @@ const io = new Server(server, {
   }
 });
 
-app.set("io",io);
+app.set("io", io);
 app.use(cors({
   origin: URL,
   credentials: true
@@ -62,7 +63,7 @@ io.use(async (socket, next) => {
       id: user.id
     };
     // console.log(user);
-    
+
     next();
 
   } catch (err) {
@@ -70,10 +71,14 @@ io.use(async (socket, next) => {
   }
 });
 
-
-// SOCKET EVENTS
-io.on("connection", async (socket) => { 
+io.on("connection", async (socket) => {
   const userId = socket.user.id;
+
+  if (!userSockets.has(userId)) {
+    userSockets.set(userId, new Set());
+  }
+
+  userSockets.get(userId).add(socket.id);
   const projects = await prisma.proj_member.findMany({
     where: { member_id: userId }
   });
@@ -83,32 +88,32 @@ io.on("connection", async (socket) => {
   });
   // console.log("user connected:", socket.id);
   // console.log("user:", socket.user.email);
-  socket.join(`user:${socket.user.id}`);
+  socket.join(`user:${socket.user.id}`); 
 
-  socket.on("join_org",async ({org})=>{
+  socket.on("join_org", async ({ org }) => {
+    
     const member = await prisma.org_member.findUnique({
-      where : {
-        member_id_org_id : {
-          org_id : Number(org.id),
-          member_id : socket.user.id
+      where: {
+        member_id_org_id: {
+          org_id: Number(org.id),
+          member_id: socket.user.id
         }
       },
-      select : {
-        id : true
+      select: { 
+        id: true
       }
     })
-    // console.log(org.id);
-    // console.log(socket.user.email);
-    socket.join(`org_${member.id}`);
+      socket.join(`org_${member.id}`);
+      console.log(socket.user.email);
   });
 
-  socket.on("join_proj",async ({proj})=>{
+  socket.on("join_proj", async ({ proj }) => {
     console.log(socket.user.email);
     socket.join(`project_${proj.id}`);
   });
-  
+
   socket.on("invite_user", async ({ email, org_id }) => {
-  
+
     // console.log("invite receive");
     try {
       const receiver = await prisma.user.findUnique({
@@ -177,8 +182,8 @@ io.on("connection", async (socket) => {
       }
 
       console.log('sending');
-      io.to(`user:${receiver.id}`).emit("invite_received", invite);
-      if(prev) return socket.emit("sender_invite",invite);
+      io.to(`user:${receiver.id}`).emit("invite_received", { invite });
+      if (prev) return socket.emit("sender_invite", { invite });
     } catch (err) {
       console.error(err);
     }
@@ -191,8 +196,8 @@ io.on("connection", async (socket) => {
         data: { status: "accepted" }
       });
       const org = await prisma.org.update({
-        where: {id : invite.org_id},
-        data:{
+        where: { id: invite.org_id },
+        data: {
           member_count: {
             increment: 1
           }
@@ -204,21 +209,21 @@ io.on("connection", async (socket) => {
           org_id: invite.org_id,
           member_id: invite.receiver_id,
           member_email: invite.receiver_email
-        }        
+        }
       })
       org.role = "member";
       const data = await prisma.teaminvitation.findMany({
-        where : {
-          org_id : invite.org_id
+        where: {
+          org_id: invite.org_id
         }
       })
       io.to(`user:${id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
-      return socket.emit("joined_org", { org: org , invite : data});
+      return socket.emit("joined_org", { org: org, invite: data });
     } catch (err) {
       console.error(err);
     }
   });
-  
+
   socket.on("reject_invite", async ({ invite_id }) => {
     try {
       const receiver = await prisma.teaminvitation.update({
@@ -237,47 +242,46 @@ io.on("connection", async (socket) => {
     // console.log(project.description);
     try {
       const user = await prisma.user.findUnique({
-        where : {
-          email : project.email
+        where: {
+          email: project.email
         }
       })
       const data = await prisma.project.create({
-        data : {
-          name : project.name,
-          org_id : orgId,
-          assigned_to : user.id,
-          Description : project.description,
-          status : project.status,
-          priority : project.priority,
-          endDate : new Date(project.endDate) 
+        data: {
+          name: project.name,
+          org_id: orgId,
+          assigned_to: user.id,
+          Description: project.description,
+          status: project.status,
+          priority: project.priority,
+          endDate: new Date(project.endDate)
         }
       });
-    
+
       await prisma.proj_member.create({
-        data : {
-          proj_id : data.id,
-          org_id : orgId,
-          member_id : user.id,
-          role : "manager"
+        data: {
+          proj_id: data.id,
+          org_id: orgId,
+          member_id: user.id,
+          role: "manager"
         }
       })
       const member = await prisma.org_member.findUnique({
-        where : {
-          member_id_org_id : {
-            org_id : orgId, 
-            member_id : user.id
+        where: {
+          member_id_org_id: {
+            org_id: orgId,
+            member_id: user.id
           }
         }
       })
-      // console.log(member.id);
-      io.to(`org_${member.id}`).emit("project_created", { project : data });
+      io.to(`org_${member.id}`).emit("project_created", { project: data });
     } catch (error) {
       console.log(error);
     }
   });
 
   socket.on("disconnect", () => {
-    // console.log("user disconnected:", socket.id);
+    userSockets.get(userId)?.delete(socket.id);
   });
 
 });

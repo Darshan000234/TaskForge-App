@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { userSockets } from "../utils/userSockets.js";
 
 export const projData = async (req, res) => {
     const { id } = req.user;
@@ -126,9 +127,11 @@ export const projectDelete = async (req, res) => {
             }
         });
 
-        // if (!proj) return res.status(404).json({ message: "project does not exist" });
-        // console.log(pid);
         io.to(`project_${pid}`).emit('project_deleted', { id: pid });
+        const sockets = await io.in(`proj_${pid}`).fetchSockets();
+        for (const socket of sockets) {
+            socket.leave(`proj_${pid}`);
+        }
         res.status(204).json({ message: ' project deleted successfully' });
     } catch (error) {
         console.log(error.message);
@@ -137,28 +140,20 @@ export const projectDelete = async (req, res) => {
 }
 
 export const reassignProject = async (req, res) => {
-    const id = req.params.id;
-    const { email,org }  = req.body;
+    const id = Number(req.params.id);
+    const { email, org } = req.body;
+    const io = req.app.get("io");
     try {
         const user = await prisma.user.findUnique({
-            where : {
-                email : email
+            where: {
+                email: email
             }
         });
-        const project = await prisma.project.update({
-            where : {
-                id : id
+        const project = await prisma.project.findUnique({
+            where: {
+                id: id
             }
         });
-        const proj = await prisma.project.update({
-            where : {
-                id : id
-            },
-            data : {
-                assigned_to : user.id
-            }
-        })
-        proj.email = email;
         const org_member = await prisma.org_member.findUnique({
             where: {
                 member_id_org_id: {
@@ -167,19 +162,57 @@ export const reassignProject = async (req, res) => {
                 }
             }
         });
-        await prisma.proj_member.update({
-            where : {
-                proj_id : id,
-                member_id : project.assigned_to,
-            }, data :{
-                member_id : user.id
+        await prisma.$transaction([
+            prisma.proj_member.delete({
+                where: {
+                    proj_id_member_id: {
+                        proj_id: id,
+                        member_id: project.assigned_to,
+                    }
+                }
+            }),
+            prisma.proj_member.create({
+                data: {
+                    proj_id: id,
+                    org_id: project.org_id,
+                    member_id: user.id,
+                    role: "manager"
+                }
+            })
+        ]);
+        const proj = await prisma.project.update({
+            where: {
+                id: id
+            },
+            data: {
+                assigned_to: user.id
             }
         })
-        io.to(`org_${org_member.id}`).emit('project_created', { project : proj});
-        io.to(`project_${id}`).emit('project_created', { project : proj});
-        io.to(`user_${proj.assigned_to}`).emit('project_deleted', { id: id });
-        res.status(204).json({ message : "assing to another user successfully"});
+        proj.email = email;
+        const prevOrgmember = await prisma.org_member.findUnique({
+            where: {
+                member_id_org_id: {
+                    member_id: project.assigned_to,
+                    org_id: Number(org.id)
+                }
+            }
+        });
+        // console.log('fine data');
+        io.to(`project_${id}`).emit('project_created', { project: proj });
+        io.to(`org_${org_member.id}`).emit('project_created', { project: proj });
+        io.to(`org_${prevOrgmember.id}`).emit('project_deleted', { id: id });
+        const sockets = userSockets.get(project.assigned_to);
+        if (!sockets) return;
+
+        for (const socketId of sockets) {
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+                socket.leave(`project_${id}`);
+            }
+        }
+        res.status(204).json({ message: "assing to another user successfully" });
     } catch (error) {
-        res.status(404).json({ message : error.message });
+        console.log(error.message);
+        res.status(404).json({ message: error.message });
     }
 }

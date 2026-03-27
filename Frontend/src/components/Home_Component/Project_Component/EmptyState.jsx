@@ -11,7 +11,7 @@ const EmptyState = ({ onNew }) => {
                 <p className="text-zinc-500 text-sm mt-1">Create your first project to get started</p>
                 <button
                     onClick={onNew}
-                    className="mt-6 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium"
+                    className="cursor-pointer mt-6 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium"
                 >
                     <Plus size={16} />Create Project
                 </button>

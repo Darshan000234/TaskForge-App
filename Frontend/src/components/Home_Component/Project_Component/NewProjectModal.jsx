@@ -164,13 +164,13 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-5 py-2.5 rounded-lg border border-zinc-700 text-sm hover:border-zinc-500 transition"
+                                className="cursor-pointer px-5 py-2.5 rounded-lg border border-zinc-700 text-sm hover:border-zinc-500 transition"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition"
+                                className="cursor-pointer px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition"
                             >
                                 Create Project
                             </button>

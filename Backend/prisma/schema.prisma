@@ -23,18 +23,6 @@ enum Role {
   member 
 }  
 
-model User {
-  id           Int          @id @default(autoincrement())
-  name         String
-  email        String       @unique
-  password     String?
-  googleId     String?      @unique
-  authProvider AuthProvider @default(local)
-  createdAt    DateTime     @default(now())
-
-  projectMemberships proj_member[]
-  projectAssigner    project[]
-}
 
 model org {
   id           Int          @id @default(autoincrement())
@@ -46,9 +34,24 @@ model org {
   createdAt    DateTime     @default(now())
 
   members      org_member[]
+  user         User[]
   
   @@index([userId]) 
   @@index([id])
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  name         String
+  email        String       @unique
+  password     String?
+  googleId     String?      @unique
+  activeorg    Int?          
+  org          org?          @relation(fields: [activeorg], references: [id], onDelete: Cascade) 
+  authProvider AuthProvider @default(local)
+  createdAt    DateTime     @default(now())
+  projectMemberships proj_member[]
+  projectAssigner    project[]
 }
 
 model org_member {

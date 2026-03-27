@@ -15,6 +15,7 @@ import notification from '../assets/img/inbox.png';
 import toast from "react-hot-toast";
 import api from "../api/api.js";
 import socket from "../socket/socket.js";
+import CreateOrgModal from "./CreateOrgModal.jsx";
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/user/dashboard" },
@@ -27,9 +28,15 @@ const navItems = [
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [show, setShow] = useState(false);
-  const [orgs,setOrgs] = useState([]);
-  const [activeorg, setactiveOrg] = useState(null);
+  const [orgs, setOrgs] = useState([]);
+  const [activeorg,setActiveOrg] = useState(null);
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
 
+  const handleOrgCreated = async (newOrg) => {
+    setOrgs((prev) => [...prev, newOrg]);
+    const id = await api.get(`/orgs/activeorg/${newOrg.id}`);
+    setActiveOrg(id);
+  };
   useEffect(() => {
     socket.auth = {
       token: localStorage.getItem("accessToken")
@@ -44,36 +51,16 @@ const DashboardLayout = () => {
     const fetchOrgs = async () => {
       try {
         const org = await api.get("/orgs");
-        // console.log(org);
         setOrgs(org.data);
-        setactiveOrg(org.data?.[0] || null);
+        const id = await api.get(`/orgs/activeorg/${org.data?.[0].id}`);
+        setActiveOrg(id);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
       }
     };
     fetchOrgs();
   }, [])
-  
-  useEffect(() => {
-    if (activeorg) {
-      localStorage.setItem("org", JSON.stringify(activeorg));
-      // console.log(activeorg);
-      socket.emit("join_org",{ org : activeorg});
-    }
-  },[activeorg]);
-  
-  useEffect(() => {
-    const handleJoinOrg = (data) => {
-      setOrgs((prevOrgs) => [...prevOrgs, data.org]);
-    }
-    socket.on("joined_org",handleJoinOrg);
-    // console.log();
-    if(!activeorg && orgs) setactiveOrg(orgs[0]);
-    return () => {
-      socket.off("joined_org",handleJoinOrg);
-    }
-  }, [])
-  
+
 
   const toggleDrawer = () => {
     const newState = !collapsed;
@@ -81,7 +68,7 @@ const DashboardLayout = () => {
     setShow(newState ? false : show);
   };
 
-  
+
   return (
     <div className="text-white min-h-screen flex">
 
@@ -152,55 +139,59 @@ const DashboardLayout = () => {
                 </p>
               </div>
 
-              {orgs.map((item)=> (
+              {orgs.map((item) => (
                 <div key={item.id} className="px-2 pb-2">
-                <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
+                  <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
 
-                  <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
 
-                    <p className="font-semibold text-gray-800 dark:text-white text-sm truncate">
-                      {item.name}
-                    </p>
+                      <p className="font-semibold text-gray-800 dark:text-white text-sm truncate">
+                        {item.name}
+                      </p>
 
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      Role: {item.role}
-                    </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        Role: {item.role}
+                      </p>
 
-                    <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
-                      <span>Members: {item.member_count}</span>
-                      <span>Created: {new Date(item.createdAt).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric"
-                          })}
-                      </span>
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
+                        <span>Members: {item.member_count}</span>
+                        <span>Created: {new Date(item.createdAt).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric"
+                        })}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-              </div>))}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-4 h-4 text-blue-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                </div>))}
 
               <div className="border-t border-zinc-800" />
 
               <div className="px-2 py-2">
-                <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition text-blue-500">
-                  <p className="text-sm font-medium">
-                    + Create Workspace
-                  </p>
+                <div
+                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition text-blue-500"
+                  onClick={() => {
+                    setShow(false);
+                    setShowCreateOrg(true);
+                  }}
+                >
+                  <p className="text-sm font-medium">+ Create Workspace</p>
                 </div>
               </div>
             </div>
@@ -289,23 +280,23 @@ const DashboardLayout = () => {
               </svg>
             </div>
             <Link to="/user/dashboard/notification">
-            <div
-              title={collapsed ? "Invites" : ""}
-              className={`
+              <div
+                title={collapsed ? "Invites" : ""}
+                className={`
         h-10 rounded-lg hover:bg-[#222225] cursor-pointer text-[16px] font-medium text-zinc-300
         flex items-center
         ${collapsed ? "justify-center" : "gap-3 px-2"}
       `}
-            >
-              <img src={notification} className="w-5 h-5" />
-              {!collapsed && (
+              >
+                <img src={notification} className="w-5 h-5" />
+                {!collapsed && (
                   <span>
                     Notification
-                  </span> 
+                  </span>
                 )}
-            </div>
-                </Link>
-            
+              </div>
+            </Link>
+
           </div>
         </nav>
 
@@ -331,8 +322,13 @@ const DashboardLayout = () => {
             />
           </div>
         </div>
-        <Outlet context={{ orgId: activeorg?.id }}/> {/* render child route here this is production based route handling*/}
+        <Outlet context={{ orgId: activeorg?.id }} /> {/* render child route here this is production based route handling*/}
       </motion.div>
+      <CreateOrgModal
+        isOpen={showCreateOrg}
+        onClose={() => setShowCreateOrg(false)}
+        onCreated={handleOrgCreated}
+      />
     </div>
   );
 }
