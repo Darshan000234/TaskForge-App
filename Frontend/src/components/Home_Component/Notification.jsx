@@ -3,24 +3,41 @@ import socket from "../../socket/socket.js";
 import { Bell, Check, X } from "lucide-react";
 import api from "../../api/api.js";
 import toast from "react-hot-toast";
+import NotificationSkeleton from "./Notification_Component/NotificationSkeleton.jsx"
 
 const Notification = () => {
   const [notifications, setNotifications] = useState([]);
-  const org = JSON.parse(localStorage.getItem("org"));
+  const [loading, setLoading] = useState(false);
+  const [org, setOrg] = useState(null);
   useEffect(() => {
+    const getActiveOrg = async () => {
+      try {
+        const res = await api.get('/orgs/activeorgs');
+        setOrg(res.data);
+      } catch (error) {
+        toast.error(error.message);
+      }
+    };
+
+    getActiveOrg();
+  }, []);
+  useEffect(() => {
+    if (!org) return;
     const fetchInvites = async () => {
       try {
-        const res = await api.get(`/invites/`);
-        setNotifications(res.data.data);
+        const res = await api.get('/invites/data');
+        setNotifications(res.data?.data || []);
+        console.log(res.data);
       } catch (err) {
         toast.error(err.message);
       }
     };
     fetchInvites();
-  }, []);
+  }, [org]);
 
   useEffect(() => {
-    const handleInvite = (invite) => {
+    const handleInvite = (payload) => {
+      const invite = payload.invite;
       setNotifications((prev) => [invite, ...prev]);
       toast.success(`New invite from ${invite.from}`);
     };
@@ -31,8 +48,14 @@ const Notification = () => {
 
   const acceptInvite = async (invite) => {
     try {
-      socket.emit("accept_invite", { invite_id: invite.id });
+      // socket.emit("accept_invite", { invite_id: invite.id });
+      console.log(invite);
+      setLoading(true);
       setNotifications((prev) => prev.filter((n) => n.id !== invite.id));
+      const res = await api.get(`/invites/${invite.id}/accept`);
+      // setTimeout(() => {
+      //   setLoading(false);
+      // }, 2000);
       toast.success("Joined workspace");
     } catch (err) {
       toast.error("Failed to accept invite");
@@ -63,14 +86,15 @@ const Notification = () => {
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {loading ? (
+        <NotificationSkeleton rows={3} />
+      ) : notifications.length === 0 ? (
         <div className="border border-zinc-800 rounded-xl p-10 text-center text-zinc-400">
           No notifications
         </div>
       ) : (
         <div className="border border-zinc-800 rounded-xl overflow-hidden">
 
-          {/* Table Header */}
           <div className="grid grid-cols-[1fr_auto_auto] gap-4 px-5 py-3 bg-zinc-900 border-b border-zinc-800 text-xs font-medium text-zinc-400 uppercase tracking-wider">
             <span>Message</span>
             <span className="w-24 text-center">Accept</span>

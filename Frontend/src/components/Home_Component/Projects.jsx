@@ -8,7 +8,6 @@ import socket from "../../socket/socket.js";
 import api from "../../api/api.js";
 import ConfirmDeleteModal from "./Project_Component/ConfirmDeleteModal";
 import ReassignManagerModal from "./Project_Component/ReassignManagerModal";
-import { h1 } from "framer-motion/client";
 
 const STATUS_OPTIONS = ["all", "active", "completed", "cancelled", "onhold"];
 const PRIORITY_OPTIONS = ["all", "low", "medium", "high"];
@@ -52,26 +51,36 @@ const Projects = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
   const [showModal, setShowModal] = useState(false);
-  const org = JSON.parse(localStorage.getItem("org"));
+  const [org,setOrg] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [reassignTarget, setReassignTarget] = useState(null);
 
   useEffect(() => {
-    // Simulates a network fetch — swap with real api.get() call
-    const t = setTimeout(async () => {
-    //  console.log(org);
-      const proj = await api.post(`/org/proj/${org.id}`, {
+    const getActiveOrg = async () => {
+      try {
+        const res = await api.get('/orgs/activeorgs');
+        setOrg(res.data);
+      } catch (error) {
+        toast.error(error.message);
+      }
+    };
+    getActiveOrg();
+  }, []);
+
+  useEffect(() => {
+    if (!org) return;
+
+    const fetchProjects = async () => {
+      const proj = await api.post(`/orgs/proj/${org.id}`, {
         role: org.role
       });
       setProjects(proj.data);
       setLoading(false);
-      // console.log(proj.data);
-    }, 800);
-    // console.log(org.id);
-    
-    return () => clearTimeout(t);
-  }, []);
+    };
 
+    fetchProjects();
+  }, [org]);
+  
   useEffect(() => {
     const handleProjectCreated = (data) => {
       console.log(data);
@@ -102,7 +111,7 @@ const Projects = () => {
 
   const handleDelete = async (projectId) => {
     try {
-      await api.delete(`/org/proj/${projectId}`);
+      await api.delete(`/orgs/proj/${projectId}`);
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
     } catch (err) {
       console.error("Delete failed:", err);
@@ -134,7 +143,7 @@ const Projects = () => {
     console.log(newProject);
     setShowModal(false);
     setLoading(true);
-    const data = await api.post('/org/proj/', { proj : newProject, orgid : Number(org.id)});
+    const data = await api.post('/orgs/proj/', { proj : newProject, orgid : Number(org.id)});
     // console.log(data.data.project);
     setProjects((prev) => [data.data.project, ...prev]);
     setTimeout(() => {

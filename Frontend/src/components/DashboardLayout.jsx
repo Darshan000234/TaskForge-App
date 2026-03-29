@@ -29,13 +29,13 @@ const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [show, setShow] = useState(false);
   const [orgs, setOrgs] = useState([]);
-  const [activeorg,setActiveOrg] = useState(null);
+  const [activeorg, setActiveOrg] = useState(null);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
 
   const handleOrgCreated = async (newOrg) => {
     setOrgs((prev) => [...prev, newOrg]);
-    const id = await api.get(`/orgs/activeorg/${newOrg.id}`);
-    setActiveOrg(id);
+    const res = await api.get(`/orgs/activeorg/${newOrg.id}`);
+    setActiveOrg(res.data);
   };
   useEffect(() => {
     socket.auth = {
@@ -46,14 +46,14 @@ const DashboardLayout = () => {
       socket.disconnect();
     };
   }, []);
-
   useEffect(() => {
     const fetchOrgs = async () => {
       try {
         const org = await api.get("/orgs");
+        console.log(org.data);
         setOrgs(org.data);
-        const id = await api.get(`/orgs/activeorg/${org.data?.[0].id}`);
-        setActiveOrg(id);
+        const res = await api.get(`/orgs/activeorg/${org.data?.[0].id}`);
+        setActiveOrg(res.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
       }
@@ -61,7 +61,15 @@ const DashboardLayout = () => {
     fetchOrgs();
   }, [])
 
-
+  useEffect(()=>{
+    const handleCreated = async (newOrg) => {
+      setOrgs((prev) => [...prev, newOrg]);
+    }
+    socket.on("joined_org",handleCreated);
+    return () => {
+      socket.off("joined_org",handleCreated);
+    } 
+  })
   const toggleDrawer = () => {
     const newState = !collapsed;
     setCollapsed(newState);
@@ -101,7 +109,7 @@ const DashboardLayout = () => {
                     />
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-800 dark:text-white text-sm truncate">
-                        coinwise
+                        {activeorg ? activeorg.name : "not created"}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-zinc-400 truncate">
                         1 workspace

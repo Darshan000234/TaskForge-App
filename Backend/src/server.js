@@ -39,7 +39,7 @@ app.use(cookieParser());
 app.use("/user", userRoute);
 app.use("/orgs", orgRoute);
 app.use("/invites", inviteRoute);
-app.use("/org/proj", projectRoute);
+app.use("/orgs/proj", projectRoute);
 
 // SOCKET AUTH
 io.use(async (socket, next) => {
@@ -110,131 +110,6 @@ io.on("connection", async (socket) => {
   socket.on("join_proj", async ({ proj }) => {
     console.log(socket.user.email);
     socket.join(`project_${proj.id}`);
-  });
-
-  socket.on("invite_user", async ({ email, org_id }) => {
-
-    // console.log("invite receive");
-    try {
-      const receiver = await prisma.user.findUnique({
-        where: { email }
-      });
-      console.log("come");
-      if (socket.user.email === email) {
-        return socket.emit("invite_error", {
-          message: "User not found"
-        });
-      }
-      console.log(1);
-      const existingInvite = await prisma.teaminvitation.findUnique({
-        where: {
-          receiver_id_org_id: {
-            receiver_id: receiver.id,
-            org_id: org_id
-          }
-        }
-      });
-
-      if (existingInvite && existingInvite.status === "pending") {
-        return socket.emit("invite_error", {
-          message: "User already invited"
-        });
-      }
-
-      if (existingInvite && existingInvite.status === "accepted") {
-        return socket.emit("invite_error", {
-          message: "User already a member of the organization"
-        });
-      }
-
-      let invite = null;
-      let prev = true;
-      if (existingInvite && existingInvite.status === "rejected") {
-        prev = false;
-        invite = await prisma.teaminvitation.update({
-          where: {
-            receiver_id_org_id: {
-              receiver_id: receiver.id,
-              org_id: org_id
-            }
-          },
-          data: {
-            sender_id: socket.user.id,
-            status: "pending",
-            message: `${socket.user.name} has invited you to join the organization`
-          }
-        });
-      } else {
-        invite = await prisma.teaminvitation.create({
-          data: {
-            sender_id: socket.user.id,
-            receiver_id: receiver.id,
-            receiver_email: email,
-            org_id: org_id,
-            status: "pending",
-            message: `${socket.user.name} has invited you to join the organization`
-          }
-        });
-      }
-
-      if (!receiver) {
-        return socket.emit("invite_error", { message: "User not found" });
-      }
-
-      console.log('sending');
-      io.to(`user:${receiver.id}`).emit("invite_received", { invite });
-      if (prev) return socket.emit("sender_invite", { invite });
-    } catch (err) {
-      console.error(err);
-    }
-  });
-
-  socket.on("accept_invite", async ({ invite_id }) => {
-    try {
-      const invite = await prisma.teaminvitation.update({
-        where: { id: invite_id },
-        data: { status: "accepted" }
-      });
-      const org = await prisma.org.update({
-        where: { id: invite.org_id },
-        data: {
-          member_count: {
-            increment: 1
-          }
-        }
-      })
-      const id = invite.sender_id;
-      await prisma.org_member.create({
-        data: {
-          org_id: invite.org_id,
-          member_id: invite.receiver_id,
-          member_email: invite.receiver_email
-        }
-      })
-      org.role = "member";
-      const data = await prisma.teaminvitation.findMany({
-        where: {
-          org_id: invite.org_id
-        }
-      })
-      io.to(`user:${id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
-      return socket.emit("joined_org", { org: org, invite: data });
-    } catch (err) {
-      console.error(err);
-    }
-  });
-
-  socket.on("reject_invite", async ({ invite_id }) => {
-    try {
-      const receiver = await prisma.teaminvitation.update({
-        where: { id: invite_id },
-        data: { status: "rejected" }
-      });
-      const id = receiver.sender_id;
-      io.to(`user:${id}`).emit("invite_rejected", { id: invite_id, status: "rejected" });
-    } catch (err) {
-      console.error(err);
-    }
   });
 
   socket.on("project_created", async ({ project, orgId }) => {

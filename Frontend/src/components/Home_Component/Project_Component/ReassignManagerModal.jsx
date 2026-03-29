@@ -19,7 +19,7 @@ const ReassignManagerModal = ({ project, onClose, onReassigned }) => {
     try {
       // Adjust endpoint to match your API
       console.log('sended reassing');
-      await api.patch(`/org/proj/${project.id}/reassign`, { org : org,email: selectedEmail });
+      await api.patch(`/orgs/proj/${project.id}/reassign`, { org : org,email: selectedEmail });
       onReassigned({ ...project, email: selectedEmail });
     } catch (err) {
       console.error("Reassign failed:", err);

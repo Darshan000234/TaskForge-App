@@ -1,10 +1,16 @@
 import express from "express";
 import authMiddleware from "../../middlewares/authMiddleware.js";
-import { inviteData } from "../../controllers/InviteController.js";
+import { 
+    inviteData,
+    sendInvite,
+    acceptInvite,
+    rejectInvite } from "../../controllers/InviteController.js";
 
 const router = express.Router();
 
-router.get("/",authMiddleware, inviteData);
-// router.post("/:id/accept", authMiddleware, acceptInvite);
+router.post("/",authMiddleware,sendInvite);
+router.get("/data",authMiddleware, inviteData);
+router.get("/:id/accept", authMiddleware, acceptInvite);
+router.get("/:id/reject",authMiddleware,rejectInvite);
 
 export default router;

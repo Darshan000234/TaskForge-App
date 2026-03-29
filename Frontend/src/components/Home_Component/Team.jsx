@@ -1,18 +1,33 @@
 import { Search, Users, Activity, Shield } from "lucide-react";
 import { useState, useEffect, use } from "react";
 import toast from "react-hot-toast";
+import Loader  from "./Team_Component/loader.jsx";
 import api from "../../api/api.js";
-// import { useOutletContext } from "react-router-dom";
 import socket from "../../socket/socket.js";
 
 const Team = () => {
   const [members, setMembers] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const org = JSON.parse(localStorage.getItem("org"));
-  
-  
+  const [org, setOrg] = useState(null);
+
+
   useEffect(() => {
+    const getActiveOrg = async () => {
+      try {
+        const res = await api.get('/orgs/activeorgs');
+        setOrg(res.data);
+      } catch (error) {
+        toast.error(error.message);
+      }
+    };
+
+    getActiveOrg();
+  }, []);
+
+  useEffect(() => {
+    if (!org) return;
     const getMembers = async () => {
       try {
         // console.log(orgId);
@@ -23,8 +38,8 @@ const Team = () => {
         toast.error(error.message || "Failed to fetch team members");
       }
     }
-    if(org.id) getMembers();
-  }, []);
+    getMembers();
+  }, [org])
 
   useEffect(() => {
     const handlestatuschange = (data) => {
@@ -37,44 +52,45 @@ const Team = () => {
         })
       })
     }
-
-    const handlemember = (data) => {
-      setMembers((prevmember) => {
-        return [data, ...prevmember]
-      })
-    }
-
     const handledata = (data) => {
-      if(org.id == data.org.id) {
+      if (org.id == data.org.id) {
         setMembers(data.invite);
       }
     }
     socket.on("invite_accepted", handlestatuschange);
     socket.on("invite_rejected", handlestatuschange);
-    socket.on("sender_invite", handlemember);
-    socket.on("joined_org",handledata);
+    // socket.on("joined_org", handledata);
     return () => {
       socket.off("invite_accepted", handlestatuschange);
       socket.off("invite_rejected", handlestatuschange);
-      socket.off("sender_invite", handlemember);
-      socket.off("joined_org",handledata);
+      // socket.off("joined_org", handledata);
     }
   }, []);
 
-  const inviteMember = ({Email,id}) => {
-    // console.log(id);
-    if(id){
-      setMembers((prevmember) => prevmember.map((n) => 
-      {
-        if(n.status=="rejected") n.status = "pending"
-        return n;
-      } 
-      ));
+  const inviteMember = async ({ Email, id }) => {
+    setLoading(true);
+    try {
+      if (id) {
+        setMembers((prevmember) => prevmember.map((n) => {
+          if (n.status == "rejected") n.status = "pending"
+          return n;
+        }
+        ));
+      }
+      // console.log(Email);
+      const res = await api.post('/invites', { email: Email, org_id: Number(org.id) });
+      if (!id) {
+        setMembers((prev) => [...prev, res.data.invite]);
+      }
+      setTimeout(() => {
+        setLoading(false);
+      }, 2000);
+      setInviteEmail("");
+      setShowInvite(false);
+    } catch (error) {
+      console.log(error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
-    
-    socket.emit("invite_user", { email: Email, org_id: Number(org.id) });
-    setInviteEmail("");
-    setShowInvite(false);
   };
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
@@ -138,6 +154,7 @@ const Team = () => {
         </div>
       </div>
 
+      {loading ? <Loader rows={5} /> : (
       <div className="mt-8 border border-zinc-800 rounded-xl overflow-hidden w-280">
         <table className="w-full text-sm">
           <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
@@ -166,11 +183,11 @@ const Team = () => {
 
                 <td className="px-6 py-4 flex items-center gap-3">
                   <span className={`px-3 py-1 rounded-md font-medium ${member.status === "rejected" ? "bg-red-600/20 text-red-400" : "bg-purple-600/20 text-purple-400"}`}>
-                      {member.status}
+                    {member.status}
                   </span>
                   {member.status === "rejected" && (
                     <button
-                      onClick={() => inviteMember({Email: member.receiver_email,id: member.id})}
+                      onClick={() => inviteMember({ Email: member.receiver_email, id: member.id })}
                       className="px-3 py-1 rounded-md bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 transition font-medium"
                     >
                       Resend
@@ -182,7 +199,7 @@ const Team = () => {
           </tbody>
         </table>
       </div>
-
+      )}
       {showInvite && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 w-full max-w-md text-zinc-200">
@@ -194,9 +211,9 @@ const Team = () => {
               </p>
             </div>
 
-            <form onSubmit={(e)=> {
+            <form onSubmit={(e) => {
               e.preventDefault();
-              inviteMember({Email: inviteEmail,id: 0})
+              inviteMember({ Email: inviteEmail, id: 0 })
             }} className="space-y-4">
               <div>
                 <label className="text-sm">Email</label>

@@ -3,7 +3,7 @@ import { userSockets } from "../utils/userSockets.js";
 
 export const projData = async (req, res) => {
     const { id } = req.user;
-    const orgid = req.params.id;
+    const orgid = Number(req.params.id);
     const { role } = req.body;
     // console.log(orgid);
     // console.log(role);
@@ -197,7 +197,6 @@ export const reassignProject = async (req, res) => {
                 }
             }
         });
-        // console.log('fine data');
         io.to(`project_${id}`).emit('project_created', { project: proj });
         io.to(`org_${org_member.id}`).emit('project_created', { project: proj });
         io.to(`org_${prevOrgmember.id}`).emit('project_deleted', { id: id });

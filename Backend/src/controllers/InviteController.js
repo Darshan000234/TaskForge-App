@@ -1,20 +1,163 @@
 import prisma from "../config/prisma.js";
 
 export const inviteData = async (req, res) => {
-    const { email } = req.user;
-    // console.log(email);
-
+    const uid = req.user.id;
+    // console.log(uid);
     try {
         const data = await prisma.teaminvitation.findMany({
-            where : {
-                receiver_email : email,
-                status : "pending"
-            }
+          where: {
+            receiver_id: uid,
+            status: "pending"
+          }
         });
-
+        console.log(data);
+        // if (!data) return res.status(404).json({ message: "No invite found" });
         res.status(200).json({ data });
     } catch (error) {
+        console.log(error.message);
+        console.log("inviteData");
         res.status(500).json({message : error.message});
     }
 }
 
+export const sendInvite = async (req, res) => {
+
+  const  uemail = req.user.email 
+  const { email , org_id } = req.body;
+  // console.log(req.body);
+    const io = req.app.get("io");
+    try {
+      const sender = await prisma.user.findUnique({
+        where : {
+          id : req.user.id
+        },
+        select : {
+          name : true
+        }
+      })
+      const receiver = await prisma.user.findUnique({
+        where: { email }
+      });
+      // console.log("come");
+      if(!receiver) return res.status(404).json({ message : "user does not exist in system"});
+      // console.log("passes");
+      
+      if (uemail === email) {
+        return res.status(404).json({ message : " something went wrong "});
+      }
+      // console.log(receiver);
+      const existingInvite = await prisma.teaminvitation.findUnique({
+        where: {
+          receiver_id_org_id: {
+            receiver_id: receiver.id,
+            org_id: org_id
+          }
+        }
+      });
+      // console.log("ok1");
+      if (existingInvite && existingInvite.status === "pending") {
+        return res.status(404).json({ message : " something went wrong "});
+      }
+
+      if (existingInvite && existingInvite.status === "accepted") {
+        return res.status(404).json({ message : " something went wrong "});
+      }
+      // console.log("ok");
+      let invite = null;
+      let prev = true;
+      if (existingInvite && existingInvite.status === "rejected") {
+        prev = false;
+        invite = await prisma.teaminvitation.update({
+          where: {
+            receiver_id_org_id: {
+              receiver_id: receiver.id,
+              org_id: org_id
+            }
+          },
+          data: {
+            sender_id: req.user.id,
+            status: "pending",
+            message: `${sender.name} has invited you to join the organization`
+          }
+        });
+      } else {
+        invite = await prisma.teaminvitation.create({
+          data: {
+            sender_id: req.user.id,
+            receiver_id: receiver.id,
+            receiver_email: email,
+            org_id: org_id,
+            status: "pending",
+            message: `${sender.name} has invited you to join the organization`
+          }
+        });
+      }
+
+      if (!receiver) {
+        return res.status(404).json({ message : " something went wrong "});
+      }
+
+      io.to(`user:${receiver.id}`).emit("invite_received", { invite });
+      return res.status(202).json({ invite });
+    } catch (error) {
+      console.log(error.message);
+      console.log("sendInvite");
+      res.status(404).json({ message : error.message});
+    }
+}
+
+export const acceptInvite = async (req, res) => {
+    const invite_id = Number(req.params.id);
+    const io = req.app.get("io");
+    try {
+      const invite = await prisma.teaminvitation.update({
+        where: { id: invite_id },
+        data: { status: "accepted" }
+      });
+      const org = await prisma.org.update({
+        where: { id: invite.org_id },
+        data: {
+          member_count: {
+            increment: 1
+          }
+        }
+      });
+      const id = invite.sender_id;
+      await prisma.org_member.create({
+        data: {
+          org_id: invite.org_id,
+          member_id: invite.receiver_id,
+          member_email: invite.receiver_email
+        }
+      })
+      org.role = "member";
+      const data = await prisma.teaminvitation.findMany({
+        where: {
+          org_id: invite.org_id
+        }
+      })
+      io.to(`user:${id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
+      return io.to(`user:${invite.receiver_id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
+    } catch (error) {
+      console.log(error.message);
+      console.log("acceptInvite");
+      res.status(404).json({ message : error.message});
+    }
+}
+
+export const rejectInvite = async (req,res) => {
+    const invite_id = Number(req.params.id);
+    const io = req.app.get("io");
+    try {
+      const receiver = await prisma.teaminvitation.update({
+        where: { id: invite_id },
+        data: { status: "rejected" }
+      });
+      const id = receiver.sender_id;
+      io.to(`user:${id}`).emit("invite_rejected", { id: invite_id, status: "rejected" });
+    } catch (error) {
+        console.log(error.message);
+        console.log("rejectInvite");
+        res.status(404).json({ message : error.message});
+    }
+}
