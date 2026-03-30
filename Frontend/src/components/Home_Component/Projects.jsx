@@ -5,7 +5,9 @@ import EmptyState from "./Project_Component/EmptyState";
 import ProjectCard from "./Project_Component/ProjectCard";
 import NewProjectModal from "./Project_Component/NewProjectModal";
 import socket from "../../socket/socket.js";
+import toast from "react-hot-toast";
 import api from "../../api/api.js";
+import { useOutletContext } from "react-router-dom";
 import ConfirmDeleteModal from "./Project_Component/ConfirmDeleteModal";
 import ReassignManagerModal from "./Project_Component/ReassignManagerModal";
 
@@ -51,25 +53,12 @@ const Projects = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
   const [showModal, setShowModal] = useState(false);
-  const [org,setOrg] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [reassignTarget, setReassignTarget] = useState(null);
-
-  useEffect(() => {
-    const getActiveOrg = async () => {
-      try {
-        const res = await api.get('/orgs/activeorgs');
-        setOrg(res.data);
-      } catch (error) {
-        toast.error(error.message);
-      }
-    };
-    getActiveOrg();
-  }, []);
-
+  const { org } = useOutletContext();
+  
   useEffect(() => {
     if (!org) return;
-
     const fetchProjects = async () => {
       const proj = await api.post(`/orgs/proj/${org.id}`, {
         role: org.role

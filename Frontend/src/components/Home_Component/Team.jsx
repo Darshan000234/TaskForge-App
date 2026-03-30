@@ -4,42 +4,30 @@ import toast from "react-hot-toast";
 import Loader  from "./Team_Component/loader.jsx";
 import api from "../../api/api.js";
 import socket from "../../socket/socket.js";
+import { useOutletContext } from "react-router-dom";
 
 const Team = () => {
   const [members, setMembers] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [org, setOrg] = useState(null);
-
-
-  useEffect(() => {
-    const getActiveOrg = async () => {
-      try {
-        const res = await api.get('/orgs/activeorgs');
-        setOrg(res.data);
-      } catch (error) {
-        toast.error(error.message);
-      }
-    };
-
-    getActiveOrg();
-  }, []);
+  const { org } = useOutletContext();
 
   useEffect(() => {
     if (!org) return;
+
     const getMembers = async () => {
       try {
-        // console.log(orgId);
         const response = await api.get(`/orgs/${org.id}/members`);
         setMembers(response.data);
-        // console.log(response.data);
       } catch (error) {
-        toast.error(error.message || "Failed to fetch team members");
+        toast.error("Failed to fetch team members");
       }
-    }
+    };
+
     getMembers();
-  }, [org])
+  }, [org]);
+
 
   useEffect(() => {
     const handlestatuschange = (data) => {
@@ -51,11 +39,6 @@ const Team = () => {
           return member;
         })
       })
-    }
-    const handledata = (data) => {
-      if (org.id == data.org.id) {
-        setMembers(data.invite);
-      }
     }
     socket.on("invite_accepted", handlestatuschange);
     socket.on("invite_rejected", handlestatuschange);

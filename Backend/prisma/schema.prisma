@@ -61,7 +61,7 @@ model org_member {
   member_email String
   role         String @default("member")
 
-  org          org    @relation(fields: [org_id], references: [id], onDelete: SetNull)
+  org          org    @relation(fields: [org_id], references: [id], onDelete: Cascade)
   
   @@index([member_id])
   @@unique([member_id,org_id])
@@ -80,7 +80,7 @@ model project {
   last_update  DateTime    @default(now()) 
   members      proj_member[]
 
-  member       User    @relation(fields: [assigned_to], references: [id], onDelete: SetNull)
+  member       User    @relation(fields: [assigned_to], references: [id], onDelete: Cascade)
 
   createdAt    DateTime     @default(now())
   @@index([org_id])
@@ -116,7 +116,7 @@ model proj_member {
   member_id    Int 
   role         Role 
 
-  project      project     @relation(fields: [proj_id], references: [id], onDelete: SetNull)
+  project      project     @relation(fields: [proj_id], references: [id], onDelete: Cascade)
   member       User    @relation(fields: [member_id], references: [id], onDelete: SetNull)
 
   @@index([org_id, member_id])

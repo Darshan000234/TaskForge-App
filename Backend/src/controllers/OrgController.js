@@ -1,12 +1,22 @@
 import prisma from '../config/prisma.js';
 
+
+const getUserOrganizations = async (userId) => {
+    return await prisma.$queryRaw`
+        SELECT o.id, o.name, o.member_count, o.proj_count, om.role, o."createdAt"
+        FROM org_member om
+        INNER JOIN org o ON om.org_id = o.id
+        WHERE om.member_id = ${userId};
+    `;
+};
+
 export const addOrganization = async (req, res) => {
     const { name } = req.body;
-    const { id,email } = req.user; 
+    const { id, email } = req.user;
     try {
         // console.log(name);
         const org = await prisma.org.create({
-            data : {
+            data: {
                 name: name,
                 userId: id,
                 member_count: 0,
@@ -14,16 +24,16 @@ export const addOrganization = async (req, res) => {
             }
         });
         await prisma.org_member.create({
-            data : {
-                org_id : org.id,
-                member_id : id,
-                member_email : email,
-                role : "admin"
+            data: {
+                org_id: org.id,
+                member_id: id,
+                member_email: email,
+                role: "admin"
             }
         });
-        res.status(201).json(org);
+        res.status(201).json({ org });
     } catch (error) {
-         if (error.code === "P2002") {
+        if (error.code === "P2002") {
             return res.status(400).json({
                 message: "Organization name already exists"
             });
@@ -41,7 +51,7 @@ export const updateOrganization = async (req, res) => {
             where: {
                 id: org_id
             },
-            date: {
+            data: {
                 name: name
             }
         })
@@ -69,17 +79,9 @@ export const deleteOrganization = async (req, res) => {
 };
 
 export const DataOrganization = async (req, res) => {
-    const id = req.user.id;
-    console.log(id);
     try {
-        const org = await prisma.$queryRaw`
-            SELECT o.id, o.name, o.member_count, o.proj_count, om.role, o."createdAt"
-            FROM org_member om
-            INNER JOIN org o ON om.org_id = o.id
-            WHERE om.member_id = ${id};
-            `;
-        console.log(org);
-        res.status(200).json( org );
+        const org = await getUserOrganizations(req.user.id);
+        res.status(200).json(org);
     } catch (error) {
         console.log(error.message);
         res.status(500).json({ message: "Something went wrong" });
@@ -90,11 +92,11 @@ export const DataOrganizationMembers = async (req, res) => {
     const id = Number(req.params.id);
     // console.log(id);
     try {
-        const data  = await prisma.teaminvitation.findMany({
-            where : {
-                org_id : id
+        const data = await prisma.teaminvitation.findMany({
+            where: {
+                org_id: id
             }
-            
+
         });
         res.status(200).json(data);
     } catch (error) {
@@ -103,47 +105,65 @@ export const DataOrganizationMembers = async (req, res) => {
     }
 }
 
-export const updateactiveOrgs = async(req,res) => {
-    const id  = Number(req.params.id);
+export const updateactiveOrgs = async (req, res) => {
+    const id = Number(req.params.id);
     const userID = req.user.id;
     // console.log(userID);
-    // console.log(id);
+    console.log(id);
     try {
         await prisma.user.update({
-            where : {
-                id : userID
+            where: {
+                id: userID
             },
-            data : {
-                activeorg : id
+            data: {
+                activeorg: id
             }
         });
-        const data =  await prisma.org.findUnique({
-            where : {
-                id : id
+        const data = await prisma.org.findUnique({
+            where: {
+                id: id
             }
-        }) 
-        res.status(200).json( data );
+        })
+        res.status(200).json(data);
     } catch (error) {
         console.log(error.message);
         console.log("updateactiveOrgs");
-        res.status(400).json({ message: "something went wrong"});
+        res.status(400).json({ message: "something went wrong" });
     }
 }
 
-export const getActiveOrgs = async(req,res) => {
+export const getActiveOrgs = async (req, res) => {
     const userID = req.user.id;
+    // console.log(userID);
     try {
-        const data = await prisma.user.findUnique({
-            where : {
-                id : userID
+        let data = await prisma.user.findUnique({
+            where: {
+                id: userID
             },
-            include : {
-                org : true
+            include: {
+                org: true
             }
         });
-        res.status(200).json( data.org );
+        if (!data.org) {
+            const org = await getUserOrganizations(userID);
+            if (!org || org.length === 0) return res.status(400).json({ message: "No organization found" });
+            await prisma.user.update({
+                where: {
+                    id: userID
+                },
+                data: {
+                    activeorg: org[0].id
+                }
+            })
+            data = await prisma.user.findUnique({
+                where: { id: userID },
+                include: { org: true }
+            });
+        }
+        // console.log(data.org);
+        res.status(200).json(data.org);
     } catch (error) {
         console.log(error.message);
-        res.status(400).json({ message: "something went wrong"});
+        res.status(400).json({ message: "something went wrong" });
     }
 }

@@ -4,30 +4,19 @@ import { Bell, Check, X } from "lucide-react";
 import api from "../../api/api.js";
 import toast from "react-hot-toast";
 import NotificationSkeleton from "./Notification_Component/NotificationSkeleton.jsx"
+import { useOutletContext } from "react-router-dom";
 
 const Notification = () => {
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [org, setOrg] = useState(null);
-  useEffect(() => {
-    const getActiveOrg = async () => {
-      try {
-        const res = await api.get('/orgs/activeorgs');
-        setOrg(res.data);
-      } catch (error) {
-        toast.error(error.message);
-      }
-    };
-
-    getActiveOrg();
-  }, []);
+  const [loading, setLoading] = useState(null);
+  const { org } = useOutletContext();
   useEffect(() => {
     if (!org) return;
     const fetchInvites = async () => {
       try {
         const res = await api.get('/invites/data');
         setNotifications(res.data?.data || []);
-        console.log(res.data);
+        // console.log(res.data);
       } catch (err) {
         toast.error(err.message);
       }
@@ -48,17 +37,14 @@ const Notification = () => {
 
   const acceptInvite = async (invite) => {
     try {
-      // socket.emit("accept_invite", { invite_id: invite.id });
-      console.log(invite);
-      setLoading(true);
+      setLoading(invite.id);
+      const res = await api.post(`/invites/${invite.id}/accept`);
       setNotifications((prev) => prev.filter((n) => n.id !== invite.id));
-      const res = await api.get(`/invites/${invite.id}/accept`);
-      // setTimeout(() => {
-      //   setLoading(false);
-      // }, 2000);
       toast.success("Joined workspace");
     } catch (err) {
       toast.error("Failed to accept invite");
+    } finally {
+      setLoading(null);
     }
   };
 

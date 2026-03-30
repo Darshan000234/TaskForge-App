@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.post("/",authMiddleware,sendInvite);
 router.get("/data",authMiddleware, inviteData);
-router.get("/:id/accept", authMiddleware, acceptInvite);
-router.get("/:id/reject",authMiddleware,rejectInvite);
+router.post("/:id/accept", authMiddleware, acceptInvite);
+router.post("/:id/reject",authMiddleware,rejectInvite);
 
 export default router;

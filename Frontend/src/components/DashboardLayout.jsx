@@ -32,11 +32,28 @@ const DashboardLayout = () => {
   const [activeorg, setActiveOrg] = useState(null);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
 
-  const handleOrgCreated = async (newOrg) => {
-    setOrgs((prev) => [...prev, newOrg]);
-    const res = await api.get(`/orgs/activeorg/${newOrg.id}`);
-    setActiveOrg(res.data);
+  const handleActiveOrg = async (item) => {
+    if (activeorg?.id === item.id) return;
+    console.log(item);
+    setActiveOrg(item);
+    try {
+      await api.get(`/orgs/activeorgs/${item.id}`);
+    } catch (error) {
+      toast.error("Failed to switch org");
+    }
   };
+
+  const handleOrgCreated = async (newOrg) => {
+    try {
+      setOrgs((prev) => [...prev, newOrg]);
+      setActiveOrg(newOrg);
+      await api.get(`/orgs/activeorgs/${newOrg.id}`);
+    } catch (error) {
+      console.log(error.response?.data?.message);
+      toast.error("something went wrong");
+    }
+  };
+
   useEffect(() => {
     socket.auth = {
       token: localStorage.getItem("accessToken")
@@ -46,13 +63,14 @@ const DashboardLayout = () => {
       socket.disconnect();
     };
   }, []);
+
   useEffect(() => {
     const fetchOrgs = async () => {
       try {
         const org = await api.get("/orgs");
-        console.log(org.data);
         setOrgs(org.data);
-        const res = await api.get(`/orgs/activeorg/${org.data?.[0].id}`);
+        const res = await api.get('/orgs/activeorgs');
+        // console.log(res.data);
         setActiveOrg(res.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
@@ -61,15 +79,19 @@ const DashboardLayout = () => {
     fetchOrgs();
   }, [])
 
-  useEffect(()=>{
-    const handleCreated = async (newOrg) => {
+  useEffect(() => {
+    const handleCreated = async (payload) => {
+      const newOrg = payload.org;
+      console.log(newOrg,"joined_org");
+      // console.log(newOrg);
       setOrgs((prev) => [...prev, newOrg]);
     }
-    socket.on("joined_org",handleCreated);
+    socket.on("joined_org", handleCreated);
     return () => {
-      socket.off("joined_org",handleCreated);
-    } 
-  })
+      socket.off("joined_org", handleCreated);
+    }
+  }, [])
+
   const toggleDrawer = () => {
     const newState = !collapsed;
     setCollapsed(newState);
@@ -148,7 +170,7 @@ const DashboardLayout = () => {
               </div>
 
               {orgs.map((item) => (
-                <div key={item.id} className="px-2 pb-2">
+                <div onClick={() => handleActiveOrg(item)} key={item.id} className="px-2 pb-2">
                   <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
 
                     <div className="flex-1 min-w-0">
@@ -330,7 +352,7 @@ const DashboardLayout = () => {
             />
           </div>
         </div>
-        <Outlet context={{ orgId: activeorg?.id }} /> {/* render child route here this is production based route handling*/}
+        <Outlet context={{ org: activeorg }} /> {/* render child route here this is production based route handling*/}
       </motion.div>
       <CreateOrgModal
         isOpen={showCreateOrg}

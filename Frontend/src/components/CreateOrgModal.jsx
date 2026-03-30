@@ -25,7 +25,7 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
       setError("");
       const res = await api.post("/orgs/add", { name: trimmed });
       toast.success("Organization created!");
-      onCreated?.(res.data); // pass new org up to parent
+      onCreated?.(res.data.org); // pass new org up to parent
       handleClose();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create organization.");
