@@ -1,6 +1,5 @@
 import prisma from '../config/prisma.js';
 
-
 const getUserOrganizations = async (userId) => {
     return await prisma.$queryRaw`
         SELECT o.id, o.name, o.member_count, o.proj_count, om.role, o."createdAt"
@@ -160,7 +159,7 @@ export const getActiveOrgs = async (req, res) => {
                 include: { org: true }
             });
         }
-        // console.log(data.org);
+        if(userID !== data.org.userId) data.org.role = 'member';
         res.status(200).json(data.org);
     } catch (error) {
         console.log(error.message);

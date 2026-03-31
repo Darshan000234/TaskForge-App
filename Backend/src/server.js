@@ -7,7 +7,6 @@ import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import prisma from "./config/prisma.js";
 import { userSockets } from "./utils/userSockets.js";
-
 import userRoute from "./routes/User/UserRoute.js";
 import orgRoute from "./routes/Organization/OrgRoute.js";
 import inviteRoute from "./routes/User/inviteRoute.js";
@@ -18,9 +17,7 @@ dotenv.config();
 const app = express();
 const port = 3000;
 const URL = process.env.CLIENT_URL;
-
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: {
     origin: URL,
@@ -29,11 +26,11 @@ const io = new Server(server, {
 });
 
 app.set("io", io);
+
 app.use(cors({
   origin: URL,
   credentials: true
 }));
-
 app.use(express.json());
 app.use(cookieParser());
 app.use("/user", userRoute);
@@ -41,7 +38,6 @@ app.use("/orgs", orgRoute);
 app.use("/invites", inviteRoute);
 app.use("/orgs/proj", projectRoute);
 
-// SOCKET AUTH
 io.use(async (socket, next) => {
   try {
     // console.log("use");
@@ -104,11 +100,11 @@ io.on("connection", async (socket) => {
       }
     })
       socket.join(`org_${member.id}`);
-      console.log(socket.user.email);
+      // console.log(socket.user.email);
   });
 
   socket.on("join_proj", async ({ proj }) => {
-    console.log(socket.user.email);
+    // console.log(socket.user.email);
     socket.join(`project_${proj.id}`);
   });
 
@@ -160,7 +156,6 @@ io.on("connection", async (socket) => {
   });
 
 });
-
 
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);

@@ -1,7 +1,7 @@
 import { Search, Users, Activity, Shield } from "lucide-react";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import Loader  from "./Team_Component/loader.jsx";
+import Loader from "./Team_Component/loader.jsx";
 import api from "../../api/api.js";
 import socket from "../../socket/socket.js";
 import { useOutletContext } from "react-router-dom";
@@ -15,7 +15,7 @@ const Team = () => {
 
   useEffect(() => {
     if (!org) return;
-
+    // console.log(org);
     const getMembers = async () => {
       try {
         const response = await api.get(`/orgs/${org.id}/members`);
@@ -53,21 +53,18 @@ const Team = () => {
   const inviteMember = async ({ Email, id }) => {
     setLoading(true);
     try {
-      if (id) {
-        setMembers((prevmember) => prevmember.map((n) => {
-          if (n.status == "rejected") n.status = "pending"
-          return n;
-        }
-        ));
+      if (id !== 0) {
+        setMembers((prev) =>
+          prev.map((n) =>
+            n.status === "rejected" ? { ...n, status: "pending" } : n
+          )
+        );
       }
-      // console.log(Email);
-      const res = await api.post('/invites', { email: Email, org_id: Number(org.id) });
+      const res = await api.post('/invites', { email: Email, org_id: Number(org.id)});
       if (!id) {
         setMembers((prev) => [...prev, res.data.invite]);
       }
-      setTimeout(() => {
-        setLoading(false);
-      }, 2000);
+      setLoading(false);
       setInviteEmail("");
       setShowInvite(false);
     } catch (error) {
@@ -84,18 +81,18 @@ const Team = () => {
             Manage team members and their contributions
           </p>
         </div>
-
-        <button onClick={() => setShowInvite(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer">
-          <Users size={18} />
-          Invite Member
-        </button>
+        {org && org.role === "admin" && (
+          <button onClick={() => setShowInvite(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer">
+            <Users size={18} />
+            Invite Member
+          </button>
+        )}
       </div>
-
       <div className="flex items-center gap-4 mt-10">
         <div className="bg-linear-to-br from-zinc-800/70 to-zinc-900/10 border border-zinc-800 rounded-xl px-8 py-6 flex items-center justify-between hover:border-zinc-600 transition min-w-75">
           <div>
             <p className="text-zinc-400 text-sm">Total Members</p>
-            <h3 className="text-3xl font-bold mt-2">1</h3>
+            <h3 className="text-3xl font-bold mt-2">{members.length}</h3>
           </div>
           <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center">
             <Users className="text-blue-500" />
@@ -138,50 +135,50 @@ const Team = () => {
       </div>
 
       {loading ? <Loader rows={5} /> : (
-      <div className="mt-8 border border-zinc-800 rounded-xl overflow-hidden w-280">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
-            <tr className="text-left">
-              <th className="px-6 py-4 font-medium">Name</th>
-              <th className="px-6 py-4 font-medium">Email</th>
-              <th className="px-6 py-4 font-medium">Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {members.map((member, index) => (
-              <tr
-                key={member.id}
-                className="border-b border-zinc-800 hover:bg-zinc-900/40 transition"
-              >
-                <td className="px-6 py-4 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-xs">
-                    {index + 1}
-                  </div>
-                </td>
-
-                <td className="px-6 py-4 text-zinc-300">
-                  {member.receiver_email}
-                </td>
-
-                <td className="px-6 py-4 flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-md font-medium ${member.status === "rejected" ? "bg-red-600/20 text-red-400" : "bg-purple-600/20 text-purple-400"}`}>
-                    {member.status}
-                  </span>
-                  {member.status === "rejected" && (
-                    <button
-                      onClick={() => inviteMember({ Email: member.receiver_email, id: member.id })}
-                      className="px-3 py-1 rounded-md bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 transition font-medium"
-                    >
-                      Resend
-                    </button>
-                  )}
-                </td>
+        <div className="mt-8 border border-zinc-800 rounded-xl overflow-hidden w-280">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
+              <tr className="text-left">
+                <th className="px-6 py-4 font-medium">Name</th>
+                <th className="px-6 py-4 font-medium">Email</th>
+                <th className="px-6 py-4 font-medium">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {members.map((member, index) => (
+                <tr
+                  key={member.id}
+                  className="border-b border-zinc-800 hover:bg-zinc-900/40 transition"
+                >
+                  <td className="px-6 py-4 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-xs">
+                      {index + 1}
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4 text-zinc-300">
+                    {member.receiver_email}
+                  </td>
+
+                  <td className="px-6 py-4 flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-md font-medium ${member.status === "rejected" ? "bg-red-600/20 text-red-400" : "bg-purple-600/20 text-purple-400"}`}>
+                      {member.status}
+                    </span>
+                    {member.status === "rejected" && org && org.role === "admin" && (
+                      <button
+                        onClick={() => inviteMember({ Email: member.receiver_email, id: member.id })}
+                        className="px-3 py-1 rounded-md bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 transition font-medium cursor-pointer"
+                      >
+                        Resend
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {showInvite && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">

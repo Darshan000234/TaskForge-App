@@ -9,7 +9,7 @@ export const inviteData = async (req, res) => {
         receiver_id: uid,
         status: "pending"
       }
-    });
+    }); 
     console.log(data);
     // if (!data) return res.status(404).json({ message: "No invite found" });
     res.status(200).json({ data });
@@ -24,7 +24,6 @@ export const sendInvite = async (req, res) => {
 
   const uemail = req.user.email
   const { email, org_id } = req.body;
-  // console.log(req.body);
   const io = req.app.get("io");
   try {
     const sender = await prisma.user.findUnique({
@@ -50,7 +49,7 @@ export const sendInvite = async (req, res) => {
       where: {
         receiver_id_org_id: {
           receiver_id: receiver.id,
-          org_id: org_id
+          org_id: orgid
         }
       }
     });
@@ -143,7 +142,7 @@ export const acceptInvite = async (req, res) => {
         role: "admin"
       }
     })
-    console.log("ok");
+    // console.log("ok");
     io.to(`org_${org_member.id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
     io.to(`user:${invite.receiver_id}`).emit("joined_org", { org: org });
     res.status(200).json({ message: "successfully joined " });
@@ -164,6 +163,7 @@ export const rejectInvite = async (req, res) => {
     });
     const id = receiver.sender_id;
     io.to(`user:${id}`).emit("invite_rejected", { id: invite_id, status: "rejected" });
+    res.status(200).json({receiver});
   } catch (error) {
     console.log(error.message);
     console.log("rejectInvite");

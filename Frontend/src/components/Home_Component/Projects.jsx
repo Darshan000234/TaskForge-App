@@ -56,7 +56,7 @@ const Projects = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [reassignTarget, setReassignTarget] = useState(null);
   const { org } = useOutletContext();
-  
+
   useEffect(() => {
     if (!org) return;
     const fetchProjects = async () => {
@@ -69,7 +69,7 @@ const Projects = () => {
 
     fetchProjects();
   }, [org]);
-  
+
   useEffect(() => {
     const handleProjectCreated = (data) => {
       console.log(data);
@@ -79,22 +79,22 @@ const Projects = () => {
       setTimeout(() => {
         setLoading(false);
       }, 4000);
-      socket.emit('join_proj',{ proj : project});
+      socket.emit('join_proj', { proj: project });
     }
     const handleProjectDeleted = (data) => {
       console.log(data.id);
       setLoading(true);
       // const project = data.id;
-      setProjects((prev)=> prev.filter((p) => p.id!==data.id));
+      setProjects((prev) => prev.filter((p) => p.id !== data.id));
       setTimeout(() => {
         setLoading(false);
       }, 4000);
     }
-    socket.on("project_created",handleProjectCreated);
-    socket.on("project_deleted",handleProjectDeleted);
+    socket.on("project_created", handleProjectCreated);
+    socket.on("project_deleted", handleProjectDeleted);
     return () => {
-      socket.off("project_created",handleProjectCreated);
-      socket.on("project_deleted",handleProjectDeleted);
+      socket.off("project_created", handleProjectCreated);
+      socket.on("project_deleted", handleProjectDeleted);
     }
   }, [])
 
@@ -128,11 +128,11 @@ const Projects = () => {
     // socket.emit("projectcreated",{ })
   };
 
-  const handleProjectCreated =async (newProject) => {
+  const handleProjectCreated = async (newProject) => {
     console.log(newProject);
     setShowModal(false);
     setLoading(true);
-    const data = await api.post('/orgs/proj/', { proj : newProject, orgid : Number(org.id)});
+    const data = await api.post('/orgs/proj/', { proj: newProject, orgid: Number(org.id)});
     // console.log(data.data.project);
     setProjects((prev) => [data.data.project, ...prev]);
     setTimeout(() => {
@@ -147,12 +147,14 @@ const Projects = () => {
           <h1 className="text-3xl font-semibold">Projects</h1>
           <p className="text-zinc-400 mt-1">Manage and track your projects</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer"
-        >
-          <Plus size={18} />New Project
-        </button>
+        {org && org.role === "admin" && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer"
+          >
+            <Plus size={18} />New Project
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -191,7 +193,7 @@ const Projects = () => {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState onNew={() => setShowModal(true)} />
+          <EmptyState onNew={() => setShowModal(true)} context={{ org: org }} />
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((project) => (
@@ -199,7 +201,7 @@ const Projects = () => {
                 key={project.id}
                 project={project}
                 onClick={() => handleProjectClick(project.id)}
-                onDelete={() => setDeleteTarget(project)}  
+                onDelete={() => setDeleteTarget(project)}
                 onReassign={() => setReassignTarget(project)}
               />
             ))}

@@ -33,8 +33,8 @@ const DashboardLayout = () => {
   const [showCreateOrg, setShowCreateOrg] = useState(false);
 
   const handleActiveOrg = async (item) => {
+    setShow(false);
     if (activeorg?.id === item.id) return;
-    console.log(item);
     setActiveOrg(item);
     try {
       await api.get(`/orgs/activeorgs/${item.id}`);
@@ -70,7 +70,7 @@ const DashboardLayout = () => {
         const org = await api.get("/orgs");
         setOrgs(org.data);
         const res = await api.get('/orgs/activeorgs');
-        // console.log(res.data);
+        // console.log(org.data);
         setActiveOrg(res.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
@@ -82,7 +82,7 @@ const DashboardLayout = () => {
   useEffect(() => {
     const handleCreated = async (payload) => {
       const newOrg = payload.org;
-      console.log(newOrg,"joined_org");
+      // console.log(newOrg,"joined_org");
       // console.log(newOrg);
       setOrgs((prev) => [...prev, newOrg]);
     }
@@ -158,11 +158,9 @@ const DashboardLayout = () => {
             </AnimatePresence>
           </button>
 
-          {/* WORKSPACE DROPDOWN */}
           {show && !collapsed && (
 
             <div className="absolute left-0 mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50">
-
               <div className="px-4 pt-4 pb-2">
                 <p className="text-xs tracking-wider text-zinc-400 uppercase">
                   Workspaces
@@ -174,15 +172,12 @@ const DashboardLayout = () => {
                   <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
 
                     <div className="flex-1 min-w-0">
-
                       <p className="font-semibold text-gray-800 dark:text-white text-sm truncate">
                         {item.name}
                       </p>
-
                       <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                         Role: {item.role}
                       </p>
-
                       <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
                         <span>Members: {item.member_count}</span>
                         <span>Created: {new Date(item.createdAt).toLocaleDateString("en-GB", {
@@ -193,26 +188,25 @@ const DashboardLayout = () => {
                         </span>
                       </div>
                     </div>
-
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-4 h-4 text-blue-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                    {activeorg && activeorg.id === item.id && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-4 h-4 text-blue-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    )}
                   </div>
                 </div>))}
-
               <div className="border-t border-zinc-800" />
-
               <div className="px-2 py-2">
                 <div
                   className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition text-blue-500"
@@ -231,6 +225,7 @@ const DashboardLayout = () => {
           className={`flex-1 py-8 space-y-2 ${collapsed ? "px-2" : "px-6"}`}
         >
           <div>
+
             {navItems.map((item) => (
               <Link key={item.path} to={item.path}>
                 <motion.div
@@ -252,7 +247,6 @@ const DashboardLayout = () => {
           </div>
 
           <div className="mt-14 flex flex-col gap-4">
-
             <div
               title={collapsed ? "My Tasks" : ""}
               className={`

@@ -50,9 +50,11 @@ const Notification = () => {
 
   const rejectInvite = async (invite) => {
     try {
-      socket.emit("reject_invite", { invite_id: invite.id });
+      setLoading(invite.id);
+      const res = await api.post(`/invites/${invite.id}/reject`);
       setNotifications((prev) => prev.filter((n) => n.id !== invite.id));
       toast.success("Invite rejected");
+      setLoading(null);
     } catch (err) {
       toast.error("Failed to reject invite");
     }
