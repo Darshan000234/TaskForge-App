@@ -60,9 +60,7 @@ const Projects = () => {
   useEffect(() => {
     if (!org) return;
     const fetchProjects = async () => {
-      const proj = await api.post(`/orgs/proj/${org.id}`, {
-        role: org.role
-      });
+      const proj = await api.post(`/orgs/proj/${org.id}`);
       setProjects(proj.data);
       setLoading(false);
     };
@@ -132,8 +130,7 @@ const Projects = () => {
     console.log(newProject);
     setShowModal(false);
     setLoading(true);
-    const data = await api.post('/orgs/proj/', { proj: newProject, orgid: Number(org.id)});
-    // console.log(data.data.project);
+    const data = await api.post('/orgs/proj/', { proj: newProject, orgid: Number(org.id) });
     setProjects((prev) => [data.data.project, ...prev]);
     setTimeout(() => {
       setLoading(false);
@@ -200,6 +197,7 @@ const Projects = () => {
               <ProjectCard
                 key={project.id}
                 project={project}
+                org={org}
                 onClick={() => handleProjectClick(project.id)}
                 onDelete={() => setDeleteTarget(project)}
                 onReassign={() => setReassignTarget(project)}
@@ -214,9 +212,11 @@ const Projects = () => {
                   <th className="px-6 py-4 font-medium">Name</th>
                   <th className="px-6 py-4 font-medium">Description</th>
                   <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium">Created By</th>
+                  <th className="px-6 py-4 font-medium">Assigned to</th>
                   <th className="px-6 py-4 font-medium">Last Updated</th>
-                  <th className="px-6 py-4 font-medium">Actions</th>
+                  {org && org.role === "admin" && (
+                    <th className="px-6 py-4 font-medium">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -224,6 +224,7 @@ const Projects = () => {
                   <ProjectRow
                     key={project.id}
                     project={project}
+                    org={org}
                     onClick={() => handleProjectClick(project.id)}
                     onDelete={() => handleDelete(project)}
                     onReassign={() => setReassignTarget(project)}

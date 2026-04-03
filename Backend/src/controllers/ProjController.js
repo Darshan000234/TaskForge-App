@@ -4,9 +4,15 @@ import { userSockets } from "../utils/userSockets.js";
 export const projData = async (req, res) => {
     const { id } = req.user;
     const orgid = Number(req.params.id);
-    const { role } = req.body;
-    // console.log(orgid);
-    // console.log(role);
+    const org = await prisma.org_member.findUnique({
+        where : {
+            member_id_org_id : {
+                org_id : orgid,
+                member_id : id
+            }
+        }
+    })
+    let role = org.role;
     try {
         let data = [];
         if (role === "admin") {
@@ -67,7 +73,7 @@ export const projData = async (req, res) => {
 };
 
 export const addProject = async (req, res) => {
-    const { proj, org_id } = req.body;
+    const { proj, orgid } = req.body;
     // console.log(proj,orgid);
     console.log(proj);
     const io = req.app.get("io");
@@ -80,7 +86,7 @@ export const addProject = async (req, res) => {
         const project = await prisma.project.create({
             data: {
                 name: proj.name,
-                org_id: org_id,
+                org_id: orgid,
                 assigned_to: user.id,
                 Description: proj.Description,
                 status: proj.status,
@@ -91,7 +97,7 @@ export const addProject = async (req, res) => {
         await prisma.proj_member.create({
             data: {
                 proj_id: project.id,
-                org_id: org_id,
+                org_id: orgid,
                 member_id: user.id,
                 role: "manager"
             }
@@ -101,7 +107,7 @@ export const addProject = async (req, res) => {
             where: {
                 member_id_org_id: {
                     member_id: user.id,
-                    org_id: org_id
+                    org_id: orgid
                 }
             }
         });

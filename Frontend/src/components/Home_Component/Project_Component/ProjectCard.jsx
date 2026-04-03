@@ -1,12 +1,11 @@
-
 import { FolderOpen, User, Trash2, UserCog } from "lucide-react";
 
-const ProjectCard = ({ project, onClick, onDelete, onReassign }) => {
+const ProjectCard = ({ project, onClick, onDelete, onReassign, org }) => {
   const statusStyle = {
-    active:    "bg-emerald-500/15 text-emerald-400",
-    archived:  "bg-zinc-600/30 text-zinc-400",
+    active: "bg-emerald-500/15 text-emerald-400",
+    archived: "bg-zinc-600/30 text-zinc-400",
     completed: "bg-blue-500/15 text-blue-400",
-    onhold:    "bg-yellow-500/15 text-yellow-400",
+    onhold: "bg-yellow-500/15 text-yellow-400",
     cancelled: "bg-red-500/15 text-red-400",
   };
   // console.log(project);
@@ -20,23 +19,24 @@ const ProjectCard = ({ project, onClick, onDelete, onReassign }) => {
       onClick={onClick}
       className="bg-linear-to-br from-zinc-800/70 to-zinc-900/10 border border-zinc-800 rounded-xl p-5 hover:border-zinc-600 transition cursor-pointer group relative"
     >
-      {/* Action buttons — hidden until hover, absolutely positioned top-right */}
-      <div className="absolute top-3 right-3 hidden group-hover:flex items-center gap-1 z-10">
-        <button
-          onClick={(e) => handleAction(e, () => onReassign(project))}
-          title="Reassign Manager"
-          className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-blue-400 transition cursor-pointer"
-        >
-          <UserCog size={15} />
-        </button>
-        <button
-          onClick={(e) => handleAction(e, () => onDelete(project))}
-          title="Delete Project"
-          className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition cursor-pointer"
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
+      {org && org.role === "admin" && (
+        <div className="absolute top-3 right-3 hidden group-hover:flex items-center gap-1 z-10">
+          <button
+            onClick={(e) => handleAction(e, () => onReassign(project))}
+            title="Reassign Manager"
+            className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-blue-400 transition cursor-pointer"
+          >
+            <UserCog size={15} />
+          </button>
+          <button
+            onClick={(e) => handleAction(e, () => onDelete(project))}
+            title="Delete Project"
+            className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition cursor-pointer"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      )}
 
       {/* Icon row — status badge hidden on hover to avoid overlap with action buttons */}
       <div className="flex items-start justify-between mb-3">
