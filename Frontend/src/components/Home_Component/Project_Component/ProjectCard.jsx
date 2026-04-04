@@ -2,7 +2,7 @@ import { FolderOpen, User, Trash2, UserCog } from "lucide-react";
 
 const ProjectCard = ({ project, onClick, onDelete, onReassign, org }) => {
   const statusStyle = {
-    active: "bg-emerald-500/15 text-emerald-400",
+    Active: "bg-emerald-500/15 text-emerald-400",
     archived: "bg-zinc-600/30 text-zinc-400",
     completed: "bg-blue-500/15 text-blue-400",
     onhold: "bg-yellow-500/15 text-yellow-400",

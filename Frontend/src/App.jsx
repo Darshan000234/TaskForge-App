@@ -1,4 +1,3 @@
-import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Home from './components/Home.jsx'
@@ -9,6 +8,7 @@ import Projects from "./components/Home_Component/Projects.jsx";
 import Team from "./components/Home_Component/Team.jsx";
 import Settings from "./components/Home_Component/Settings.jsx";
 import Notification from "./components/Home_Component/Notification.jsx";
+import ProjectDetail from './components/Home_Component/Project_Component/ProjectDetail_Component/ProjectDetail.jsx'
 
 const App = () => {
   return (
@@ -32,7 +32,8 @@ const App = () => {
         <Route path='/Signup_login' element={<Signup_login />} />
         <Route path="/user/dashboard" element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="projects" element={<Projects />} />
+          <Route path="projects" element={<Projects />} /> 
+          <Route path="projects/:id" element={<ProjectDetail />} />
           <Route path="team" element={<Team />} />
           <Route path="settings" element={<Settings />} />
           <Route path="notification" element={<Notification />} />

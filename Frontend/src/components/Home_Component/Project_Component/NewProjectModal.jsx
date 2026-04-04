@@ -5,8 +5,8 @@ import api from "../../../api/api.js";
 const INITIAL_FORM = {
   name: "",
   Description: "",
-  status: "active",
-  priority: "medium",
+  status: "Active",
+  priority: "Medium",
   endDate: "",
   email: "",
   memberIds: [],
@@ -44,9 +44,9 @@ const NewProjectModal = ({ onClose, onCreated}) => {
     };
 
     const inputCls =
-        "w-full rounded-lg border border-zinc-700 bg-zinc-900 py-2.5 px-3 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500 transition";
+        "w-full rounded-lg border border-zinc-700 bg-zinc-900 py-2.5 px-3 text-[15px] text-zinc-200 focus:outline-none focus:border-zinc-500 transition";
     const selectCls =
-        "w-full rounded-lg border border-zinc-700 bg-zinc-900 py-2.5 px-3 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500 transition appearance-none cursor-pointer";
+        "w-full rounded-lg border border-zinc-700 bg-zinc-900 py-2.5 px-3 text-[15px] text-zinc-200 focus:outline-none focus:border-zinc-500 transition appearance-none cursor-pointer";
     const labelCls = "block text-sm text-zinc-300 mb-1.5";
     return (
         <div>

@@ -7,7 +7,7 @@ import NewProjectModal from "./Project_Component/NewProjectModal";
 import socket from "../../socket/socket.js";
 import toast from "react-hot-toast";
 import api from "../../api/api.js";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import ConfirmDeleteModal from "./Project_Component/ConfirmDeleteModal";
 import ReassignManagerModal from "./Project_Component/ReassignManagerModal";
 
@@ -44,7 +44,7 @@ const Dropdown = ({ value, options, onChange, label }) => {
 
 const Projects = () => {
   // const { orgId } = useParams();       // uncomment for real routes
-  // const navigate = useNavigate();      // uncomment for real routes
+  const navigate = useNavigate();      // uncomment for real routes
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,9 +121,8 @@ const Projects = () => {
     return matchSearch && matchStatus && matchPriority;
   });
 
-  const handleProjectClick = (projectId) => {
-    console.log("Navigate to project:", projectId);
-    // socket.emit("projectcreated",{ })
+  const handleProjectClick = (project) => {
+    navigate(`/user/dashboard/projects/${project.id}`);
   };
 
   const handleProjectCreated = async (newProject) => {
@@ -198,7 +197,7 @@ const Projects = () => {
                 key={project.id}
                 project={project}
                 org={org}
-                onClick={() => handleProjectClick(project.id)}
+                onClick={() => handleProjectClick(project)}
                 onDelete={() => setDeleteTarget(project)}
                 onReassign={() => setReassignTarget(project)}
               />
