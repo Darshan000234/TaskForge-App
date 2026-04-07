@@ -5,7 +5,6 @@ import EmptyState from "./Project_Component/EmptyState";
 import ProjectCard from "./Project_Component/ProjectCard";
 import NewProjectModal from "./Project_Component/NewProjectModal";
 import socket from "../../socket/socket.js";
-import toast from "react-hot-toast";
 import api from "../../api/api.js";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import ConfirmDeleteModal from "./Project_Component/ConfirmDeleteModal";

@@ -31,7 +31,7 @@ const TeamSection = ({ teamMembers = [], tasks = [] }) => {
       <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wider font-medium">
         {teamMembers.length} member{teamMembers.length !== 1 ? "s" : ""}
       </p>
-      <div className="border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="border border-zinc-800 rounded-xl">
         <table className="w-full text-sm">
           <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
             <tr className="text-left">

@@ -8,7 +8,7 @@ export const checkRole = (requiredRole) => {
 
         const membership = await prisma.org_member.findFirst({
             where: {
-                userId: userId,
+                member_id: userId,
                 org_id: org_id
             }
         });

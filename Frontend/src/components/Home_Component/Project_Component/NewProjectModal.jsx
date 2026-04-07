@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {  ChevronDown,X } from "lucide-react";
 import api from "../../../api/api.js";
+import { useOutletContext } from "react-router-dom";
 
 const INITIAL_FORM = {
   name: "",
@@ -14,7 +15,7 @@ const INITIAL_FORM = {
 
 const NewProjectModal = ({ onClose, onCreated}) => {
     const [form, setForm] = useState(INITIAL_FORM);
-    const org = JSON.parse(localStorage.getItem("org"));
+    const { org } = useOutletContext();
     const [members,setMembers] = useState([]);
     const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -23,7 +24,7 @@ const NewProjectModal = ({ onClose, onCreated}) => {
             // console.log(org.id);
             const response = await api.get(`/orgs/${org.id}/members`);
             setMembers(response.data);
-            // console.log(response.data);
+            console.log(org.id);
         }
         getMembers();
     }, [])

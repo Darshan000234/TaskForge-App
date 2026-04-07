@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, CheckSquare, Users, History } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+
 import ProjectInfoCard from "./ProjectInfoCard";
 import StatCards       from "./StatCards";
 import TaskSection     from "./TaskSection";
@@ -12,39 +12,76 @@ import AuditLogCard    from "./AuditLogCard";
  * ProjectDetail — root layout
  *
  * Props:
- *  project      { id, name, Description, status, priority, email, endDate }
- *  teamMembers  [{ id, name, email, role }]
- *  tasks        [{ id, title, description, status, priority, assignees:[{id,name,email}], dueDate }]
- *  auditLogs    [{ id, actor, action, message, timestamp }]
- *  onBack       () => void
- *  onAddTask    () => void
- *  org          { role }
+ *  project         { id, name, Description, status, priority, email, endDate }
+ *  teamMembers     [{ id, name, email, role }]
+ *  tasks           [{ id, title, description, status, priority, assignees:[{id,name,email}], dueDate }]
+ *  auditLogs       [{ id, actor, action, message, timestamp }]
+ *  onBack          () => void
+ *  onAddTask       () => void
+ *  onDeleteTask    (taskId) => void
+ *  onAddMember     (taskId, member) => void
+ *  onRemoveMember  (taskId, memberId) => void
+ *  org             { role }
  */
 const ProjectDetail = ({
-  project     = MOCK_PROJECT,
-  teamMembers = MOCK_TEAM,
-  tasks       = MOCK_TASKS,
-  auditLogs   = MOCK_AUDIT,
+  project        = MOCK_PROJECT,
+  teamMembers    = MOCK_TEAM,
+  tasks: tasksProp = MOCK_TASKS,
+  auditLogs      = MOCK_AUDIT,
+  onBack,
   onAddTask,
-  org         = { role: "admin" },
+  onDeleteTask,
+  onAddMember,
+  onRemoveMember,
+  org            = { role: "admin" },
 }) => {
-  const navigate = useNavigate();
+  // Keep task state locally so add/remove/delete work without API round-trip.
+  // In production, replace these handlers with API calls + refetch.
+  const [tasks, setTasks] = useState(tasksProp);
+
   const [activeSection, setActiveSection] = useState("tasks");
-  // Lifted so StatCards can pre-set filter
-  const [taskFilters, setTaskFilters] = useState({});
+  const [taskFilters, setTaskFilters]     = useState({});
+
+  // ── Task mutation handlers (local-first) ──────────────────────────────────
+
+  const handleDeleteTask = (taskId) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    onDeleteTask?.(taskId);
+  };
+
+  const handleAddMember = (taskId, member) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, assignees: [...(t.assignees ?? []), member] }
+          : t
+      )
+    );
+    onAddMember?.(taskId, member);
+  };
+
+  const handleRemoveMember = (taskId, memberId) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, assignees: (t.assignees ?? []).filter((a) => a.id !== memberId) }
+          : t
+      )
+    );
+    onRemoveMember?.(taskId, memberId);
+  };
+
+  // ── Stat card shortcut ────────────────────────────────────────────────────
 
   const handleOverdueClick = () => {
     setActiveSection("tasks");
     setTaskFilters({ due: "overdue" });
   };
 
-  const onBack = () => {
-    navigate('/user/dashboard/projects');
-  }
   const TABS = [
-    { key: "tasks", label: "Tasks",  icon: <CheckSquare size={14} /> },
-    { key: "team",  label: "Team",   icon: <Users size={14} /> },
-    { key: "audit", label: "Audit",  icon: <History size={14} /> },
+    { key: "tasks", label: "Tasks", icon: <CheckSquare size={14} /> },
+    { key: "team",  label: "Team",  icon: <Users size={14} /> },
+    { key: "audit", label: "Audit", icon: <History size={14} /> },
   ];
 
   return (
@@ -55,17 +92,16 @@ const ProjectDetail = ({
         onClick={onBack}
         className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition text-sm mb-8 cursor-pointer"
       >
-        <ArrowLeft size={15} />
-        Back to Projects
+        <ArrowLeft size={15} />Back to Projects
       </button>
 
-      {/* Project info card */}
+      {/* Project info */}
       <ProjectInfoCard project={project} taskCount={tasks.length} />
 
-      {/* Stat cards */}
+      {/* Stats */}
       <StatCards tasks={tasks} onOverdueClick={handleOverdueClick} />
 
-      {/* Section tabs */}
+      {/* Tabs */}
       <div className="flex items-center gap-1 border border-zinc-800 rounded-lg p-1 bg-zinc-900 w-fit mt-8">
         {TABS.map(({ key, label, icon }) => (
           <button
@@ -82,16 +118,18 @@ const ProjectDetail = ({
         ))}
       </div>
 
-      {/* ── Main content + right sidebar ────────────────────────────── */}
+      {/* ── Content + right sidebar ───────────────────────────────────── */}
       <div className="flex gap-6 mt-6 items-start">
 
-        {/* Left: section content */}
         {activeSection === "tasks" && (
           <TaskSection
             tasks={tasks}
             teamMembers={teamMembers}
             org={org}
             onAddTask={onAddTask}
+            onDeleteTask={handleDeleteTask}
+            onAddMember={handleAddMember}
+            onRemoveMember={handleRemoveMember}
             initialFilters={taskFilters}
             onFiltersChange={setTaskFilters}
           />
@@ -101,7 +139,6 @@ const ProjectDetail = ({
           <TeamSection teamMembers={teamMembers} tasks={tasks} />
         )}
 
-        {/* Audit tab: full width, no sidebar */}
         {activeSection === "audit" && (
           <div className="flex-1 min-w-0">
             <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wider font-medium flex items-center gap-2">
@@ -113,7 +150,7 @@ const ProjectDetail = ({
           </div>
         )}
 
-        {/* Right sidebar: only on tasks + team tabs */}
+        {/* Right sidebar: Overdue + Audit (not on audit tab) */}
         {activeSection !== "audit" && (
           <div className="w-72 shrink-0 space-y-4">
             <DueTasksCard tasks={tasks} />
@@ -127,7 +164,7 @@ const ProjectDetail = ({
 
 export default ProjectDetail;
 
-// ─── Mock data (remove when wired to API) ─────────────────────────────────────
+// ─── Mock data (remove when wired to API) ────────────────────────────────────
 
 const MOCK_PROJECT = {
   id: 1, name: "Bugatti",

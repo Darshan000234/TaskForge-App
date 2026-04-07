@@ -75,15 +75,8 @@ const Dashboard = ({ }) => {
           ))}
         </div>
 
-
-        {/* Main Grid */}
-        {/* Main Grid */}
         <div className="grid grid-cols-3 gap-10">
-
-          {/* LEFT COLUMN (2 cols) */}
           <div className="col-span-2 space-y-10">
-
-            {/* Project Overview */}
             <div className="
       bg-linear-to-br 
       from-zinc-800/60 
@@ -93,16 +86,12 @@ const Dashboard = ({ }) => {
       overflow-hidden
       hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
     ">
-
-              {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
                 <h3 className="text-white text-[14px]">Project Overview</h3>
                 <button className="text-zinc-400 text-[14px] hover:text-white transition">
                   View all →
                 </button>
               </div>
-
-              {/* Body */}
               <div className="h-90 flex flex-col items-center justify-center text-zinc-400 ">
                 <img
                   className="w-20 h-20 p-4 bg-[#27272a] rounded-full"
@@ -115,8 +104,6 @@ const Dashboard = ({ }) => {
                 </button>
               </div>
             </div>
-
-            {/* Recent Activity */}
             <div className="
       bg-linear-to-br 
       from-zinc-800/60 

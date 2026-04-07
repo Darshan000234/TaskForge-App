@@ -1,4 +1,4 @@
-import { Search, Users, Activity, Shield } from "lucide-react";
+import { Search, Users, Activity, Shield, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import Loader from "./Team_Component/loader.jsx";
@@ -50,6 +50,19 @@ const Team = () => {
     }
   }, []);
 
+  const handleDelete = async (id) => {
+
+    try {
+      setLoading(true);
+      const res = await api.delete(`/invites/delete/${id}`);
+      setMembers((prev)=> prev.filter((p) => p.id !== id));
+      setLoading(false);
+      toast.success(res.data.message);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   const inviteMember = async ({ Email, id }) => {
     setLoading(true);
     try {
@@ -60,7 +73,7 @@ const Team = () => {
           )
         );
       }
-      const res = await api.post('/invites', { email: Email, org_id: Number(org.id)});
+      const res = await api.post('/invites', { email: Email, org_id: Number(org.id) });
       if (!id) {
         setMembers((prev) => [...prev, res.data.invite]);
       }
@@ -142,6 +155,7 @@ const Team = () => {
                 <th className="px-6 py-4 font-medium">Name</th>
                 <th className="px-6 py-4 font-medium">Email</th>
                 <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium">Action</th>
               </tr>
             </thead>
 
@@ -173,6 +187,16 @@ const Team = () => {
                         Resend
                       </button>
                     )}
+                  </td>
+
+                  <td className="px-6 py-4 ">
+                    <button
+                      onClick={(e) => handleDelete(member.id)}
+                      title="Delete Project"
+                      className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition cursor-pointer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </td>
                 </tr>
               ))}

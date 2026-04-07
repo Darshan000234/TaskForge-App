@@ -273,7 +273,6 @@ const DashboardLayout = () => {
                 </span>
               )}
             </div>
-
             <div
               title={collapsed ? "Projects" : ""}
               className={`

@@ -10,7 +10,7 @@ export const inviteData = async (req, res) => {
         status: "pending"
       }
     }); 
-    console.log(data);
+    // console.log(data);
     // if (!data) return res.status(404).json({ message: "No invite found" });
     res.status(200).json({ data });
   } catch (error) {
@@ -49,7 +49,7 @@ export const sendInvite = async (req, res) => {
       where: {
         receiver_id_org_id: {
           receiver_id: receiver.id,
-          org_id: orgid
+          org_id: org_id
         }
       }
     });
@@ -168,5 +168,28 @@ export const rejectInvite = async (req, res) => {
     console.log(error.message);
     console.log("rejectInvite");
     res.status(404).json({ message: error.message });
+  }
+}
+
+export const DeleteInvite = async (req,res) => {
+  const id = Number(req.params.id);
+  const io = req.app.get("io");
+  try {
+    const invite = await prisma.teaminvitation.findUnique({
+      where : {
+        id : id
+      }
+    });
+    await prisma.teaminvitation.delete({
+      where : {
+        id : invite.id
+      }
+    });
+    io.to(`org_${invite.org_id}`).emit('invite Deleted',{ id : invite.id});
+    res.status(200).json({message : "successfully Deleted"});
+  } catch (error) {
+    console.log(error.message);
+    console.log("DeleteInvite");
+    res.status(404).json({message : error.message});
   }
 }
