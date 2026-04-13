@@ -11,6 +11,7 @@ import userRoute from "./routes/User/UserRoute.js";
 import orgRoute from "./routes/Organization/OrgRoute.js";
 import inviteRoute from "./routes/User/inviteRoute.js";
 import projectRoute from "./routes/Project/projectRoute.js";
+import TaskRoute from "./routes/Task/TaskRoute.js";
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use("/user", userRoute);
 app.use("/orgs", orgRoute);
 app.use("/invites", inviteRoute);
 app.use("/orgs/proj", projectRoute);
+app.use("/proj/task",TaskRoute);
 
 io.use(async (socket, next) => {
   try {

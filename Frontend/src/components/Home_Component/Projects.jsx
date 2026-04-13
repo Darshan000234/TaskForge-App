@@ -121,11 +121,12 @@ const Projects = () => {
   });
 
   const handleProjectClick = (project) => {
+    // console.log(project);
     navigate(`/user/dashboard/projects/${project.id}`);
   };
 
   const handleProjectCreated = async (newProject) => {
-    console.log(newProject);
+    // console.log(newProject);
     setShowModal(false);
     setLoading(true);
     const data = await api.post('/orgs/proj/', { proj: newProject, orgid: Number(org.id) });
@@ -223,7 +224,7 @@ const Projects = () => {
                     key={project.id}
                     project={project}
                     org={org}
-                    onClick={() => handleProjectClick(project.id)}
+                    onClick={() => handleProjectClick(project)}
                     onDelete={() => handleDelete(project)}
                     onReassign={() => setReassignTarget(project)}
                   />

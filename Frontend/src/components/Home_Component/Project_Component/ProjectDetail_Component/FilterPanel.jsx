@@ -1,45 +1,65 @@
 import { useRef, useEffect } from "react";
 import { X } from "lucide-react";
+import CustomSelect from "../../../../utils/CustomSelect.jsx";
 import { buildQueryString } from "./constants";
 
+/* Click outside hook */
 function useClickOutside(ref, cb) {
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) cb(); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        cb();
+      }
+    };
+
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [ref, cb]);
 }
 
-const Sel = ({ label, field, options, filters, onChange }) => (
-  <div>
-    <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium block mb-1">
-      {label}
-    </label>
-    <select
-      value={filters[field] ?? ""}
-      onChange={(e) => onChange({ ...filters, [field]: e.target.value })}
-      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-zinc-500 transition"
-    >
-      <option value="">All</option>
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
-  </div>
-);
-
-/**
- * FilterPanel
- *
- * Props:
- *  filters    object  current filter state
- *  onChange   (filters) => void
- *  members    [{ id, name }]
- *  onClose    () => void
- */
 const FilterPanel = ({ filters, onChange, members, onClose }) => {
   const ref = useRef(null);
   useClickOutside(ref, onClose);
+
+  /* Centralized update */
+  const handleChange = (field, value) => {
+    onChange({
+      ...filters,
+      [field]: value,
+    });
+  };
+
+  /* Config-driven filters */
+  const filterConfig = [
+    {
+      label: "Status",
+      field: "status",
+      options: [
+        { value: "todo", label: "To Do" },
+        { value: "inprogress", label: "In Progress" },
+        { value: "done", label: "Done" },
+        { value: "blocked", label: "Blocked" },
+      ],
+    },
+    {
+      label: "Priority",
+      field: "priority",
+      options: [
+        { value: "high", label: "High" },
+        { value: "medium", label: "Medium" },
+        { value: "low", label: "Low" },
+      ],
+    },
+    {
+      label: "Due",
+      field: "due",
+      options: [
+        { value: "overdue", label: "Overdue" },
+        { value: "today", label: "Due Today" },
+        { value: "week", label: "Due This Week" },
+      ],
+    },
+  ];
 
   return (
     <div
@@ -49,71 +69,74 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-white">Filters</span>
-        <button onClick={onClose} className="cursor-pointer text-zinc-500 hover:text-zinc-300 transition">
+        <button
+          onClick={onClose}
+          className="cursor-pointer text-zinc-500 hover:text-zinc-300"
+        >
           <X size={15} />
         </button>
       </div>
 
-      <Sel label="Status" field="status" filters={filters} onChange={onChange} options={[
-        { value: "todo",       label: "To Do"       },
-        { value: "inprogress", label: "In Progress" },
-        { value: "done",       label: "Done"        },
-        { value: "blocked",    label: "Blocked"     },
-      ]} />
-
-      <Sel label="Priority" field="priority" filters={filters} onChange={onChange} options={[
-        { value: "high",   label: "High"   },
-        { value: "medium", label: "Medium" },
-        { value: "low",    label: "Low"    },
-      ]} />
-
-      <Sel label="Due" field="due" filters={filters} onChange={onChange} options={[
-        { value: "overdue", label: "Overdue"       },
-        { value: "today",   label: "Due Today"     },
-        { value: "week",    label: "Due This Week" },
-      ]} />
+      {/* Dynamic Filters */}
+      {filterConfig.map((item) => (
+        <CustomSelect
+          key={item.field}
+          label={item.label}
+          value={filters[item.field]}
+          options={item.options}
+          onChange={(val) => handleChange(item.field, val)}
+        />
+      ))}
 
       {/* Assignee */}
-      <div>
-        <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium block mb-1">
-          Assignee
-        </label>
-        <select
-          value={filters.assigneeId ?? ""}
-          onChange={(e) => onChange({ ...filters, assigneeId: e.target.value })}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-zinc-500 transition"
-        >
-          <option value="">All Members</option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
-      </div>
+      <CustomSelect
+        label="Assignee"
+        value={filters.assigneeId}
+        options={members.map((m) => ({
+          value: m.id,
+          label: m.name,
+        }))}
+        onChange={(val) => handleChange("assigneeId", val)}
+      />
 
       {/* Sort */}
       <div className="grid grid-cols-2 gap-3">
-        <Sel label="Sort By" field="sortBy" filters={filters} onChange={onChange} options={[
-          { value: "dueDate",   label: "Due Date"  },
-          { value: "priority",  label: "Priority"  },
-          { value: "status",    label: "Status"    },
-          { value: "createdAt", label: "Created"   },
-        ]} />
-        <Sel label="Order" field="order" filters={filters} onChange={onChange} options={[
-          { value: "asc",  label: "Asc"  },
-          { value: "desc", label: "Desc" },
-        ]} />
+        <CustomSelect
+          label="Sort By"
+          value={filters.sortBy}
+          options={[
+            { value: "dueDate", label: "Due Date" },
+            { value: "priority", label: "Priority" },
+            { value: "status", label: "Status" },
+            { value: "createdAt", label: "Created" },
+          ]}
+          onChange={(val) => handleChange("sortBy", val)}
+        />
+
+        <CustomSelect
+          label="Order"
+          value={filters.order}
+          options={[
+            { value: "asc", label: "Asc" },
+            { value: "desc", label: "Desc" },
+          ]}
+          onChange={(val) => handleChange("order", val)}
+        />
       </div>
 
-      {/* Query string preview */}
-      <div className="bg-zinc-800/60 rounded-lg p-2.5">
-        <p className="text-[10px] text-zinc-500 font-mono break-all leading-relaxed">
-          {buildQueryString(filters) || "No filters applied"}
-        </p>
-      </div>
-
+      {/* Clear */}
       <button
-        onClick={() => onChange({})}
-        className="cursor-pointer w-full py-2 rounded-lg border border-zinc-700 text-xs text-zinc-400 hover:text-white hover:border-zinc-500 transition"
+        onClick={() =>
+          onChange({
+            status: "",
+            priority: "",
+            due: "",
+            assigneeId: "",
+            sortBy: "",
+            order: "",
+          })
+        }
+        className="cursor-pointer w-full py-2 rounded-lg border border-zinc-700 text-xs text-zinc-400 hover:text-white hover:border-zinc-500"
       >
         Clear All
       </button>

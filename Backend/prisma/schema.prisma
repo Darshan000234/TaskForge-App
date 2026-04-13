@@ -35,6 +35,8 @@ model org {
 
   members      org_member[]
   user         User[]
+  task         task[]
+  project      project[]
   
   @@index([userId]) 
   @@index([id])
@@ -50,8 +52,11 @@ model User {
   org org? @relation(fields: [activeorg], references: [id], onDelete: SetNull)
   authProvider AuthProvider @default(local)
   createdAt    DateTime     @default(now())
+
   projectMemberships proj_member[]
   projectAssigner    project[]
+  createdTasks       task[] @relation("TaskCreator")
+  assignedTasks      task_assignee[]
 }
 
 model org_member {
@@ -79,21 +84,45 @@ model project {
   endDate      DateTime 
   last_update  DateTime    @default(now()) 
   members      proj_member[]
+  tasks        task[]
 
-  member       User    @relation(fields: [assigned_to], references: [id], onDelete: Cascade)
+  member       User    @relation(fields: [assigned_to], references: [id], onDelete: SetNull)
+  org          org     @relation(fields: [org_id], references: [id], onDelete: Cascade )
 
   createdAt    DateTime     @default(now())
   @@index([org_id])
 }
 
 model task {
-  id           Int          @id @default(autoincrement())
+  id           Int    @id @default(autoincrement())
   name         String
-  userId       Int 
+  Description  String 
+  Status       String 
+  priority     String 
+  dueDate      DateTime
+  created_by   Int?
   project_id   Int
   org_id       Int 
-  assigned_to  Int
-  createdAt    DateTime     @default(now())
+
+  creator  User?    @relation("TaskCreator", fields: [created_by], references: [id], onDelete: SetNull)
+
+  project  project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  org      org      @relation(fields: [org_id], references: [id], onDelete: Cascade)
+
+  assignees task_assignee[]
+
+  createdAt DateTime @default(now())
+}
+
+model task_assignee {
+  id        Int  @id @default(autoincrement())
+  task_id   Int
+  user_id   Int
+
+  task      task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([task_id, user_id]) // prevent duplicate assignment
 }
 
 model teaminvitation {

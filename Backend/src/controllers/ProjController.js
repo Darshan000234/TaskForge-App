@@ -5,10 +5,10 @@ export const projData = async (req, res) => {
     const { id } = req.user;
     const orgid = Number(req.params.id);
     const org = await prisma.org_member.findUnique({
-        where : {
-            member_id_org_id : {
-                org_id : orgid,
-                member_id : id
+        where: {
+            member_id_org_id: {
+                org_id: orgid,
+                member_id: id
             }
         }
     })
@@ -75,7 +75,7 @@ export const projData = async (req, res) => {
 export const addProject = async (req, res) => {
     const { proj, orgid } = req.body;
     // console.log(proj,orgid);
-    console.log(proj);
+    // console.log(proj);
     const io = req.app.get("io");
     try {
         const user = await prisma.user.findUnique({
@@ -219,5 +219,30 @@ export const reassignProject = async (req, res) => {
     } catch (error) {
         console.log(error.message);
         res.status(404).json({ message: error.message });
+    }
+}
+
+export const OneProjData = async (req, res) => {
+    const id = Number(req.params.id);
+    // console.log(id);
+    try {
+        const data = await prisma.project.findUnique({
+            where: {
+                id: id
+            },
+            include : {
+                member: {
+                    select: {
+                        email: true
+                    }
+                }
+            }
+        });
+        data.email = data.member.email; 
+        res.status(200).json({ data });
+    } catch (error) {
+        console.log("OneProjectData");
+        console.log(error.message);
+        res.status(404).json({ message : error.message});
     }
 }
