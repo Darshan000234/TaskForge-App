@@ -71,6 +71,7 @@ const DashboardLayout = () => {
         setOrgs(org.data);
         const res = await api.get('/orgs/activeorgs');
         // console.log(org.data);
+        socket.emit("join_org",{id : res.data.id});
         setActiveOrg(res.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
@@ -85,6 +86,7 @@ const DashboardLayout = () => {
       // console.log(newOrg,"joined_org");
       // console.log(newOrg);
       setOrgs((prev) => [...prev, newOrg]);
+      socket.emit("join_org", { id: newOrg.id });
     }
     socket.on("joined_org", handleCreated);
     return () => {

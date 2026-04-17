@@ -135,16 +135,11 @@ export const acceptInvite = async (req, res) => {
         org_id: invite.org_id
       }
     })
-    const org_member = await prisma.org_member.findFirst({
-      where: {
-        org_id: invite.org_id,
-        member_id: id,
-        role: "admin"
-      }
-    })
+    
     // console.log("ok");
-    io.to(`org_${org_member.id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
+    io.to(`org_${org.id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
     io.to(`user:${invite.receiver_id}`).emit("joined_org", { org: org });
+    // console.log(org.id);
     res.status(200).json({ message: "successfully joined " });
   } catch (error) {
     console.log(error.message);

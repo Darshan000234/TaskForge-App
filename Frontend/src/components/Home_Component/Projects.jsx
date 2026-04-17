@@ -9,6 +9,7 @@ import api from "../../api/api.js";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import ConfirmDeleteModal from "./Project_Component/ConfirmDeleteModal";
 import ReassignManagerModal from "./Project_Component/ReassignManagerModal";
+import toast from "react-hot-toast";
 
 const STATUS_OPTIONS = ["all", "active", "completed", "cancelled", "onhold"];
 const PRIORITY_OPTIONS = ["all", "low", "medium", "high"];
@@ -68,20 +69,35 @@ const Projects = () => {
   }, [org]);
 
   useEffect(() => {
+    const joinProj = async ({ projectId }) => {
+      try {
+        const res = await api.get(`orgs/proj/one/${projectId}`);
+        setProjects((prev) => { [...prev, res.data.data] });
+        socket.emit("join_proj",{ id : projectId });
+      } catch (error) {
+        toast.error(error.message);
+      }
+    }
+
+    socket.on("joined_proj", joinProj);
+    return () => {
+      socket.off("joined_proj", joinProj);
+    }
+  }, [])
+
+
+  useEffect(() => {
     const handleProjectCreated = (data) => {
-      console.log(data);
       const project = data.project;
       setLoading(true);
       setProjects((prev) => [project, ...prev]);
       setTimeout(() => {
         setLoading(false);
       }, 4000);
-      socket.emit('join_proj', { proj: project });
+      socket.emit('join_proj', { id : project.id });
     }
     const handleProjectDeleted = (data) => {
-      console.log(data.id);
       setLoading(true);
-      // const project = data.id;
       setProjects((prev) => prev.filter((p) => p.id !== data.id));
       setTimeout(() => {
         setLoading(false);
@@ -121,7 +137,6 @@ const Projects = () => {
   });
 
   const handleProjectClick = (project) => {
-    // console.log(project);
     navigate(`/user/dashboard/projects/${project.id}`);
   };
 
@@ -135,6 +150,7 @@ const Projects = () => {
       setLoading(false);
     }, 4000);
   }
+
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
       {/* Header */}

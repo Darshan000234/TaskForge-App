@@ -31,6 +31,7 @@ const Team = () => {
 
   useEffect(() => {
     const handlestatuschange = (data) => {
+      console.log(data);
       setMembers((prevmember) => {
         return prevmember.map((member) => {
           if (member.id === data.id) {
@@ -46,7 +47,6 @@ const Team = () => {
     return () => {
       socket.off("invite_accepted", handlestatuschange);
       socket.off("invite_rejected", handlestatuschange);
-      // socket.off("joined_org", handledata);
     }
   }, []);
 
@@ -82,6 +82,7 @@ const Team = () => {
       setShowInvite(false);
     } catch (error) {
       console.log(error.message);
+      setLoading(false);
       toast.error(error.response?.data?.message || error.message);
     }
   };

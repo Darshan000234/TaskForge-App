@@ -166,3 +166,4 @@ export const getActiveOrgs = async (req, res) => {
         res.status(400).json({ message: "something went wrong" });
     }
 }
+

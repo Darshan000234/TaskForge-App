@@ -15,13 +15,6 @@ const StatCard = ({ icon, label, value, accent, onClick }) => (
   </div>
 );
 
-/**
- * StatCards
- *
- * Props:
- *  tasks           task[]
- *  onOverdueClick  () => void  — clicking Overdue card filters tasks
- */
 const StatCards = ({ tasks = [], onOverdueClick }) => {
   const isOverdue = (t) =>
     t.dueDate && t.status !== "done" && new Date(t.dueDate) < new Date();

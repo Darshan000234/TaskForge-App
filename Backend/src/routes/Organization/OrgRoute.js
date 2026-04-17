@@ -20,4 +20,5 @@ router.get('/:id/members',authMiddleware,DataOrganizationMembers); // get all me
 router.get('/activeorgs/:id',authMiddleware,updateactiveOrgs);
 router.get('/activeorgs',authMiddleware,getActiveOrgs); // get all active orgs of the user
 
+
 export default router;

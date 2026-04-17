@@ -1,29 +1,31 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Plus, Calendar, Flag, AlignLeft, Type, Search } from "lucide-react";
+import api from "../../../../api/api";
+import toast from "react-hot-toast";
 
 /* ─────────────────────────────────────────────
    Constants
 ───────────────────────────────────────────── */
 const STATUS_OPTIONS = [
-  { value: "todo",       label: "To Do",       dot: "bg-zinc-500"    },
-  { value: "inprogress", label: "In Progress",  dot: "bg-yellow-400"  },
-  { value: "done",       label: "Done",         dot: "bg-emerald-400" },
-  { value: "blocked",    label: "Blocked",      dot: "bg-red-400"     },
+  { value: "todo", label: "To Do", dot: "bg-zinc-500" },
+  { value: "inprogress", label: "In Progress", dot: "bg-yellow-400" },
+  { value: "done", label: "Done", dot: "bg-emerald-400" },
+  { value: "blocked", label: "Blocked", dot: "bg-red-400" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: "high",   label: "High",   dot: "bg-red-400"    },
+  { value: "high", label: "High", dot: "bg-red-400" },
   { value: "medium", label: "Medium", dot: "bg-yellow-400" },
-  { value: "low",    label: "Low",    dot: "bg-emerald-400"},
+  { value: "low", label: "Low", dot: "bg-emerald-400" },
 ];
 
 const DEFAULT_FORM = {
-  title:       "",
+  title: "",
   description: "",
-  status:      "todo",
-  priority:    "medium",
-  dueDate:     "",
-  assignees:   [],
+  status: "todo",
+  priority: "medium",
+  dueDate: "",
+  assignees: [],
 };
 
 /* ─────────────────────────────────────────────
@@ -37,11 +39,10 @@ const SegmentedPicker = ({ options, value, onChange }) => (
         key={o.value}
         type="button"
         onClick={() => onChange(o.value)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer ${
-          value === o.value
-            ? "bg-zinc-700 border-zinc-600 text-white"
-            : "border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 bg-transparent"
-        }`}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer ${value === o.value
+          ? "bg-zinc-700 border-zinc-600 text-white"
+          : "border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 bg-transparent"
+          }`}
       >
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${o.dot}`} />
         {o.label}
@@ -50,23 +51,18 @@ const SegmentedPicker = ({ options, value, onChange }) => (
   </div>
 );
 
-/* ─────────────────────────────────────────────
-   AssigneePicker  — searchable, supports 100+ members
-───────────────────────────────────────────── */
+
 const AssigneePicker = ({ teamMembers, selected, onChange }) => {
   const [query, setQuery] = useState("");
-  const inputRef          = useRef(null);
-
+  const inputRef = useRef(null);
   const toggle = (member) => {
     const exists = selected.some((a) => a.id === member.id);
     onChange(exists ? selected.filter((a) => a.id !== member.id) : [...selected, member]);
   };
-
   const removeSelected = (id) => onChange(selected.filter((a) => a.id !== id));
 
   const filtered = teamMembers.filter((m) =>
-    m.name?.toLowerCase().includes(query.toLowerCase()) ||
-    m.email?.toLowerCase().includes(query.toLowerCase())
+    m.receiver_email?.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -79,10 +75,10 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
               key={m.id}
               className="flex items-center gap-1.5 pl-1.5 pr-2 py-1 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs text-blue-300"
             >
-              <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-                {m.name?.[0]?.toUpperCase()}
+              <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                {m.receiver_email?.[0]?.toUpperCase()}
               </div>
-              {m.name}
+              {m.receiver_email}
               <button
                 type="button"
                 onClick={() => removeSelected(m.id)}
@@ -129,23 +125,18 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
                 key={m.id}
                 type="button"
                 onClick={() => toggle(m)}
-                className={`cursor-pointer w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition ${
-                  active ? "bg-blue-500/8 hover:bg-blue-500/12" : "hover:bg-zinc-800/60"
-                }`}
+                className={`cursor-pointer w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition ${active ? "bg-blue-500/8 hover:bg-blue-500/12" : "hover:bg-zinc-800/60"
+                  }`}
               >
                 {/* Avatar */}
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                  active ? "bg-blue-500 text-white" : "bg-zinc-700 text-zinc-400"
-                }`}>
-                  {m.name?.[0]?.toUpperCase()}
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${active ? "bg-blue-500 text-white" : "bg-zinc-700 text-zinc-400"
+                  }`}>
+                  {m.receiver_email?.[0]?.toUpperCase()}
                 </div>
-
-                {/* Name + email */}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-medium truncate ${active ? "text-blue-300" : "text-zinc-200"}`}>
-                    {m.name}
-                  </p>
-                  <p className="text-[10px] text-zinc-500 truncate">{m.email}</p>
+
+                  <p className="text-[12px] text-zinc-500 truncate">{m.receiver_email
+                  }</p>
                 </div>
 
                 {/* Checkmark */}
@@ -195,12 +186,24 @@ const Field = ({ icon: Icon, label, children, required }) => (
      onSubmit      (task) => void   — receives form data (no id)
      teamMembers   [{ id, name, email }]
 ───────────────────────────────────────────── */
-const AddTaskModal = ({ open, onClose, onSubmit, teamMembers = [] }) => {
-  const [form, setForm]     = useState(DEFAULT_FORM);
+const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
+  const [form, setForm] = useState(DEFAULT_FORM);
   const [errors, setErrors] = useState({});
-  const titleRef            = useRef(null);
+  const titleRef = useRef(null);
+  const [teamMembers, setTeamMembers] = useState([]);
 
-  // Auto-focus title on open; reset form on close
+  useEffect(() => {
+    const fetchTeamembers = async () => {
+      try {
+        const res = await api.post(`/orgs/proj/members/${id}`, { org_id });
+        setTeamMembers(res.data.data);
+      } catch (error) {
+        toast.error(error.message);
+      }
+    }
+    fetchTeamembers();
+  }, [org_id]);
+
   useEffect(() => {
     if (open) {
       setForm(DEFAULT_FORM);
@@ -209,7 +212,6 @@ const AddTaskModal = ({ open, onClose, onSubmit, teamMembers = [] }) => {
     }
   }, [open]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -231,8 +233,16 @@ const AddTaskModal = ({ open, onClose, onSubmit, teamMembers = [] }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const e2 = validate();
-    if (Object.keys(e2).length) { setErrors(e2); return; }
-    onSubmit?.({ ...form, title: form.title.trim() });
+    if (Object.keys(e2).length) {
+      setErrors(e2);
+      return;
+    }
+    const payload = {
+      ...form,
+      title: form.title.trim(),
+      assignees: form.assignees.map(m => m.receiver_id)
+    };
+    onSubmit?.(payload);
     onClose();
   };
 
@@ -276,11 +286,10 @@ const AddTaskModal = ({ open, onClose, onSubmit, teamMembers = [] }) => {
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
                 placeholder="e.g. Set up CI/CD pipeline"
-                className={`w-full bg-zinc-900 border rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none transition ${
-                  errors.title
-                    ? "border-red-500/60 focus:border-red-500"
-                    : "border-zinc-800 focus:border-zinc-600"
-                }`}
+                className={`w-full bg-zinc-900 border rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none transition ${errors.title
+                  ? "border-red-500/60 focus:border-red-500"
+                  : "border-zinc-800 focus:border-zinc-600"
+                  }`}
               />
               {errors.title && (
                 <p className="text-xs text-red-400 mt-1">{errors.title}</p>
@@ -322,7 +331,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, teamMembers = [] }) => {
                 type="date"
                 value={form.dueDate}
                 onChange={(e) => set("dueDate", e.target.value)}
-                className="bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition [color-scheme:dark]"
+                className="bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition scheme-dark"
               />
             </Field>
 

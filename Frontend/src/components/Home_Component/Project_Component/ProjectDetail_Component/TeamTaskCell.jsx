@@ -27,6 +27,8 @@ const STATUS_ICON = {
 const TeamTaskCell = ({ tasks = [] }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  console.log(tasks);
+  
   useClickOutside(ref, () => setOpen(false));
 
   return (
@@ -46,8 +48,8 @@ const TeamTaskCell = ({ tasks = [] }) => {
           </p>
           {tasks.map((t) => (
             <div key={t.id} className="flex items-center gap-2 px-3 py-2.5 hover:bg-zinc-800 transition">
-              {STATUS_ICON[t.status]}
-              <span className="text-xs text-zinc-300 flex-1 truncate">{t.title}</span>
+              {STATUS_ICON[t.Status]}
+              <span className="text-xs text-zinc-300 flex-1 truncate">{t.name}</span>
               <span className={`text-[10px] font-medium capitalize ${PRIORITY_COLOR[t.priority]}`}>
                 {t.priority}
               </span>

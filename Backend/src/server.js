@@ -12,11 +12,12 @@ import orgRoute from "./routes/Organization/OrgRoute.js";
 import inviteRoute from "./routes/User/inviteRoute.js";
 import projectRoute from "./routes/Project/projectRoute.js";
 import TaskRoute from "./routes/Task/TaskRoute.js";
+import projectTeamRoute from "./routes/ProjectTeam/projectTeamRoute.js";
 
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = 3000; 
 const URL = process.env.CLIENT_URL;
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -39,6 +40,7 @@ app.use("/orgs", orgRoute);
 app.use("/invites", inviteRoute);
 app.use("/orgs/proj", projectRoute);
 app.use("/proj/task",TaskRoute);
+app.use("/proj/team",projectTeamRoute);
 
 io.use(async (socket, next) => {
   try {
@@ -88,69 +90,13 @@ io.on("connection", async (socket) => {
   // console.log("user:", socket.user.email);
   socket.join(`user:${socket.user.id}`); 
 
-  socket.on("join_org", async ({ org }) => {
-    
-    const member = await prisma.org_member.findUnique({
-      where: {
-        member_id_org_id: {
-          org_id: Number(org.id),
-          member_id: socket.user.id
-        }
-      },
-      select: { 
-        id: true
-      }
-    })
-      socket.join(`org_${member.id}`);
-      // console.log(socket.user.email);
+  socket.on("join_org", async ({ id }) => {
+    // console.log(org);
+    socket.join(`org_${Number(id)}`);
   });
 
-  socket.on("join_proj", async ({ proj }) => {
-    // console.log(socket.user.email);
-    socket.join(`project_${proj.id}`);
-  });
-
-  socket.on("project_created", async ({ project, orgId }) => {
-    // console.log("coming");
-    // console.log(project.description);
-    try {
-      const user = await prisma.user.findUnique({
-        where: {
-          email: project.email
-        }
-      })
-      const data = await prisma.project.create({
-        data: {
-          name: project.name,
-          org_id: orgId,
-          assigned_to: user.id,
-          Description: project.description,
-          status: project.status,
-          priority: project.priority,
-          endDate: new Date(project.endDate)
-        }
-      });
-
-      await prisma.proj_member.create({
-        data: {
-          proj_id: data.id,
-          org_id: orgId,
-          member_id: user.id,
-          role: "manager"
-        }
-      })
-      const member = await prisma.org_member.findUnique({
-        where: {
-          member_id_org_id: {
-            org_id: orgId,
-            member_id: user.id
-          }
-        }
-      })
-      io.to(`org_${member.id}`).emit("project_created", { project: data });
-    } catch (error) {
-      console.log(error);
-    }
+  socket.on("join_proj", async ({ id }) => { 
+    socket.join(`project_${id}`);
   });
 
   socket.on("disconnect", () => {

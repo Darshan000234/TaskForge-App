@@ -165,7 +165,7 @@ const TaskGridCard = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
         {task.title}
       </p>
       <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-md shrink-0 font-medium ${TASK_STATUS_STYLE[task.status]}`}>
-        {TASK_STATUS_LABEL[task.status] ?? task.status}
+        {TASK_STATUS_LABEL[task.Status] ?? task.status}
       </span>
     </div>
 
@@ -183,7 +183,11 @@ const TaskGridCard = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
         <span className={`capitalize font-medium ${PRIORITY_COLOR[task.priority]}`}>{task.priority}</span>
         {task.dueDate && (
           <span className={`flex items-center gap-1 ${isOverdue(task) ? "text-red-400" : "text-zinc-500"}`}>
-            <Calendar size={11} />{task.dueDate}
+            <Calendar size={11} />{new Date(task.dueDate).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            })}
           </span>
         )}
       </div>
@@ -252,7 +256,11 @@ const TaskTableRow = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
     <td className="px-5 py-3.5">
       <span className={`text-xs flex items-center gap-1 ${isOverdue(task) ? "text-red-400 font-medium" : "text-zinc-400"}`}>
         {isOverdue(task) && <AlertTriangle size={11} />}
-        {task.dueDate ?? "—"}
+        {new Date(task.dueDate).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }) ?? "—"}
       </span>
     </td>
 
