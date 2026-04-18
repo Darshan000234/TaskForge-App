@@ -69,19 +69,20 @@ const Projects = () => {
   }, [org]);
 
   useEffect(() => {
-    const joinProj = async ({ projectId }) => {
+    const AddProj = async ({ projectId }) => {
       try {
         const res = await api.get(`orgs/proj/one/${projectId}`);
-        setProjects((prev) => { [...prev, res.data.data] });
-        socket.emit("join_proj",{ id : projectId });
+        setTasks((prev) => {
+          return [...prev, res.data.data];
+        });
       } catch (error) {
         toast.error(error.message);
       }
     }
 
-    socket.on("joined_proj", joinProj);
+    socket.on("add_proj", AddProj);
     return () => {
-      socket.off("joined_proj", joinProj);
+      socket.off("add_proj", AddProj);
     }
   }, [])
 

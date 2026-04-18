@@ -20,9 +20,9 @@ const PRIORITY_OPTIONS = [
 ];
 
 const DEFAULT_FORM = {
-  title: "",
-  description: "",
-  status: "todo",
+  name: "",
+  Description: "",
+  Status: "todo",
   priority: "medium",
   dueDate: "",
   assignees: [],
@@ -226,7 +226,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.title.trim()) e.title = "Title is required";
+    if (!form.name.trim()) e.name = "Title is required";
     return e;
   };
 
@@ -239,7 +239,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
     }
     const payload = {
       ...form,
-      title: form.title.trim(),
+      title: form.name.trim(),
       assignees: form.assignees.map(m => m.receiver_id)
     };
     onSubmit?.(payload);
@@ -283,24 +283,24 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
               <input
                 ref={titleRef}
                 type="text"
-                value={form.title}
-                onChange={(e) => set("title", e.target.value)}
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
                 placeholder="e.g. Set up CI/CD pipeline"
-                className={`w-full bg-zinc-900 border rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none transition ${errors.title
+                className={`w-full bg-zinc-900 border rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none transition ${errors.name
                   ? "border-red-500/60 focus:border-red-500"
                   : "border-zinc-800 focus:border-zinc-600"
                   }`}
               />
-              {errors.title && (
-                <p className="text-xs text-red-400 mt-1">{errors.title}</p>
+              {errors.name && (
+                <p className="text-xs text-red-400 mt-1">{errors.name}</p>
               )}
             </Field>
 
             {/* Description */}
             <Field icon={AlignLeft} label="Description">
               <textarea
-                value={form.description}
-                onChange={(e) => set("description", e.target.value)}
+                value={form.Description}
+                onChange={(e) => set("Description", e.target.value)}
                 placeholder="Short context or notes..."
                 rows={2}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition resize-none"
@@ -311,8 +311,8 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
             <Field label="Status">
               <SegmentedPicker
                 options={STATUS_OPTIONS}
-                value={form.status}
-                onChange={(v) => set("status", v)}
+                value={form.Status}
+                onChange={(v) => set("Status", v)}
               />
             </Field>
 

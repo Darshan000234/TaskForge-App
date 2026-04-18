@@ -203,6 +203,7 @@ export const reassignProject = async (req, res) => {
                 }
             }
         });
+
         io.to(`project_${id}`).emit('project_created', { project: proj });
         io.to(`org_${org_member.id}`).emit('project_created', { project: proj });
         io.to(`org_${prevOrgmember.id}`).emit('project_deleted', { id: id });
@@ -224,13 +225,14 @@ export const reassignProject = async (req, res) => {
 
 export const OneProjData = async (req, res) => {
     const id = Number(req.params.id);
+    const userId = req.user.id;
     // console.log(id);
     try {
         const data = await prisma.project.findUnique({
             where: {
                 id: id
             },
-            include : {
+            include: {
                 member: {
                     select: {
                         email: true
@@ -239,12 +241,20 @@ export const OneProjData = async (req, res) => {
             }
         });
         data.email = data.member.email;
-        // console.log(data);
+        const org = await prisma.org_member.findUnique({
+            where: {
+                member_id_org_id: {
+                    org_id: data.org_id,
+                    member_id: userId
+                }
+            }
+        });
+        data.org = org;
         res.status(200).json({ data });
     } catch (error) {
         console.log("OneProjectData");
         console.log(error.message);
-        res.status(404).json({ message : error.message});
+        res.status(404).json({ message: error.message });
     }
 }
 
@@ -253,24 +263,24 @@ export const getMember = async (req, res) => {
     const pid = Number(req.params.id);
     try {
         const check = await prisma.project.findUnique({
-            where : {
-                org_id : org_id,
-                id : pid
+            where: {
+                org_id: org_id,
+                id: pid
             }
         })
-        if(!check) return res.status(404).json({ message : "not found"});
+        if (!check) return res.status(404).json({ message: "not found" });
         const data = await prisma.teaminvitation.findMany({
-            where : {
-                org_id : org_id,
-                receiver_id : {
-                    not : check.assigned_to
+            where: {
+                org_id: org_id,
+                receiver_id: {
+                    not: check.assigned_to
                 }
             }
         });
         res.status(202).json({ data });
     } catch (error) {
         console.log(error.message);
-        console.log("getMember","projcontroller");
-        res.status(404).json({ message : error.message });
+        console.log("getMember", "projcontroller");
+        res.status(404).json({ message: error.message });
     }
 }

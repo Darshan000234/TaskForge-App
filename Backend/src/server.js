@@ -86,12 +86,10 @@ io.on("connection", async (socket) => {
   projects.forEach(p => {
     socket.join(`project_${p.proj_id}`);
   });
-  // console.log("user connected:", socket.id);
-  // console.log("user:", socket.user.email);
+  
   socket.join(`user:${socket.user.id}`); 
 
   socket.on("join_org", async ({ id }) => {
-    // console.log(org);
     socket.join(`org_${Number(id)}`);
   });
 

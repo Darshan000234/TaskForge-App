@@ -129,7 +129,7 @@ model task_assignee {
   user      User @relation(fields: [user_id], references: [id], onDelete: Cascade)
   org       org @relation(fields: [org_id], references: [id], onDelete: Cascade)
 
-  @@unique([task_id, user_id]) // prevent duplicate assignment
+  @@unique([task_id, user_id])
 }
 
 model teaminvitation {

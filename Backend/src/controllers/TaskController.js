@@ -19,11 +19,13 @@ export const TaskData = async (req, res) => {
 
         const result = tasks.map(t => ({
             id: t.id,
-            title: t.name,
-            description: t.Description,
-            status: t.Status,
+            name: t.name,
+            Description: t.Description,
+            Status: t.Status,
             priority: t.priority,
             dueDate: t.dueDate,
+            projectId: t.proj_id,
+            orgId: t.org_id,
             assignees: t.assignees.map(a => a.user)
         }));
 
@@ -39,12 +41,13 @@ export const AddTask = async (req, res) => {
     const data = req.body.task;
     const projectId = Number(req.body.id);
     const orgId = Number(req.body.orgId);
-    
+
     if (!data || !Array.isArray(data.assignees)) {
         return res.status(400).json({ message: "Invalid task data" });
     }
 
     try {
+
         const memberIds = data.assignees;
         const existingMembers = await prisma.proj_member.findMany({
             where: {
@@ -54,12 +57,10 @@ export const AddTask = async (req, res) => {
                 member_id: true
             }
         });
-        // console.log(existingMembers);
+
         const existingIds = new Set(existingMembers.map(m => m.member_id));
         const newMembers = memberIds.filter(id => !existingIds.has(id));
-        existingMembers = memberIds.filter(id => existingIds.has(id));
-        // console.log(newMembers);
-        // console.log(memberIds);
+
         if (newMembers.length > 0) {
             await prisma.proj_member.createMany({
                 data: newMembers.map(userId => ({
@@ -74,9 +75,9 @@ export const AddTask = async (req, res) => {
 
         const task = await prisma.task.create({
             data: {
-                name: data.title,
-                Description: data.description,
-                Status: data.status,
+                name: data.name,
+                Description: data.Description,
+                Status: data.Status,
                 priority: data.priority,
                 dueDate: new Date(data.dueDate),
                 project_id: projectId,
@@ -98,7 +99,7 @@ export const AddTask = async (req, res) => {
             const sockets = userSockets.get(userId);
             if (sockets) {
                 sockets.forEach(socketid => {
-                    io.to(socketid).emit("project_joined", {
+                    io.to(socketid).emit("add_proj", {
                         projectId: projectId
                     });
                 });
@@ -118,15 +119,21 @@ export const AddTask = async (req, res) => {
 
         const result = {
             id: createdTask.id,
-            title: createdTask.name,
-            description: createdTask.Description,
-            status: createdTask.Status,
+            name: createdTask.name,
+            Description: createdTask.Description,
+            Status: createdTask.Status,
             priority: createdTask.priority,
             dueDate: createdTask.dueDate,
+            projectId: createdTask.proj_id,
+            orgId: createdTask.org_id,
             assignees: createdTask.assignees.map(a => a.user)
         };
 
-        res.status(202).json({ task : result });
+        if (existingIds) {
+            io.to(`project_${projectId}`).emit("add_task", { taskId: result.id });
+        }
+
+        res.status(202).json({ task: result });
     } catch (error) {
         console.log(error.message);
         console.log("AddTask");
@@ -136,17 +143,108 @@ export const AddTask = async (req, res) => {
 
 export const DeleteTask = async (req, res) => {
     const tid = req.body.id;
-    console.log(tid);
-    try { 
+    try {
         await prisma.task.delete({
-            where : {
-                id : tid
+            where: {
+                id: tid
             }
         })
-        res.status(202).json({ message : "deleted task"});
+        res.status(202).json({ message: "deleted task" });
     } catch (error) {
         console.log("DeleteTask");
         console.log(error.message);
-        res.status(404).json({message : error.message});
+        res.status(404).json({ message: error.message });
+    }
+}
+
+export const OneTaskData = async (req, res) => {
+    const id = Number(req.params.id);
+
+    try {
+
+        const tasks = await prisma.task.findUnique({
+            where: { id: id },
+            include: {
+                assignees: {
+                    include: {
+                        user: true
+                    }
+                }
+            }
+        });
+
+        const result = {
+            id: tasks.id,
+            name: tasks.name,
+            Description: tasks.Description,
+            Status: tasks.Status,
+            priority: tasks.priority,
+            dueDate: tasks.dueDate,
+            projectId: tasks.proj_id,
+            orgId: tasks.org_id,
+            assignees: tasks.assignees.map(a => a.user)
+        };
+
+        res.status(202).json({ result });
+    } catch (error) {
+        res.status(404).json({ message: error.message });
+    }
+}
+
+export const addmemberData = async (req, res) => {
+    const taskid = Number(req.params.id);
+    const projectId = Number(req.body.projectId);
+    const org_id = Number(req.body.org_id);
+    try {
+        const assignees = await prisma.task_assignee.findMany({
+            where: {
+                task_id: taskid
+            },
+            select: {
+                user: {
+                    select: {
+                        id: true
+                    }
+                }
+            }
+        });
+
+        const manager = await prisma.project.findUnique({
+            where: { id: projectId },
+            select: {
+                members: {
+                    select: {
+                        member_id: true
+                    }
+                }
+            }
+        });
+
+        let member = await prisma.teaminvitation.findMany({
+            where: {
+                org_id: org_id
+            },
+        });
+
+        const assignedIds = new Set([
+            ...assignees.map(a => a.user.id),
+            ...manager.members.map(m => m.member_id)
+        ]);
+
+        member = member.filter((m) => !assignedIds.has(m.receiver_id));
+
+        member = member.map((m) => {
+            return {
+                user_id: m.receiver_id,
+                email: m.receiver_email
+            }
+        })
+        
+        res.status(202).json({ member });
+    } catch (error) {
+        console.log("addmemberData");
+        console.log(error.message);
+
+        res.status(404).json({ message: error.message });
     }
 }

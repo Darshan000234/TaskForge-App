@@ -10,14 +10,13 @@ import DueTasksCard from "./DueTasksCard";
 import AuditLogCard from "./AuditLogCard";
 import AddTaskModal from "./AddTaskModal";
 import toast from "react-hot-toast";
+import socket from "../../../../socket/socket.js";
 
 const ProjectDetail = ({
-  // teamMembers = MOCK_TEAM,
   auditLogs = MOCK_AUDIT,
   onBack,
   onAddMember,
-  onRemoveMember,
-  org = { role: "admin" },
+  onRemoveMember
 }) => {
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -25,7 +24,7 @@ const ProjectDetail = ({
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("tasks");
   const [taskFilters, setTaskFilters] = useState({});
-  const [orgId, setOrgId] = useState(null);
+  const [org, setOrg] = useState(null);
   const { id } = useParams();
   const [project, setProject] = useState(null);
 
@@ -37,9 +36,10 @@ const ProjectDetail = ({
         const taskres = await api.get(`proj/task/${id}`);
         setTasks(taskres.data.result);
         setCount(taskres.data.result.length);
-        setOrgId(res.data.data.org_id);
+        setOrg(res.data.data.org);
         const teamMembers = await api.post(`proj/team/${id}`);
         setTeamMembers(teamMembers.data.result);
+        socket.emit("join_proj", id);
       } catch (err) {
         console.error(err);
       }
@@ -47,9 +47,28 @@ const ProjectDetail = ({
     fetchProject();
   }, [id]);
 
+  useEffect(() => {
+    const AddTask = async ({ taskId }) => {
+      try {
+        const res = await api.get(`proj/task/${taskId}/one`);
+        console.log(res);
+        setTasks((prev) => {
+          if (!Array.isArray(prev)) return [res.data.result];
+          return [...prev, res.data.result];
+        });
+      } catch (error) {
+        toast.error(error.message);
+      }
+    }
+    socket.on("add_task", AddTask);
+    return () => {
+      socket.off("add_task", AddTask);
+    }
+  }, []);
+
   const handleDeleteTask = async (taskId) => {
     try {
-      await api.post(`/proj/task/delete`, { id : taskId });
+      await api.post(`/proj/task/delete`, { id: taskId });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
       setCount(count - 1);
     } catch (error) {
@@ -79,8 +98,6 @@ const ProjectDetail = ({
     onRemoveMember?.(taskId, memberId);
   };
 
-  // ── Stat card shortcut ────────────────────────────────────────────────────
-
   const handleOverdueClick = () => {
     setActiveSection("tasks");
     setTaskFilters({ due: "overdue" });
@@ -90,7 +107,7 @@ const ProjectDetail = ({
     try {
       const res = await api.post(`proj/task/add`, { task, id, orgId });
       toast.success("Added Task successfully");
-      setTasks((prev) => [...prev,res.data.task]);
+      setTasks((prev) => [...prev, res.data.task]);
     } catch (error) {
       toast.error(error.message);
     }
@@ -145,6 +162,7 @@ const ProjectDetail = ({
                 tasks={tasks}
                 teamMembers={teamMembers}
                 org={org}
+                proj_id={id}
                 onAddTask={() => setAddTaskOpen(true)}
                 onDeleteTask={handleDeleteTask}
                 onAddMember={handleAddMember}
@@ -154,11 +172,11 @@ const ProjectDetail = ({
               />
             )}
 
-            {orgId && (
+            {org && (
               <AddTaskModal
                 open={addTaskOpen}
                 onClose={() => setAddTaskOpen(false)}
-                org_id={orgId}
+                org_id={org.org_id}
                 onSubmit={handleAddTask}
                 id={id}
               />

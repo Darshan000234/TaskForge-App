@@ -11,14 +11,16 @@ import {
   TASK_STATUS_STYLE, PRIORITY_COLOR, PRIORITY_DOT,
   applyFilters, isOverdue, TASK_STATUS_LABEL,
 } from "./constants";
+// import socket from "../../../../socket/socket.js";
+import api from "../../../../api/api.js";
 
 const LIMIT = 10;
 // format: { type: "assignee" | "addMember", taskId: string }
 const STATUS_ICON = {
-  todo:       <Circle size={14} className="text-zinc-500" />,
+  todo: <Circle size={14} className="text-zinc-500" />,
   inprogress: <Clock size={14} className="text-yellow-400" />,
-  done:       <CheckCircle2 size={14} className="text-emerald-400" />,
-  blocked:    <AlertCircle size={14} className="text-red-400" />,
+  done: <CheckCircle2 size={14} className="text-emerald-400" />,
+  blocked: <AlertCircle size={14} className="text-red-400" />,
 };
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
@@ -38,9 +40,8 @@ const Pagination = ({ page, total, limit, onChange }) => {
         </button>
         {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
           <button key={p} onClick={() => onChange(p)}
-            className={`cursor-pointer w-7 h-7 rounded-lg text-xs font-medium transition ${
-              p === page ? "bg-blue-600 text-white" : "border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600"
-            }`}>
+            className={`cursor-pointer w-7 h-7 rounded-lg text-xs font-medium transition ${p === page ? "bg-blue-600 text-white" : "border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600"
+              }`}>
             {p}
           </button>
         ))}
@@ -72,19 +73,32 @@ function useClickOutside(ref, cb) {
   }, [ref]);
 }
 
-const AddMemberDropdown = ({ task, teamMembers, onAddMember, setOpenDropdown, openDropdown }) => {
+const AddMemberDropdown = ({ task, org , proj_id, onAddMember, setOpenDropdown, openDropdown }) => {
   const isOpen = openDropdown?.taskId === task.id;
   const ref = useRef(null);
-
+  const [members, setMembers] = useState([]);
   useClickOutside(ref, () => {
     setOpenDropdown(null);
   });
 
+  useEffect(() => {
+    const getMembers = async () => {
+      try {
+        // console.log(proj_id);
+        const res = await api.post(`proj/task/${task.id}/addmember`, { projectId : proj_id, org_id : org.org_id});
+        setMembers(res.data.member);
+      } catch (error) {
+        toast.error(error.message);
+      }
+    }
+    getMembers();
+  }, []);
+
   const handleBlur = () => setTimeout(() => setOpen(false), 150);
 
-  const unassigned = teamMembers.filter(
-    (m) => !task.assignees?.some((a) => a.id === m.id)
-  );
+  // const unassigned = members.filter(
+  //   (m) => !task.assignees?.some((a) => a.id === m.id)
+  // );
 
   return (
     <div className="relative" ref={ref}>
@@ -96,11 +110,10 @@ const AddMemberDropdown = ({ task, teamMembers, onAddMember, setOpenDropdown, op
           );
         }}
         title="Add member"
-        className={`cursor-pointer flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition ${
-          open
+        className={`cursor-pointer flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition ${open
             ? "border-blue-500/50 bg-blue-500/10 text-blue-400"
             : "border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
-        }`}
+          }`}
       >
         <UserPlus size={13} />
         <span>Add</span>
@@ -115,24 +128,23 @@ const AddMemberDropdown = ({ task, teamMembers, onAddMember, setOpenDropdown, op
           <p className="px-3 py-2 text-[10px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
             Add Member
           </p>
-          {unassigned.length === 0 ? (
+          {members.length === 0 ? (
             <p className="px-3 py-3 text-xs text-zinc-600 text-center">All members assigned</p>
           ) : (
-            unassigned.map((m) => (
+            members.map((m) => (
               <button
                 key={m.id}
                 onClick={(e) => {
-                e.stopPropagation();
-                onAddMember?.(task.id, m);
-                setOpenDropdown(null); // close after select
-              }}
+                  e.stopPropagation();
+                  onAddMember?.(task.id, m);
+                  setOpenDropdown(null); // close after select
+                }}
                 className="cursor-pointer w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-zinc-800 transition text-left"
               >
                 <div className="w-6 h-6 rounded-full bg-blue-500/15 flex items-center justify-center text-[10px] font-semibold text-blue-400 shrink-0">
-                  {m.name?.[0]?.toUpperCase()}
+                  {m.email?.[0]?.toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-white font-medium truncate">{m.name}</p>
                   <p className="text-[10px] text-zinc-500 truncate">{m.email}</p>
                 </div>
               </button>
@@ -146,7 +158,7 @@ const AddMemberDropdown = ({ task, teamMembers, onAddMember, setOpenDropdown, op
 
 // ─── Task Grid Card ───────────────────────────────────────────────────────────
 
-const TaskGridCard = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRemoveMember, setOpenDropdown , openDropdown}) => (
+const TaskGridCard = ({ task, org, proj_id, teamMembers, onDeleteTask, onAddMember, onRemoveMember, setOpenDropdown, openDropdown }) => (
   <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition group relative">
     {/* Delete button top-right */}
     {org?.role === "admin" && (
@@ -184,9 +196,9 @@ const TaskGridCard = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
         {task.dueDate && (
           <span className={`flex items-center gap-1 ${isOverdue(task) ? "text-red-400" : "text-zinc-500"}`}>
             <Calendar size={11} />{new Date(task.dueDate).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric"
+              day: "2-digit",
+              month: "short",
+              year: "numeric"
             })}
           </span>
         )}
@@ -196,7 +208,7 @@ const TaskGridCard = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
     {/* Add member row */}
     {org?.role === "admin" && (
       <div className="mt-3 pt-3 border-t border-zinc-800">
-        <AddMemberDropdown task={task} teamMembers={teamMembers} onAddMember={onAddMember} setOpenDropdown={setOpenDropdown}  openDropdown={openDropdown} />
+        <AddMemberDropdown task={task} org={org} proj={proj_id} teamMembers={teamMembers} onAddMember={onAddMember} setOpenDropdown={setOpenDropdown} openDropdown={openDropdown} />
       </div>
     )}
   </div>
@@ -204,18 +216,18 @@ const TaskGridCard = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
 
 // ─── Task Table Row ───────────────────────────────────────────────────────────
 
-const TaskTableRow = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRemoveMember, setOpenDropdown, openDropdown }) => (
+const TaskTableRow = ({ task, org, proj_id, teamMembers, onDeleteTask, onAddMember, onRemoveMember, setOpenDropdown, openDropdown }) => (
   <tr className="border-b border-zinc-800/60 hover:bg-zinc-900/50 transition group">
     {/* Task name */}
     <td className="px-5 py-3.5 cursor-pointer">
       <div className="flex items-center gap-2.5">
         {STATUS_ICON[task.status]}
-        <span className={`font-medium ${task.status === "done" ? "line-through text-zinc-500" : "text-white"}`}>
-          {task.title}
+        <span className={`font-medium ${task.Status === "done" ? "line-through text-zinc-500" : "text-white"}`}>
+          {task.name}
         </span>
       </div>
-      {task.description && (
-        <p className="text-xs text-zinc-600 mt-0.5 truncate max-w-xs ml-6">{task.description}</p>
+      {task.Description && (
+        <p className="text-xs text-zinc-600 mt-0.5 truncate max-w-xs ml-6">{task.Description}</p>
       )}
     </td>
 
@@ -229,12 +241,11 @@ const TaskTableRow = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
 
     {/* Status */}
     <td className="px-5 py-3.5">
-      <span className={`text-xs px-2.5 py-1 rounded-md font-medium capitalize ${TASK_STATUS_STYLE[task.status]}`}>
-        {TASK_STATUS_LABEL[task.status] ?? task.status}
+      <span className={`text-xs px-2.5 py-1 rounded-md font-medium capitalize ${TASK_STATUS_STYLE[task.Status]}`}>
+        {TASK_STATUS_LABEL[task.Status] ?? task.Status}
       </span>
     </td>
 
-    {/* Assignees — avatar stack + per-member delete in popover */}
     <td className="px-5 py-3.5">
       <AssigneeCell
         assignees={task.assignees ?? []}
@@ -243,10 +254,9 @@ const TaskTableRow = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
       />
     </td>
 
-    {/* Add Member */}
     <td className="px-5 py-3.5">
       {org?.role === "admin" ? (
-        <AddMemberDropdown task={task} teamMembers={teamMembers} onAddMember={onAddMember} setOpenDropdown={setOpenDropdown}  openDropdown={openDropdown}/>
+        <AddMemberDropdown task={task} org={org} proj_id={proj_id} onAddMember={onAddMember} setOpenDropdown={setOpenDropdown} openDropdown={openDropdown} />
       ) : (
         <span className="text-zinc-600 text-xs">—</span>
       )}
@@ -257,10 +267,10 @@ const TaskTableRow = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
       <span className={`text-xs flex items-center gap-1 ${isOverdue(task) ? "text-red-400 font-medium" : "text-zinc-400"}`}>
         {isOverdue(task) && <AlertTriangle size={11} />}
         {new Date(task.dueDate).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric"
-            }) ?? "—"}
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
+        }) ?? "—"}
       </span>
     </td>
 
@@ -279,26 +289,12 @@ const TaskTableRow = ({ task, org, teamMembers, onDeleteTask, onAddMember, onRem
   </tr>
 );
 
-// ─── Main TaskSection ─────────────────────────────────────────────────────────
 
-/**
- * TaskSection
- *
- * Props:
- *  tasks           task[]
- *  teamMembers     [{ id, name, email }]
- *  org             { role }
- *  onAddTask       () => void
- *  onDeleteTask    (taskId) => void
- *  onAddMember     (taskId, member) => void
- *  onRemoveMember  (taskId, memberId) => void
- *  initialFilters  object
- *  onFiltersChange (filters) => void
- */
 const TaskSection = ({
   tasks = [],
   teamMembers = [],
   org,
+  proj_id,
   onAddTask,
   onDeleteTask,
   onAddMember,
@@ -306,19 +302,19 @@ const TaskSection = ({
   initialFilters = {},
   onFiltersChange,
 }) => {
-  const [search, setSearch]         = useState("");
-  const [filters, setFilters]       = useState(initialFilters);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState(initialFilters);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [view, setView]             = useState("list");
-  const [page, setPage]             = useState(1);
-  const filterRef                   = useRef(null);
+  const [view, setView] = useState("list");
+  const [page, setPage] = useState(1);
+  const filterRef = useRef(null);
   const [openDropdown, setOpenDropdown] = useState(null);
 
   const handleFilters = (f) => { setFilters(f); setPage(1); onFiltersChange?.(f); };
-  const handleSearch  = (v) => { setSearch(v);  setPage(1); };
+  const handleSearch = (v) => { setSearch(v); setPage(1); };
 
-  const filtered    = applyFilters(tasks, filters, search);
-  const paged       = filtered.slice((page - 1) * LIMIT, page * LIMIT);
+  const filtered = applyFilters(tasks, filters, search);
+  const paged = filtered.slice((page - 1) * LIMIT, page * LIMIT);
   const activeCount = Object.values(filters).filter(Boolean).length;
 
   const isAdmin = org?.role === "admin";
@@ -344,11 +340,10 @@ const TaskSection = ({
         <div className="relative" ref={filterRef}>
           <button
             onClick={() => setFilterOpen((o) => !o)}
-            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${
-              activeCount > 0
+            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${activeCount > 0
                 ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
                 : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
-            }`}
+              }`}
           >
             <SlidersHorizontal size={15} />
             {activeCount > 0 && (
@@ -379,7 +374,6 @@ const TaskSection = ({
           </button>
         </div>
 
-        {/* Add task */}
         {isAdmin && (
           <button
             onClick={onAddTask}
@@ -390,12 +384,10 @@ const TaskSection = ({
         )}
       </div>
 
-      {/* Result count */}
       <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wider font-medium">
         {filtered.length} task{filtered.length !== 1 ? "s" : ""}{activeCount > 0 ? " (filtered)" : ""}
       </p>
 
-      {/* Empty state */}
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 border border-zinc-800 rounded-2xl bg-zinc-900/30">
           <Search size={28} className="text-zinc-600" />
@@ -403,7 +395,6 @@ const TaskSection = ({
         </div>
       )}
 
-      {/* ── Grid view ────────────────────────────────────────────────── */}
       {filtered.length > 0 && view === "grid" && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -412,6 +403,7 @@ const TaskSection = ({
                 key={t.id}
                 task={t}
                 org={org}
+                proj_id={proj_id}
                 teamMembers={teamMembers}
                 onDeleteTask={onDeleteTask}
                 onAddMember={onAddMember}
@@ -448,6 +440,7 @@ const TaskSection = ({
                     key={t.id}
                     task={t}
                     org={org}
+                    proj_id={proj_id}
                     teamMembers={teamMembers}
                     onDeleteTask={onDeleteTask}
                     onAddMember={onAddMember}
