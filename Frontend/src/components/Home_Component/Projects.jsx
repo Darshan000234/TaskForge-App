@@ -88,8 +88,8 @@ const Projects = () => {
 
 
   useEffect(() => {
-    const handleProjectCreated = (data) => {
-      const project = data.project;
+    const handleProjectCreated = async (data) => {
+      const project = await api.get(`/orgs/proj/one/${data.proj_id}`);
       setLoading(true);
       setProjects((prev) => [project, ...prev]);
       setTimeout(() => {
@@ -97,18 +97,32 @@ const Projects = () => {
       }, 4000);
       socket.emit('join_proj', { id : project.id });
     }
+    
     const handleProjectDeleted = (data) => {
       setLoading(true);
-      setProjects((prev) => prev.filter((p) => p.id !== data.id));
+      setProjects((prev) => prev.filter((p) => p.id !== data.proj_id));
+      setTimeout(() => {
+        setLoading(false);
+      }, 4000);
+    }
+
+    const handleProjectreassign = async (data) => {
+      setLoading(true);
+      const updatedProject = await api.get(`/orgs/proj/one/${data.proj_id}`);
+      setProjects((prev) =>
+        prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+      );
       setTimeout(() => {
         setLoading(false);
       }, 4000);
     }
     socket.on("project_created", handleProjectCreated);
     socket.on("project_deleted", handleProjectDeleted);
+    socket.on("project_reassign", handleProjectreassign);
     return () => {
       socket.off("project_created", handleProjectCreated);
-      socket.on("project_deleted", handleProjectDeleted);
+      socket.off("project_deleted", handleProjectDeleted);
+      socket.off("project_reassign", handleProjectreassign);
     }
   }, [])
 

@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { userSockets } from "../utils/userSockets.js";
+import { getIO } from "../utils/socket.js";
 
 export const projData = async (req, res) => {
     const { id } = req.user;
@@ -76,7 +77,7 @@ export const addProject = async (req, res) => {
     const { proj, orgid } = req.body;
     // console.log(proj,orgid);
     // console.log(proj);
-    const io = req.app.get("io");
+    const io = getIO();
     try {
         const user = await prisma.user.findUnique({
             where: {
@@ -114,7 +115,7 @@ export const addProject = async (req, res) => {
         project.email = proj.email;
         // console.log(project);
         // console.log(req.app.get("io"));
-        io.to(`org_${org_member.id}`).emit('project_created', { project: project });
+        io.to(`org_${org_member.org_id}`).emit('project_created', { project: project });
         res.status(201).json({ project: project });
     } catch (error) {
         console.log(error.message);
@@ -124,7 +125,7 @@ export const addProject = async (req, res) => {
 
 export const projectDelete = async (req, res) => {
     const pid = Number(req.params.id);
-    const io = req.app.get("io");
+    const io = getIO();
     // console.log(pid);
     try {
         await prisma.project.delete({
@@ -148,7 +149,7 @@ export const projectDelete = async (req, res) => {
 export const reassignProject = async (req, res) => {
     const id = Number(req.params.id);
     const { email, org } = req.body;
-    const io = req.app.get("io");
+    const io = getIO();
     try {
         const user = await prisma.user.findUnique({
             where: {
@@ -204,9 +205,10 @@ export const reassignProject = async (req, res) => {
             }
         });
 
-        io.to(`project_${id}`).emit('project_created', { project: proj });
-        io.to(`org_${org_member.id}`).emit('project_created', { project: proj });
-        io.to(`org_${prevOrgmember.id}`).emit('project_deleted', { id: id });
+        io.to(`project_${id}`).emit('project_created', { proj_id: proj.id });
+        io.to(`org_member_${org_member.org_id}`).emit('project_created', { proj_id: proj.id });
+        io.to(`org_member_${prevOrgmember.id}`).emit('project_deleted', { id: id });
+
         const sockets = userSockets.get(project.assigned_to);
         if (!sockets) return;
 

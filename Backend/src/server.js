@@ -13,11 +13,12 @@ import inviteRoute from "./routes/User/inviteRoute.js";
 import projectRoute from "./routes/Project/projectRoute.js";
 import TaskRoute from "./routes/Task/TaskRoute.js";
 import projectTeamRoute from "./routes/ProjectTeam/projectTeamRoute.js";
+import { setIO } from "./utils/socket.js";
 
 dotenv.config();
 
 const app = express();
-const port = 3000; 
+const port = 3000;
 const URL = process.env.CLIENT_URL;
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -27,7 +28,7 @@ const io = new Server(server, {
   }
 });
 
-app.set("io", io);
+setIO(io);
 
 app.use(cors({
   origin: URL,
@@ -39,8 +40,8 @@ app.use("/user", userRoute);
 app.use("/orgs", orgRoute);
 app.use("/invites", inviteRoute);
 app.use("/orgs/proj", projectRoute);
-app.use("/proj/task",TaskRoute);
-app.use("/proj/team",projectTeamRoute);
+app.use("/proj/task", TaskRoute);
+app.use("/proj/team", projectTeamRoute);
 
 io.use(async (socket, next) => {
   try {
@@ -86,14 +87,28 @@ io.on("connection", async (socket) => {
   projects.forEach(p => {
     socket.join(`project_${p.proj_id}`);
   });
-  
-  socket.join(`user:${socket.user.id}`); 
+
+  socket.join(`user:${socket.user.id}`);
 
   socket.on("join_org", async ({ id }) => {
+    // console.log(socket.user.email);
     socket.join(`org_${Number(id)}`);
   });
 
-  socket.on("join_proj", async ({ id }) => { 
+  socket.on("join_org_member", async ({ id }) => {
+    const user_id = socket.user.id;
+    const org_member = await prisma.org_member.findUnique({
+      where: {
+        member_id_org_id: {
+          member_id: user_id,
+          org_id: id
+        }
+      }
+    })
+    socket.join(`org_member_${org_member.id}`);
+  });
+
+  socket.on("join_proj", async ({ id }) => {
     socket.join(`project_${id}`);
   });
 

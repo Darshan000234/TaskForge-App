@@ -23,6 +23,22 @@ enum Role {
   member 
 }  
 
+model User {
+  id           Int          @id @default(autoincrement())
+  name         String
+  email        String       @unique
+  password     String?
+  googleId     String?      @unique
+  activeorg    Int?          
+  org org? @relation(fields: [activeorg], references: [id], onDelete: SetNull)
+  authProvider AuthProvider @default(local)
+  createdAt    DateTime     @default(now())
+
+  projectMemberships proj_member[]
+  projectAssigner    project[]
+  createdTasks       task[] @relation("TaskCreator")
+  task_assignee task_assignee[]
+}
 
 model org {
   id           Int          @id @default(autoincrement())
@@ -41,23 +57,6 @@ model org {
   
   @@index([userId]) 
   @@index([id])
-}
-
-model User {
-  id           Int          @id @default(autoincrement())
-  name         String
-  email        String       @unique
-  password     String?
-  googleId     String?      @unique
-  activeorg    Int?          
-  org org? @relation(fields: [activeorg], references: [id], onDelete: SetNull)
-  authProvider AuthProvider @default(local)
-  createdAt    DateTime     @default(now())
-
-  projectMemberships proj_member[]
-  projectAssigner    project[]
-  createdTasks       task[] @relation("TaskCreator")
-  task_assignee task_assignee[]
 }
 
 model org_member {
@@ -96,6 +95,21 @@ model project {
   @@index([org_id])
 }
 
+model proj_member {
+  id           Int         @id @default(autoincrement())
+  proj_id      Int 
+  org_id       Int 
+  member_id    Int 
+  role         Role 
+
+  project      project     @relation(fields: [proj_id], references: [id], onDelete: Cascade)
+  member       User    @relation(fields: [member_id], references: [id], onDelete: SetNull)
+
+  @@index([org_id, member_id])
+  @@index([proj_id])
+  @@unique([proj_id, member_id])
+}
+
 model task {
   id           Int    @id @default(autoincrement())
   name         String
@@ -114,6 +128,7 @@ model task {
 
   assignees task_assignee[]
 
+  @@index([project_id])
   createdAt DateTime @default(now())
 }
 
@@ -145,19 +160,5 @@ model teaminvitation {
   @@index([receiver_id])
 }
 
-model proj_member {
-  id           Int         @id @default(autoincrement())
-  proj_id      Int 
-  org_id       Int 
-  member_id    Int 
-  role         Role 
-
-  project      project     @relation(fields: [proj_id], references: [id], onDelete: Cascade)
-  member       User    @relation(fields: [member_id], references: [id], onDelete: SetNull)
-
-  @@index([org_id, member_id])
-  @@index([proj_id])
-  @@unique([proj_id, member_id])
-}
 
 

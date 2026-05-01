@@ -9,14 +9,6 @@ function useClickOutside(ref, cb) {
   }, [ref, cb]);
 }
 
-/**
- * AssigneeCell
- *
- * Props:
- *  assignees       [{ id, name, email }]
- *  canEdit         boolean              — show remove buttons (admin only)
- *  onRemoveMember  (memberId) => void
- */
 const AssigneeCell = ({ assignees = [], canEdit = false, onRemoveMember }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -24,6 +16,8 @@ const AssigneeCell = ({ assignees = [], canEdit = false, onRemoveMember }) => {
 
   if (!assignees.length)
     return <span className="text-zinc-600 text-xs">—</span>;
+
+  // console.log(assignees);
 
   return (
     <div className="relative" ref={ref}>
@@ -53,7 +47,7 @@ const AssigneeCell = ({ assignees = [], canEdit = false, onRemoveMember }) => {
 
       {/* Popover */}
       {open && (
-        <div className="absolute top-full mt-1.5 left-0 z-30 min-w-[220px] bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden">
+        <div className="absolute top-full mt-1.5 left-0 z-30 min-w-55 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden">
           <p className="px-3 py-2 text-[10px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
             {assignees.length} Assignee{assignees.length > 1 ? "s" : ""}
           </p>

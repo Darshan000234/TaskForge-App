@@ -43,7 +43,6 @@ const Team = () => {
     }
     socket.on("invite_accepted", handlestatuschange);
     socket.on("invite_rejected", handlestatuschange);
-    // socket.on("joined_org", handledata);
     return () => {
       socket.off("invite_accepted", handlestatuschange);
       socket.off("invite_rejected", handlestatuschange);

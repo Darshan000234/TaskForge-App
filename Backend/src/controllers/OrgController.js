@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { getIO } from "../utils/socket.js";
 
 const getUserOrganizations = async (userId) => {
     return await prisma.$queryRaw`

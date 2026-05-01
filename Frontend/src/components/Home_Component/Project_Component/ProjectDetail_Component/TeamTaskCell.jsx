@@ -11,24 +11,22 @@ function useClickOutside(ref, cb) {
 }
 
 const STATUS_ICON = {
-  todo:       <Circle size={13} className="text-zinc-500" />,
+  todo: <Circle size={13} className="text-zinc-500" />,
   inprogress: <Clock size={13} className="text-yellow-400" />,
-  done:       <CheckCircle2 size={13} className="text-emerald-400" />,
-  blocked:    <AlertCircle size={13} className="text-red-400" />,
+  done: <CheckCircle2 size={13} className="text-emerald-400" />,
+  blocked: <AlertCircle size={13} className="text-red-400" />,
 };
 
-/**
- * TeamTaskCell
- * Shows a count badge. Click opens a popover listing assigned tasks.
- *
- * Props:
- *  tasks  [{ id, title, status, priority }]
- */
-const TeamTaskCell = ({ tasks = [] }) => {
+const TeamTaskCell = ({
+  tasks = [],
+  memberId,
+  canEdit = false,
+  onRemoveMember,
+  onDeleteTask
+}) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  console.log(tasks);
-  
+
   useClickOutside(ref, () => setOpen(false));
 
   return (
@@ -46,13 +44,49 @@ const TeamTaskCell = ({ tasks = [] }) => {
           <p className="px-3 py-2 text-[10px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
             Assigned Tasks
           </p>
+
           {tasks.map((t) => (
-            <div key={t.id} className="flex items-center gap-2 px-3 py-2.5 hover:bg-zinc-800 transition">
+            <div
+              key={t.id}
+              className="flex items-center gap-2 px-3 py-2.5 hover:bg-zinc-800 transition group"
+            >
               {STATUS_ICON[t.Status]}
-              <span className="text-xs text-zinc-300 flex-1 truncate">{t.name}</span>
-              <span className={`text-[10px] font-medium capitalize ${PRIORITY_COLOR[t.priority]}`}>
+
+              <span className="text-xs text-zinc-300 flex-1 truncate">
+                {t.name}
+              </span>
+
+              <span className={`text-[10px] font-medium ${PRIORITY_COLOR[t.priority]}`}>
                 {t.priority}
               </span>
+
+              {canEdit && (
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                  
+                  {/* Remove member from task */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveMember?.(t.id, memberId);
+                    }}
+                    className="p-1 rounded hover:bg-red-500/15 text-zinc-500 hover:text-red-400"
+                  >
+                    ✕
+                  </button>
+
+                  {/* Delete task */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteTask?.(t.id);
+                    }}
+                    className="p-1 rounded hover:bg-red-500/15 text-zinc-500 hover:text-red-400"
+                  >
+                    🗑
+                  </button>
+
+                </div>
+              )}
             </div>
           ))}
         </div>

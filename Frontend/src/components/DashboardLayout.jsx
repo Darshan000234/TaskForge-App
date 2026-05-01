@@ -38,6 +38,8 @@ const DashboardLayout = () => {
     setActiveOrg(item);
     try {
       await api.get(`/orgs/activeorgs/${item.id}`);
+      socket.emit("join_org",{id : item.id});
+      socket.emit("join_org_member", { id : item.id});
     } catch (error) {
       toast.error("Failed to switch org");
     }
@@ -48,6 +50,8 @@ const DashboardLayout = () => {
       setOrgs((prev) => [...prev, newOrg]);
       setActiveOrg(newOrg);
       await api.get(`/orgs/activeorgs/${newOrg.id}`);
+      socket.emit("join_org",{id : newOrg.id});
+      socket.emit("join_org_member", { id : newOrg.id});
     } catch (error) {
       console.log(error.response?.data?.message);
       toast.error("something went wrong");
@@ -70,8 +74,8 @@ const DashboardLayout = () => {
         const org = await api.get("/orgs");
         setOrgs(org.data);
         const res = await api.get('/orgs/activeorgs');
-        // console.log(org.data);
         socket.emit("join_org",{id : res.data.id});
+        socket.emit("join_org_member", { id : res.data.id});
         setActiveOrg(res.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
@@ -83,10 +87,7 @@ const DashboardLayout = () => {
   useEffect(() => {
     const handleCreated = async (payload) => {
       const newOrg = payload.org;
-      // console.log(newOrg,"joined_org");
-      // console.log(newOrg);
       setOrgs((prev) => [...prev, newOrg]);
-      socket.emit("join_org", { id: newOrg.id });
     }
     socket.on("joined_org", handleCreated);
     return () => {

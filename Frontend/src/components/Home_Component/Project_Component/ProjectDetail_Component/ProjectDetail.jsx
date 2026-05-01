@@ -47,11 +47,12 @@ const ProjectDetail = ({
     fetchProject();
   }, [id]);
 
+  // console.log(org);
+
   useEffect(() => {
     const AddTask = async ({ taskId }) => {
       try {
         const res = await api.get(`proj/task/${taskId}/one`);
-        console.log(res);
         setTasks((prev) => {
           if (!Array.isArray(prev)) return [res.data.result];
           return [...prev, res.data.result];
@@ -60,9 +61,42 @@ const ProjectDetail = ({
         toast.error(error.message);
       }
     }
+
+    const deleteTask = ({ taskId }) => {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+    }
+
+    const handleRemovedMember = ({ taskId, asmemberId }) => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, assignees: (t.assignees ?? []).filter((a) => a.id !== memberId) }
+            : t
+        )
+      );
+    }
+
+    const handleAddMember = ({ taskId, member }) => {
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === taskId
+            ? {
+              ...t,
+              assignees: [...(t.assignees ?? []), member]
+            }
+            : t
+        )
+      );
+    };
+    socket.on("deleted_task", deleteTask);
     socket.on("add_task", AddTask);
+    socket.on("removed member", handleRemovedMember)
+    socket.on("member added", handleAddMember);
     return () => {
       socket.off("add_task", AddTask);
+      socket.off("deleted_task", deleteTask);
+      socket.off("removed member", handleRemovedMember);
+      socket.off("member added", handleAddMember);
     }
   }, []);
 
@@ -76,26 +110,50 @@ const ProjectDetail = ({
     }
   };
 
-  const handleAddMember = (taskId, member) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? { ...t, assignees: [...(t.assignees ?? []), member] }
+  const handleAddMember = async (taskId, members) => {
+  try {
+    const res = await api.post(`proj/task/${taskId}/addmember`, { users: members });
+    const { taskId: tid, members: newMembers } = res.data.result;
+    setTasks(prev =>
+      prev.map(t =>
+        t.id === tid
+          ? {
+              ...t,
+              assignees: [
+                ...(t.assignees ?? []).filter(
+                  a => !newMembers.some(m => m.id === a.id)
+                ),
+                ...newMembers,
+              ],
+            }
           : t
       )
+      
     );
-    onAddMember?.(taskId, member);
-  };
 
-  const handleRemoveMember = (taskId, memberId) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? { ...t, assignees: (t.assignees ?? []).filter((a) => a.id !== memberId) }
-          : t
-      )
+    toast.success(
+      `${newMembers.length} member${newMembers.length !== 1 ? "s" : ""} added`
     );
-    onRemoveMember?.(taskId, memberId);
+  } catch (error) {
+    toast.error(error.response.data.message);
+  }
+};
+
+  const handleRemoveMember = async (taskId, memberId) => {
+    try {
+      await api.post(`proj/task/${taskId}/removemember`, { user_id: memberId });
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, assignees: (t.assignees ?? []).filter((a) => a.id !== memberId) }
+            : t
+        )
+      );
+
+      toast.success(" Deleted successfully");
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
 
   const handleOverdueClick = () => {
@@ -105,11 +163,19 @@ const ProjectDetail = ({
 
   const handleAddTask = async (task) => {
     try {
-      const res = await api.post(`proj/task/add`, { task, id, orgId });
+      const res = await api.post(`proj/task/add`, { task, id, orgId: org.org_id });
       toast.success("Added Task successfully");
       setTasks((prev) => [...prev, res.data.task]);
     } catch (error) {
       toast.error(error.message);
+    }
+  } 
+
+  const handleDeleteMember = () => {
+    try {
+      const res = await api.post(`proj/`)
+    } catch (error) {
+      toast.error(error.message || error.response.data.message);
     }
   }
 
@@ -118,7 +184,7 @@ const ProjectDetail = ({
     { key: "team", label: "Team", icon: <Users size={14} /> },
     { key: "audit", label: "Audit", icon: <History size={14} /> },
   ];
-  // console.log(project);
+
   return (
     <div>
 
@@ -183,7 +249,13 @@ const ProjectDetail = ({
             )}
 
             {activeSection === "team" && (
-              <TeamSection teamMembers={teamMembers} tasks={tasks} />
+              <TeamSection
+                teamMembers={teamMembers}
+                tasks={tasks}
+                org={org}
+                onRemoveMember={handleDeleteMember}
+                onDeleteTask={handleDeleteTaskMember}
+              />
             )}
 
             {activeSection === "audit" && (
