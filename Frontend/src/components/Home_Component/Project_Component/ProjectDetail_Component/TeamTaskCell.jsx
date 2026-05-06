@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Circle, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { ChevronDown, Circle, Clock, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { PRIORITY_COLOR } from "./constants";
 
 function useClickOutside(ref, cb) {
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) cb(); };
+    const h = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) cb();
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [ref, cb]);
@@ -21,8 +23,7 @@ const TeamTaskCell = ({
   tasks = [],
   memberId,
   canEdit = false,
-  onRemoveMember,
-  onDeleteTask
+  onRemoveTaskFromMember
 }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -30,59 +31,63 @@ const TeamTaskCell = ({
   useClickOutside(ref, () => setOpen(false));
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative w-fit" ref={ref}>
+      {/* Trigger */}
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="cursor-pointer flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white transition"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        className="flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white"
       >
-        <span className="px-2 py-0.5 rounded-md bg-zinc-800 font-medium">{tasks.length}</span>
-        <ChevronDown size={12} className="text-zinc-500" />
+        <span className="px-2 py-0.5 rounded-md bg-zinc-800 font-medium">
+          {tasks.length}
+        </span>
+        <ChevronDown size={12} className="text-zinc-500 cursor-pointer" />
       </button>
 
-      {open && tasks.length > 0 && (
-        <div className="absolute top-full mt-1.5 left-0 z-30 min-w-62.5 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden">
-          <p className="px-3 py-2 text-[10px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute left-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-lg z-50">
+
+          <p className="px-3 py-2 text-[10px] text-zinc-500 uppercase border-b border-zinc-800">
             Assigned Tasks
           </p>
+
+          {tasks.length === 0 && (
+            <p className="px-3 py-3 text-xs text-zinc-500">
+              No tasks
+            </p>
+          )}
 
           {tasks.map((t) => (
             <div
               key={t.id}
-              className="flex items-center gap-2 px-3 py-2.5 hover:bg-zinc-800 transition group"
+              className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-800 group"
             >
               {STATUS_ICON[t.Status]}
 
-              <span className="text-xs text-zinc-300 flex-1 truncate">
+              <span className="flex-1 text-xs text-zinc-300 truncate">
                 {t.name}
               </span>
 
-              <span className={`text-[10px] font-medium ${PRIORITY_COLOR[t.priority]}`}>
+              <span className={`text-[10px] ${PRIORITY_COLOR[t.priority]}`}>
                 {t.priority}
               </span>
 
               {canEdit && (
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                  
-                  {/* Remove member from task */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveMember?.(t.id, memberId);
-                    }}
-                    className="p-1 rounded hover:bg-red-500/15 text-zinc-500 hover:text-red-400"
-                  >
-                    ✕
-                  </button>
 
-                  {/* Delete task */}
+                  {/* ✅ CORRECT HANDLER */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDeleteTask?.(t.id);
+                      onRemoveTaskFromMember(t.id, memberId);
                     }}
-                    className="p-1 rounded hover:bg-red-500/15 text-zinc-500 hover:text-red-400"
+                    title="Remove from task"
+                    className="cursor-pointer p-1 rounded-md hover:bg-red-500/15 text-zinc-500 hover:text-red-400 transition"
                   >
-                    🗑
+                    <X size={13} />
                   </button>
 
                 </div>

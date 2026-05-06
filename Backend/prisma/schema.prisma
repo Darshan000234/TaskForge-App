@@ -145,6 +145,7 @@ model task_assignee {
   org       org @relation(fields: [org_id], references: [id], onDelete: Cascade)
 
   @@unique([task_id, user_id])
+  @@index([proj_id,user_id])
 }
 
 model teaminvitation {
