@@ -85,3 +85,102 @@ export const DeleteMember = async (req, res) => {
         res.status(404).json({ message: error.message });
     }
 }
+
+export const deleteTask = async (req, res) => {
+    const { task_id, user_id } = req.body;
+    try {
+        await prisma.task_assignee.delete({
+            where: {
+                task_id_user_id: {
+                    user_id: user_id,
+                    task_id: task_id
+                }
+            }
+        });
+
+        res.status(202).json({ message: "successfully deleted " });
+    } catch (error) {
+        console.log("deleteTask from TeamController");
+        console.log(error.message);
+
+        res.status(404).json({ message: error.message });
+    }
+}
+
+export const manyTeamData = async (req, res) => {
+    const projectId = Number(req.params.id);
+    const memberIds = req.body.memberIds;
+
+    if (!Array.isArray(memberIds) || memberIds.length === 0) {
+        return res.status(400).json({ message: "memberIds must be a non-empty array" });
+    }
+
+    try {
+        const members = await prisma.proj_member.findMany({
+            where: {
+                proj_id: projectId,
+                member_id: { in: memberIds },
+                role: {
+                    not: "manager"
+                }
+            },
+            select: {
+                member_id: true,
+                role: true,
+                member: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        task_assignee: {
+                            where: { proj_id: projectId },
+                            select: {
+                                task: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        Status: true,
+                                        priority: true,
+                                        dueDate: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const result = members.map(m => ({
+            name: m.member.name,
+            memberId: m.member_id,
+            email: m.member.email,
+            role: m.role,
+            tasks: m.member.task_assignee.map(a => a.task)
+        }));
+
+        res.status(200).json({ result });
+    } catch (error) {
+        console.log("manyTeamData error:", error.message);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const OneTaskData = async (req, res) => {
+    const { id } = Number(req.params.id);
+
+    try {
+        const result = await prisma.task.findUnique({
+            where: {
+                id: id
+            }, select: {
+                id: true,
+                name: true,
+                email: true
+            }
+        })
+        res.status(202).json({ result });
+    } catch (error) {
+        res.status(404).json({ message: error.message });
+    }
+};

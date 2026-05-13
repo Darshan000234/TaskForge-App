@@ -12,39 +12,26 @@ import toast from "react-hot-toast";
 import socket from "../../../../socket/socket.js";
 
 const TABS = [
-  { key: "tasks", label: "Tasks",  icon: <CheckSquare size={14} /> },
-  { key: "team",  label: "Team",   icon: <Users       size={14} /> },
-  { key: "audit", label: "Audit",  icon: <History     size={14} /> },
+  { key: "tasks", label: "Tasks", icon: <CheckSquare size={14} /> },
+  { key: "team",  label: "Team",  icon: <Users       size={14} /> },
+  { key: "audit", label: "Audit", icon: <History     size={14} /> },
 ];
 
 const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
   const { id } = useParams();
 
   const [project,       setProject]       = useState(null);
-  const [teamMembers,   setTeamMembers]   = useState([]);
   const [org,           setOrg]           = useState(null);
   const [activeSection, setActiveSection] = useState("tasks");
-
-  // Mirror of TaskSection's tasks — read-only, kept in sync via onTasksChange.
-  // Only used for StatCards and DueTasksCard; no handlers run against this.
-  const [tasks, setTasks] = useState([]);
-
-  // filterOverride is injected into TaskSection when parent wants to force a filter
-  // (e.g. clicking "Overdue" on StatCards). _t timestamp ensures re-clicking the
-  // same filter still triggers useEffect inside TaskSection.
+  const [tasks,         setTasks]         = useState([]);
   const [filterOverride, setFilterOverride] = useState(null);
 
-  // ── Fetch project + team ────────────────────────────────────────────────
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const [projRes, teamRes] = await Promise.all([
-          api.get(`/orgs/proj/one/${id}`),
-          api.post(`proj/team/${id}`),
-        ]);
-        setProject(projRes.data.data);
-        setOrg(projRes.data.data.org);
-        setTeamMembers(teamRes.data.result);
+        const res = await api.get(`/orgs/proj/one/${id}`);
+        setProject(res.data.data);
+        setOrg(res.data.data.org);
         socket.emit("join_proj", id);
       } catch (err) {
         console.error(err);
@@ -53,24 +40,6 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
     fetchProject();
   }, [id]);
 
-  useEffect(() => {
-    const handleDeleteMemberSocket = ({ data }) => {
-      setTeamMembers((prev) => prev.filter((p) => p.memberId !== data.id));
-    };
-    socket.on("delete Member", handleDeleteMemberSocket);
-    return () => socket.off("delete Member", handleDeleteMemberSocket);
-  }, []);
-
-  const handleDeleteMember = async (memberId) => {
-    try {
-      await api.post(`proj/team/${id}/delete`, { user_id: memberId });
-      setTeamMembers((prev) => prev.filter((a) => a.memberId !== memberId));
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message);
-    }
-  };
-
-  // Switches to Tasks tab and forces the overdue filter.
   const handleOverdueClick = () => {
     setActiveSection("tasks");
     setFilterOverride({ due: "overdue", _t: Date.now() });
@@ -112,7 +81,6 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
 
         {activeSection === "tasks" && (
           <TaskSection
-            teamMembers={teamMembers}
             org={org}
             proj_id={id}
             filterOverride={filterOverride}
@@ -122,11 +90,9 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
 
         {activeSection === "team" && (
           <TeamSection
-            teamMembers={teamMembers}
             tasks={tasks}
             org={org}
             proj_id={id}
-            setTeamMembers={setTeamMembers}
             setTasks={setTasks}
           />
         )}
@@ -155,13 +121,11 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
 
 export default ProjectDetail;
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
 const MOCK_AUDIT = [
-  { id: 1, actor: "Darshan", action: "created",   message: "created the project Bugatti",              timestamp: "2 hours ago"      },
-  { id: 2, actor: "Riya",    action: "assigned",   message: "was assigned to task 'Design homepage'",   timestamp: "1 hour 45m ago"   },
-  { id: 3, actor: "Arjun",   action: "status",     message: "moved 'CI/CD setup' to In Progress",       timestamp: "1 hour ago"       },
-  { id: 4, actor: "Darshan", action: "completed",  message: "marked 'Design homepage' as done",         timestamp: "30 mins ago"      },
-  { id: 5, actor: "Riya",    action: "updated",    message: "updated priority on 'API docs' to Low",    timestamp: "15 mins ago"      },
-  { id: 6, actor: "Darshan", action: "deleted",    message: "removed member from task 'Auth testing'",  timestamp: "5 mins ago"       },
+  { id: 1, actor: "Darshan", action: "created",   message: "created the project Bugatti",             timestamp: "2 hours ago"    },
+  { id: 2, actor: "Riya",    action: "assigned",   message: "was assigned to task 'Design homepage'",  timestamp: "1 hour 45m ago" },
+  { id: 3, actor: "Arjun",   action: "status",     message: "moved 'CI/CD setup' to In Progress",      timestamp: "1 hour ago"     },
+  { id: 4, actor: "Darshan", action: "completed",  message: "marked 'Design homepage' as done",        timestamp: "30 mins ago"    },
+  { id: 5, actor: "Riya",    action: "updated",    message: "updated priority on 'API docs' to Low",   timestamp: "15 mins ago"    },
+  { id: 6, actor: "Darshan", action: "deleted",    message: "removed member from task 'Auth testing'", timestamp: "5 mins ago"     },
 ];

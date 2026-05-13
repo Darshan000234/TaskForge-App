@@ -11,7 +11,13 @@ export const TaskData = async (req, res) => {
             include: {
                 assignees: {
                     include: {
-                        user: true
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
                     }
                 }
             },
@@ -135,6 +141,7 @@ export const AddTask = async (req, res) => {
             io.to(`project_${projectId}`).emit("add_task", { taskId: result.id });
         }
 
+        io.to(`project_${projectId}`).emit("add task", { memberIds });
         res.status(202).json({ task: result });
     } catch (error) {
         console.log(error.message);
@@ -147,13 +154,27 @@ export const DeleteTask = async (req, res) => {
     const tid = req.body.id;
     const io = getIO();
     try {
+        const memberIds = await prisma.task_assignee.findMany({
+            where: {
+                task_id: tid
+            },
+            select: {
+                user_id: true
+            }
+        });
+
         const task = await prisma.task.delete({
             where: {
                 id: tid
             }
         })
+
+
         res.status(202).json({ message: "deleted task" });
+
         io.to(`project_${task.project_id}`).emit("deleted_task", { taskId: tid });
+        io.to(`project_${task.project_id}`).emit("delete task", { memberIds: memberIds });
+
     } catch (error) {
         console.log("DeleteTask");
         console.log(error.message);
@@ -171,7 +192,13 @@ export const OneTaskData = async (req, res) => {
             include: {
                 assignees: {
                     include: {
-                        user: true
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
                     }
                 }
             }
@@ -191,61 +218,6 @@ export const OneTaskData = async (req, res) => {
 
         res.status(202).json({ result });
     } catch (error) {
-        res.status(404).json({ message: error.message });
-    }
-}
-
-export const addmemberData = async (req, res) => {
-    const taskid = Number(req.params.id);
-    const projectId = Number(req.body.projectId);
-    const org_id = Number(req.body.org_id);
-
-    try {
-        const assignees = await prisma.task_assignee.findMany({
-            where: {
-                task_id: taskid
-            },
-            select: {
-                user: {
-                    select: {
-                        id: true
-                    }
-                }
-            }
-        });
-
-        // console.log(member);
-        const manager = await prisma.project.findUnique({
-            where: { id: projectId },
-            select: {
-                assigned_to: true
-            }
-        });
-
-        const assigneeIds = assignees.map(a => a.user.id);
-
-        const excludedIds = [
-            ...assigneeIds,
-            manager?.assigned_to
-        ].filter(Boolean);
-
-        const member = await prisma.teaminvitation.findMany({
-            where: {
-                org_id: org_id,
-                receiver_id: {
-                    notIn: excludedIds
-                }
-            },
-            select: {
-                receiver_id: true,
-                receiver_email: true
-            }
-        });
-        res.status(202).json({ member });
-    } catch (error) {
-        console.log("addmemberData");
-        console.log(error.message);
-
         res.status(404).json({ message: error.message });
     }
 }
@@ -352,11 +324,16 @@ export const addmember = async (req, res) => {
         });
 
         const result = {
-            taskId: task.id,
             members: newUsers,
         };
+        
+        const taskresult =  newUsers.map(user => ({
+            name: user.name,
+            email: user.email
+        }));
 
         io.to(`proj_${task.project_id}`).emit("member_added", result);
+        io.to(`proj_${task.project_id}`).emit("Add member", taskresult, id);
         return res.status(201).json({ result });
     } catch (error) {
         console.error("addmember:", error);

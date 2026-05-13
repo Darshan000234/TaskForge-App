@@ -18,15 +18,12 @@ import socket from "../../../../socket/socket.js";
 import toast from "react-hot-toast";
 
 const LIMIT = 10;
-
 const STATUS_ICON = {
-  todo:       <Circle      size={14} className="text-zinc-500" />,
-  inprogress: <Clock       size={14} className="text-yellow-400" />,
-  done:       <CheckCircle2 size={14} className="text-emerald-400" />,
-  blocked:    <AlertCircle  size={14} className="text-red-400" />,
+  todo: <Circle size={14} className="text-zinc-500" />,
+  inprogress: <Clock size={14} className="text-yellow-400" />,
+  done: <CheckCircle2 size={14} className="text-emerald-400" />,
+  blocked: <AlertCircle size={14} className="text-red-400" />,
 };
-
-// ─── Pagination ───────────────────────────────────────────────────────────────
 
 const Pagination = ({ page, total, limit, onChange }) => {
   const pages = Math.ceil(total / limit);
@@ -48,11 +45,10 @@ const Pagination = ({ page, total, limit, onChange }) => {
           <button
             key={p}
             onClick={() => onChange(p)}
-            className={`cursor-pointer w-7 h-7 rounded-lg text-xs font-medium transition ${
-              p === page
+            className={`cursor-pointer w-7 h-7 rounded-lg text-xs font-medium transition ${p === page
                 ? "bg-blue-600 text-white"
                 : "border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600"
-            }`}
+              }`}
           >
             {p}
           </button>
@@ -69,8 +65,6 @@ const Pagination = ({ page, total, limit, onChange }) => {
   );
 };
 
-// ─── Shared Add Member Button ─────────────────────────────────────────────────
-
 const AddMemberButton = ({ onClick }) => (
   <button
     onClick={(e) => { e.stopPropagation(); onClick(); }}
@@ -81,8 +75,6 @@ const AddMemberButton = ({ onClick }) => (
     <span>Add</span>
   </button>
 );
-
-// ─── Task Grid Card ───────────────────────────────────────────────────────────
 
 const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember }) => (
   <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition group relative">
@@ -138,8 +130,6 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
     )}
   </div>
 );
-
-// ─── Task Table Row ───────────────────────────────────────────────────────────
 
 const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenAddMember }) => (
   <tr className="group border-b border-zinc-800/60 last:border-b-0">
@@ -206,18 +196,6 @@ const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenA
   </tr>
 );
 
-// ─── Task Section ─────────────────────────────────────────────────────────────
-
-/**
- * Props:
- *  - teamMembers  : ProjectMember[]   — for filter panel & add-member modal
- *  - org          : { role, org_id }  — permission + API param
- *  - proj_id      : string            — project id
- *  - filterOverride: { [key]: value, _t: number } | null
- *                   — injected from parent (e.g. overdue click); _t timestamp
- *                     ensures the same filter re-triggers useEffect
- *  - onTasksChange: (tasks) => void   — keeps parent in sync for StatCards/DueTasksCard
- */
 const TaskSection = ({
   teamMembers = [],
   org,
@@ -225,23 +203,20 @@ const TaskSection = ({
   filterOverride = null,
   onTasksChange,
 }) => {
-  const [tasks, setTasks]               = useState([]);
-  const [addTaskOpen, setAddTaskOpen]   = useState(false);
-  const [search, setSearch]             = useState("");
-  const [filters, setFilters]           = useState({});
-  const [filterOpen, setFilterOpen]     = useState(false);
-  const [view, setView]                 = useState("list");
-  const [page, setPage]                 = useState(1);
+  const [tasks, setTasks] = useState([]);
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({});
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [view, setView] = useState("list");
+  const [page, setPage] = useState(1);
   const [addMemberTarget, setAddMemberTarget] = useState(null);
   const filterRef = useRef(null);
 
-  // ── Sync tasks up to parent (for StatCards / DueTasksCard) ──────────────
-  // Runs whenever tasks change so parent always has the latest array.
   useEffect(() => {
     onTasksChange?.(tasks);
   }, [tasks]);
 
-  // ── Initial fetch ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!proj_id) return;
     const fetch = async () => {
@@ -255,8 +230,6 @@ const TaskSection = ({
     fetch();
   }, [proj_id]);
 
-  // ── Apply filter override from parent ────────────────────────────────────
-  // _t timestamp ensures re-clicking "overdue" still fires even if already set.
   useEffect(() => {
     if (!filterOverride) return;
     const { _t, ...incoming } = filterOverride;
@@ -264,7 +237,6 @@ const TaskSection = ({
     setPage(1);
   }, [filterOverride]);
 
-  // ── Socket listeners ─────────────────────────────────────────────────────
   useEffect(() => {
     const onAddTask = async ({ taskId }) => {
       try {
@@ -279,7 +251,6 @@ const TaskSection = ({
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     };
 
-    // Bug fix: original used `memberId` (undefined); correct destructure is `asmemberId`
     const onRemovedMember = ({ taskId, asmemberId }) => {
       setTasks((prev) =>
         prev.map((t) =>
@@ -290,7 +261,7 @@ const TaskSection = ({
       );
     };
 
-    const onMemberAdded = ({ taskId, member }) => {
+    const onMemberAdded = ({ member }) => { 
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
@@ -300,21 +271,27 @@ const TaskSection = ({
       );
     };
 
-    socket.on("add_task",       onAddTask);
-    socket.on("deleted_task",   onDeleteTask);
+    const handleDelete = ({ memberId }) => {
+      setTasks((prev) =>
+        prev.map((t) => ({
+          ...t,
+          assignees: (t.assignees ?? []).filter((a) => a.id !== memberId),
+        }))
+      );
+    }
+    socket.on("add_task", onAddTask);
+    socket.on("deleted_task", onDeleteTask);
     socket.on("removed member", onRemovedMember);
-    socket.on("member added",   onMemberAdded);
-
+    socket.on("member added", onMemberAdded);
+    socket.on("delete member", handleDelete);
     return () => {
-      socket.off("add_task",       onAddTask);
-      socket.off("deleted_task",   onDeleteTask);
+      socket.off("add_task", onAddTask);
+      socket.off("deleted_task", onDeleteTask);
       socket.off("removed member", onRemovedMember);
-      socket.off("member added",   onMemberAdded);
+      socket.off("member added", onMemberAdded);
+      socket.off("delete member", handleDelete);
     };
   }, []);
-
-  // ── Handlers ─────────────────────────────────────────────────────────────
-
   const handleAddTask = async (task) => {
     try {
       const res = await api.post(`proj/task/add`, { task, id: proj_id, orgId: org.org_id });
@@ -345,12 +322,12 @@ const TaskSection = ({
         prev.map((t) =>
           t.id === tid
             ? {
-                ...t,
-                assignees: [
-                  ...(t.assignees ?? []).filter((a) => !newMembers.some((m) => m.id === a.id)),
-                  ...newMembers,
-                ],
-              }
+              ...t,
+              assignees: [
+                ...(t.assignees ?? []).filter((a) => !newMembers.some((m) => m.id === a.id)),
+                ...newMembers,
+              ],
+            }
             : t
         )
       );
@@ -377,16 +354,12 @@ const TaskSection = ({
   };
 
   const handleFilters = (f) => { setFilters(f); setPage(1); };
-  const handleSearch  = (v) => { setSearch(v);  setPage(1); };
+  const handleSearch = (v) => { setSearch(v); setPage(1); };
 
-  // ── Derived ──────────────────────────────────────────────────────────────
-
-  const filtered    = applyFilters(tasks, filters, search);
-  const paged       = filtered.slice((page - 1) * LIMIT, page * LIMIT);
+  const filtered = applyFilters(tasks, filters, search);
+  const paged = filtered.slice((page - 1) * LIMIT, page * LIMIT);
   const activeCount = Object.values(filters).filter(Boolean).length;
-  const isAdmin     = org?.role === "admin";
-
-  // ── Render ───────────────────────────────────────────────────────────────
+  const isAdmin = org?.role === "admin";
 
   return (
     <div className="flex-1 min-w-0">
@@ -407,11 +380,10 @@ const TaskSection = ({
         <div className="relative" ref={filterRef}>
           <button
             onClick={() => setFilterOpen((o) => !o)}
-            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${
-              activeCount > 0
+            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${activeCount > 0
                 ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
                 : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
-            }`}
+              }`}
           >
             <SlidersHorizontal size={15} />
             {activeCount > 0 && (

@@ -75,8 +75,7 @@ export const projData = async (req, res) => {
 
 export const addProject = async (req, res) => {
     const { proj, orgid } = req.body;
-    // console.log(proj,orgid);
-    // console.log(proj);
+    const id = req.user.id;
     const io = getIO();
     try {
         const user = await prisma.user.findUnique({
@@ -103,7 +102,14 @@ export const addProject = async (req, res) => {
                 role: "manager"
             }
         });
-
+        await prisma.proj_member.create({
+            data: {
+                proj_id: project.id,
+                org_id: orgid,
+                member_id: id,
+                role: "admin"
+            }
+        })
         const org_member = await prisma.org_member.findUnique({
             where: {
                 member_id_org_id: {
@@ -112,9 +118,8 @@ export const addProject = async (req, res) => {
                 }
             }
         });
+
         project.email = proj.email;
-        // console.log(project);
-        // console.log(req.app.get("io"));
         io.to(`org_${org_member.org_id}`).emit('project_created', { project: project });
         res.status(201).json({ project: project });
     } catch (error) {
