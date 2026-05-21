@@ -184,7 +184,6 @@ export const DeleteTask = async (req, res) => {
 
 export const OneTaskData = async (req, res) => {
     const id = Number(req.params.id);
-
     try {
 
         const tasks = await prisma.task.findUnique({
@@ -236,7 +235,7 @@ export const RemoveMemeber = async (req, res) => {
             }
         })
 
-        io.to(`proj_${data.proj_id}`).emit("removed member", { taskId: id, user_id: user_id });
+        io.to(`proj_${data.proj_id}`).emit("removed member", { task_id : id, user_id });
         res.status(202).json({ message: "deleted Successfully " });
     } catch (error) {
         console.log("RemoveMemeber");
@@ -328,12 +327,11 @@ export const addmember = async (req, res) => {
         };
         
         const taskresult =  newUsers.map(user => ({
-            name: user.name,
-            email: user.email
+            id : user.id
         }));
 
         io.to(`proj_${task.project_id}`).emit("member_added", result);
-        io.to(`proj_${task.project_id}`).emit("Add member", taskresult, id);
+        io.to(`proj_${task.project_id}`).emit("Add member", taskresult);
         return res.status(201).json({ result });
     } catch (error) {
         console.error("addmember:", error);

@@ -3,7 +3,8 @@ import {
     registerUser,
     LoginUser,
     google,
-    LogoutUser
+    LogoutUser,
+    userData
 } from '../../controllers/UserController.js';
 
 import authMiddleware from '../../middlewares/authMiddleWare.js';
@@ -14,5 +15,5 @@ router.post('/signup', registerUser);
 router.post('/login', LoginUser);
 router.post('/googleauth', google);
 router.post('/logout', authMiddleware, LogoutUser);
-
+router.get('/userdata',authMiddleware,userData);
 export default router;

@@ -95,9 +95,9 @@ const Projects = () => {
       setTimeout(() => {
         setLoading(false);
       }, 4000);
-      socket.emit('join_proj', { id : project.id });
+      socket.emit('join_proj', { id: project.id });
     }
-    
+
     const handleProjectDeleted = (data) => {
       setLoading(true);
       setProjects((prev) => prev.filter((p) => p.id !== data.proj_id));
@@ -285,6 +285,7 @@ const Projects = () => {
 
       {reassignTarget && (
         <ReassignManagerModal
+          org={org}
           project={reassignTarget}
           onClose={() => setReassignTarget(null)}
           onReassigned={handleReassigned}

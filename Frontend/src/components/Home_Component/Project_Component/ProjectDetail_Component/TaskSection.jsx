@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, LayoutGrid, List, SlidersHorizontal,
   Circle, Clock, CheckCircle2, AlertCircle,
@@ -16,6 +17,7 @@ import {
 import api from "../../../../api/api.js";
 import socket from "../../../../socket/socket.js";
 import toast from "react-hot-toast";
+import { div } from "framer-motion/client";
 
 const LIMIT = 10;
 const STATUS_ICON = {
@@ -76,8 +78,8 @@ const AddMemberButton = ({ onClick }) => (
   </button>
 );
 
-const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember }) => (
-  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition group relative">
+const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember, onClick }) => (
+  <div onClick={() => onClick?.()} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition group relative">
     {org?.role === "admin" && (
       <button
         onClick={(e) => { e.stopPropagation(); onDeleteTask?.(task.id); }}
@@ -131,8 +133,8 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
   </div>
 );
 
-const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenAddMember }) => (
-  <tr className="group border-b border-zinc-800/60 last:border-b-0">
+const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenAddMember,onClick }) => (
+  <tr onClick={() => onClick?.()} className="group border-b border-zinc-800/60 last:border-b-0">
     <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
       <div className="flex items-center gap-2.5">
         {STATUS_ICON[task.Status]}
@@ -202,6 +204,7 @@ const TaskSection = ({
   proj_id,
   filterOverride = null,
   onTasksChange,
+  // onSelectedTask,
 }) => {
   const [tasks, setTasks] = useState([]);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
@@ -212,6 +215,7 @@ const TaskSection = ({
   const [page, setPage] = useState(1);
   const [addMemberTarget, setAddMemberTarget] = useState(null);
   const filterRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     onTasksChange?.(tasks);
@@ -251,11 +255,11 @@ const TaskSection = ({
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     };
 
-    const onRemovedMember = ({ taskId, asmemberId }) => {
+    const onRemovedMember = ({ task_id, user_id }) => {
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === taskId
-            ? { ...t, assignees: (t.assignees ?? []).filter((a) => a.id !== asmemberId) }
+          t.id === task_id
+            ? { ...t, assignees: (t.assignees ?? []).filter((a) => a.id !== user_id) }
             : t
         )
       );
@@ -292,6 +296,11 @@ const TaskSection = ({
       socket.off("delete member", handleDelete);
     };
   }, []);
+
+  const handleSelectTask = (task) => {
+    navigate(`/user/dashboard/task/${task.id}`);
+  };
+  
   const handleAddTask = async (task) => {
     try {
       const res = await api.post(`proj/task/add`, { task, id: proj_id, orgId: org.org_id });
@@ -451,6 +460,7 @@ const TaskSection = ({
                 onDeleteTask={handleDeleteTask}
                 onRemoveMember={handleRemoveMember}
                 onOpenAddMember={setAddMemberTarget}
+                onClick={() => handleSelectTask(t)}
               />
             ))}
           </div>
@@ -484,7 +494,8 @@ const TaskSection = ({
                     onDeleteTask={handleDeleteTask}
                     onRemoveMember={handleRemoveMember}
                     onOpenAddMember={setAddMemberTarget}
-                  />
+                    onClick={() => handleSelectTask(t)}
+                    />
                 ))}
               </tbody>
             </table>

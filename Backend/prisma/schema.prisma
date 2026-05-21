@@ -23,6 +23,12 @@ enum Role {
   member 
 }  
 
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+}
+
 model User {
   id           Int          @id @default(autoincrement())
   name         String
@@ -161,5 +167,17 @@ model teaminvitation {
   @@index([receiver_id])
 }
 
+model Message {
+  id        Int      @id @default(autoincrement())
+  task_id   Int
+  user_id   Int
 
+  type      MessageType
+  content   String?
 
+  fileUrl   String?   // S3 / Cloudinary URL
+  fileName  String?
+  mimeType  String?
+
+  createdAt DateTime @default(now())
+}

@@ -89,44 +89,29 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
       });
 
     };
-
-    const handleAddmember = async ({memberId,taskid}) => {
-      const res = await api.get(`proj/team/${taskid}/OneTaskData`);
-      const task = res.data.result;
-      setTeamMembers((prev) => {
-        const updated = [...prev];
-        let i = 0; // teamMembers
-        let j = 0; // memberIds
-        while (i < updated.length && j < memberIds.length) {
-          if (updated[i].id === memberIds[j]) {
-            updated[i] = {
-              ...updated[i],
-              tasks: [...(updated[i].tasks || []), task]
-            };
-            i++;
-            j++;
-          } 
-          else {
-            i++;
-          }
-        }
-
-        return updated;
-      });
+    const onRemovedMember = ({ task_id, user_id }) => {
+      setTeamMembers((prev) =>
+        prev.map((t) =>
+          t.id === user_id
+            ? { ...t, tasks: (t.tasks ?? []).filter((a) => a.id !== task_id) }
+            : t
+        )
+      );
     };
-
     socket.on("delete Member", handleDeleteMemberSocket);
     socket.on("add task", handleMembersUpdate);
     socket.on("delete task",handleMembersUpdate);
-    socket.on("Add member", handleAddmember);
+    socket.on("Add member", handleMembersUpdate);
+    socket.on("removed member", onRemovedMember);
     return () => {
       socket.off("delete Member", handleDeleteMemberSocket);
       socket.off("add task", handleMembersUpdate);
       socket.off("delete task",handleMembersUpdate);
-      socket.off("Add member", handleAddmember);
+      socket.off("Add member", handleMembersUpdate);
+      socket.off("removed member", onRemovedMember);
     }
   }, [proj_id]);
-  console.log(teamMembers);
+  // console.log(teamMembers);
   
   const handleRemoveMember = async (memberId) => {
     try {

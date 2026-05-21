@@ -13,6 +13,7 @@ import inviteRoute from "./routes/User/inviteRoute.js";
 import projectRoute from "./routes/Project/projectRoute.js";
 import TaskRoute from "./routes/Task/TaskRoute.js";
 import projectTeamRoute from "./routes/ProjectTeam/projectTeamRoute.js";
+import ChatRoute from "./routes/Chat/ChatRoute.js";
 import { setIO } from "./utils/socket.js";
 
 dotenv.config();
@@ -42,6 +43,8 @@ app.use("/invites", inviteRoute);
 app.use("/orgs/proj", projectRoute);
 app.use("/proj/task", TaskRoute);
 app.use("/proj/team", projectTeamRoute);
+app.use("/proj/task/chat",ChatRoute);
+
 
 io.use(async (socket, next) => {
   try {

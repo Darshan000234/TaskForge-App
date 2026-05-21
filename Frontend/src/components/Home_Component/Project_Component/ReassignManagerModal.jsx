@@ -2,12 +2,11 @@ import { useState, useEffect } from "react";
 import { X, ChevronDown } from "lucide-react";
 import api from "../../../api/api.js";
 
-const ReassignManagerModal = ({ project, onClose, onReassigned }) => {
+const ReassignManagerModal = ({ project, onClose, onReassigned,org }) => {
   const [members, setMembers] = useState([]);
   const [selectedEmail, setSelectedEmail] = useState(project.email ?? "");
   const [loading, setLoading] = useState(false);
-  const org = JSON.parse(localStorage.getItem("org"));
-
+  
   useEffect(() => {
     api.get(`/orgs/${org.id}/members`).then((res) => setMembers(res.data));
   }, []);
