@@ -43,7 +43,9 @@ model User {
   projectMemberships proj_member[]
   projectAssigner    project[]
   createdTasks       task[] @relation("TaskCreator")
+  createdTasksmessage message[]
   task_assignee task_assignee[]
+  org_member   org_member[]
 }
 
 model org {
@@ -73,7 +75,8 @@ model org_member {
   role         String @default("member")
 
   org          org    @relation(fields: [org_id], references: [id], onDelete: Cascade)
-  
+  user         User   @relation(fields: [member_id], references: [id], onDelete: Cascade)
+
   @@index([member_id])
   @@unique([member_id,org_id])
   @@index([org_id])
@@ -133,6 +136,7 @@ model task {
   org      org      @relation(fields: [org_id], references: [id], onDelete: Cascade)
 
   assignees task_assignee[]
+  task_message   message[]
 
   @@index([project_id])
   createdAt DateTime @default(now())
@@ -167,7 +171,7 @@ model teaminvitation {
   @@index([receiver_id])
 }
 
-model Message {
+model message {
   id        Int      @id @default(autoincrement())
   task_id   Int
   user_id   Int
@@ -178,6 +182,8 @@ model Message {
   fileUrl   String?   // S3 / Cloudinary URL
   fileName  String?
   mimeType  String?
-
+  task      task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  @@index([task_id])
   createdAt DateTime @default(now())
 }

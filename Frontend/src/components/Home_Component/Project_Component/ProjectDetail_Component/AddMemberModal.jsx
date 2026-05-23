@@ -23,8 +23,8 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
     const fetchMembers = async () => {
       try {
         const res = await api.post(`proj/task/${task.id}/addmemberdata`, {
-          projectId: proj_id,
-          org_id: org.org_id,
+          projectId: Number(proj_id),
+          org_id: Number(org.org_id),
         });
         setMembers(res.data.member ?? []);
       } catch (err) {

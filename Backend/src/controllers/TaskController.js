@@ -341,3 +341,51 @@ export const addmember = async (req, res) => {
         });
     }
 };
+
+export const addmemberData = async (req, res) => {
+  const { projectId, org_id } = req.body;
+  const task_id = Number(req.params.id);
+
+  try {
+    const proj = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!proj) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    const assignedUsers = await prisma.task_assignee.findMany({
+      where: { task_id },
+      select: { user_id: true },
+    });
+
+    const assignedIds = assignedUsers.map((u) => u.user_id);
+
+    const users = await prisma.org_member.findMany({
+      where: {
+        org_id,
+        role: { not: "admin" },
+        member_id: {
+          notIn: [...assignedIds, proj.assigned_to],
+        },
+      },
+      select : {
+        member_id : true,
+        member_email : true
+      },
+    });
+
+    const formatted = users.map((u) => ({
+      receiver_id: u.member_id,
+      receiver_email:u.member_email,
+    }));
+
+    res.status(200).json({ member: formatted });
+
+  } catch (error) {
+    console.log("addmemberData");
+    console.log(error.message);
+    res.status(500).json({ message: error.message });
+  }
+};

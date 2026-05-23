@@ -114,6 +114,10 @@ io.on("connection", async (socket) => {
   socket.on("join_proj", async ({ id }) => {
     socket.join(`project_${id}`);
   });
+  
+  socket.on("join_task", async ({ id }) => {
+    socket.join(`task_${id}`);
+  });
 
   socket.on("disconnect", () => {
     userSockets.get(userId)?.delete(socket.id);

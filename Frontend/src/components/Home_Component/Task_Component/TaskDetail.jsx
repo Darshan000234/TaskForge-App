@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import socket from "../../../socket/socket.js";
 import {
   MessageCircle, Send, Paperclip, X, FileText,
   User, Calendar, Tag, Layers, ChevronRight, ChevronDown, ChevronUp,
@@ -32,52 +33,102 @@ const badge = (label, styleMap, fallback = "bg-zinc-700/40 text-zinc-400 border 
   </span>
 );
 
-// ─── Timestamp formatter ──────────────────────────────────────────────────────
-
 const formatTime = (date) => {
   const d = new Date(date);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
     " · " + d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-// ─── MessageItem ──────────────────────────────────────────────────────────────
-
 const MessageItem = ({ msg, isOwn }) => (
-  <div className={`flex gap-3 ${isOwn ? "flex-row-reverse" : ""}`}>
-    {/* Avatar */}
-    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400 shrink-0 mt-0.5">
-      {msg.author.name?.[0]?.toUpperCase() ?? "?"}
-    </div>
+  <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-3`}>
 
-    <div className={`max-w-[75%] space-y-1 ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
-      <div className={`flex items-center gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
-        <span className="text-xs font-semibold text-white">{msg.author.name}</span>
-        <span className="text-[10px] text-zinc-600">{formatTime(msg.createdAt)}</span>
-      </div>
+    <div className="max-w-[75%] flex flex-col gap-1">
 
-      {/* Text bubble */}
-      {msg.text && (
-        <div className={`text-sm leading-relaxed px-4 py-2.5 rounded-2xl ${isOwn
-          ? "bg-blue-600 text-white rounded-tr-sm"
-          : "bg-zinc-800 text-zinc-200 rounded-tl-sm border border-zinc-700/50"
-          }`}>
-          {msg.text}
+      {/* Name */}
+      {!isOwn && (
+        <span className="text-xs text-zinc-400">
+          {msg.user?.name}
+        </span>
+      )}
+
+      {/* TEXT */}
+      {msg.content && (
+        <div
+          className={`px-4 py-2.5 text-sm rounded-2xl ${isOwn
+            ? "bg-blue-600 text-white rounded-br-sm"
+            : "bg-zinc-800 text-zinc-200 rounded-bl-sm border border-zinc-700/50"
+            }`}
+        >
+          {msg.content}
+
+          <div className="text-[10px] mt-1 text-right opacity-70">
+            {formatTime(msg.createdAt)}
+          </div>
         </div>
       )}
 
-      {/* File attachment */}
-      {msg.file && (
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs ${isOwn
-          ? "bg-blue-700/40 border-blue-500/30 text-blue-200"
-          : "bg-zinc-800 border-zinc-700 text-zinc-300"
-          }`}>
-          {msg.file.type?.startsWith("image/")
-            ? <ImageIcon size={14} className="shrink-0" />
-            : <FileText size={14} className="shrink-0" />
-          }
-          <span className="truncate max-w-45">{msg.file.name}</span>
-        </div>
+      {/* IMAGE */}
+      {msg.fileUrl && msg.mimeType?.startsWith("image/") && (
+        <a
+          href={msg.fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <div
+            className={`px-3 py-2 rounded-xl text-xs cursor-pointer ${isOwn
+              ? "bg-blue-700/40 text-blue-200"
+              : "bg-zinc-800 text-zinc-300 border border-zinc-700"
+              }`}
+          >
+            🖼 Image - Click to open
+
+            <div className="text-[10px] mt-1 text-right opacity-70">
+              {formatTime(msg.createdAt)}
+            </div>
+          </div>
+        </a>
       )}
+
+      {/* PDF PREVIEW */}
+      {/* PDF */}
+      {msg.fileUrl && msg.mimeType === "application/pdf" && (
+        <a
+          href={msg.fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <div
+            className={`px-3 py-2 rounded-xl text-xs cursor-pointer ${isOwn
+              ? "bg-blue-700/40 text-blue-200"
+              : "bg-zinc-800 text-zinc-300 border border-zinc-700"
+              }`}
+          >
+            📄 {msg.fileName}
+
+            <div className="text-[10px] mt-1 text-right opacity-70">
+              {formatTime(msg.createdAt)}
+            </div>
+          </div>
+        </a>
+      )}
+
+      {/* OTHER FILES */}
+      {msg.fileUrl &&
+        !msg.mimeType?.startsWith("image/") &&
+        msg.mimeType !== "application/pdf" && (
+          <div className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-xs">
+            <a
+              href={msg.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline break-all"
+            >
+              {msg.fileName}
+            </a>
+          </div>
+        )}
     </div>
   </div>
 );
@@ -102,24 +153,14 @@ const TaskDetail = ({
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const containerRef = useRef(null); // scroll container
+  const bottomRef = useRef(null);    // bottom anchor
   const [file, setFile] = useState(null);
   const fileRef = useRef(null);
-  const bottomRef = useRef(null);
   const [task, setTask] = useState(null);
   const [author, setAuthor] = useState(null);
   const { id } = useParams();
-
-  useEffect(() => {
-    const getTaskData = async () => {
-      try {
-        const res = await api.get(`proj/task/${id}/one`);
-        setTask(res.data.result);
-      } catch (error) {
-        toast.error(error.messages);
-      }
-    };
-    getTaskData();
-  }, [id]);
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     const getAuthorData = async () => {
@@ -131,20 +172,94 @@ const TaskDetail = ({
       }
     }
     getAuthorData();
+  }, [])
+  useEffect(() => {
+    if (isFirstLoad.current && messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      isFirstLoad.current = false;
+    }
+  }, [messages]);
+  useEffect(() => {
+    const getTaskData = async () => {
+      try {
+        const res = await api.get(`proj/task/${id}/one`);
+        socket.emit('join_task', { id: id });
+        setTask(res.data.result);
+      } catch (error) {
+        toast.error(error.messages);
+      }
+    };
+    getTaskData();
+  }, [id]);
+
+  useEffect(() => {
+    const getMessageData = async () => {
+      try {
+        const res = await api.get(`/proj/task/chat/messageData/${id}`);
+        setMessages(res.data.result);
+      } catch (error) {
+        console.log(error);
+        toast.error(error.messages);
+      }
+    }
+    getMessageData();
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = containerRef.current;
+    if (!container) return;
+
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+    if (isNearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
-  const handlePost = () => {
+  useEffect(() => {
+    if(!author) return;
+    const handlenewMessage = (data) => {
+      if (data.user_id == author?.id) return;
+      setMessages((prev) => [...prev, data]);
+    }
+    socket.on("message", handlenewMessage);
+    return () => {
+      socket.off("message", handlenewMessage);
+    }
+  }, [author])
+
+  const handlePost = async () => {
     const trimmed = input.trim();
     if (!trimmed && !file) return;
     try {
-      const formdata = new FromData();
+      const formData = new FormData();
 
-      // if (fileRef.current) fileRef.current.value = "";
+      formData.append("task_id", id);
+
+      if (file) {
+        if (file.type.startsWith("image/")) {
+          formData.append("type", "IMAGE");
+        } else {
+          formData.append("type", "FILE");
+        }
+
+        formData.append("file", file);
+      } else {
+        formData.append("type", "TEXT");
+        formData.append("content", trimmed);
+      }
+
+      const res = await api.post("/proj/task/chat/message/sent", formData);
+      setMessages((prev) => [...prev, res.data.result]);
+      setInput("");
+
+      if (fileRef.current) fileRef.current.value = "";
+      if (file) setFile(null)
+      toast.success("message sent");
     } catch (error) {
+      console.log(error);
+
       toast.error(error.messages);
     }
   };
@@ -158,16 +273,32 @@ const TaskDetail = ({
 
   const handleFileChange = (e) => {
     const selected = e.target.files?.[0];
-    if (selected) setFile(selected);
+
+    if (!selected) return;
+
+    const allowedTypes = [
+      "application/pdf",
+      "text/plain",
+      "image/jpeg",
+      "image/png",
+    ];
+
+    if (!allowedTypes.includes(selected.type)) {
+      toast.error("Only PDF, image (jpg/png), or txt allowed");
+      e.target.value = "";
+      return;
+    }
+
+    setFile(selected);
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
+    <div className="h-scrren overflow-hidden bg-black text-white">
+      <div className="max-w-7xl mx-auto px-6 h-full flex flex-col">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 h-full mt-10">
 
           {/* ── Left: Discussion ───────────────────────────────────── */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col overflow-hidden"
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col h-full overflow-hidden"
             style={{ minHeight: "600px", maxHeight: "80vh" }}>
 
             {/* Header */}
@@ -180,8 +311,10 @@ const TaskDetail = ({
             </div>
 
             {/* Message list */}
-            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-              {messages.length==0 ? (
+            <div ref={containerRef}
+              className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+            >
+              {messages.length == 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-16">
                   <MessageCircle size={32} className="text-zinc-700 mb-3" />
                   <p className="text-sm text-zinc-500">No comments yet. Be the first!</p>
@@ -191,7 +324,7 @@ const TaskDetail = ({
                   <MessageItem
                     key={msg.id}
                     msg={msg}
-                    isOwn={msg.author.id === author.id}
+                    isOwn={msg.user_id === author.id}
                   />
                 ))
               )}
@@ -236,7 +369,8 @@ const TaskDetail = ({
                   <input
                     ref={fileRef}
                     type="file"
-                    accept="image/*,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    accept="image/jpeg,image/png,.pdf,.txt"
+                    multiple={false}
                     className="hidden"
                     onChange={handleFileChange}
                   />
