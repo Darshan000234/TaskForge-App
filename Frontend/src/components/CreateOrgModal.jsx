@@ -25,7 +25,7 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
       setError("");
       const res = await api.post("/orgs/add", { name: trimmed });
       toast.success("Organization created!");
-      onCreated?.(res.data.org); // pass new org up to parent
+      onCreated?.(res.data.org);
       handleClose();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create organization.");
@@ -45,7 +45,6 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             initial={{ opacity: 0 }}
@@ -54,7 +53,6 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
             onClick={handleClose}
           />
 
-          {/* Modal */}
           <motion.div
             className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
             initial={{ opacity: 0, scale: 0.95, y: 12 }}
@@ -66,7 +64,6 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
               className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-md mx-4 pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-zinc-800">
                 <div className="flex items-center gap-3">
                   <div className="bg-zinc-800 p-2 rounded-lg">

@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import CustomSelect from "../../../../utils/CustomSelect.jsx";
 import { buildQueryString } from "./constants";
 
-/* Click outside hook */
 function useClickOutside(ref, cb) {
   useEffect(() => {
     const handler = (e) => {
@@ -21,7 +20,6 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
   const ref = useRef(null);
   useClickOutside(ref, onClose);
 
-  /* Centralized update */
   const handleChange = (field, value) => {
     onChange({
       ...filters,
@@ -29,7 +27,6 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
     });
   };
 
-  /* Config-driven filters */
   const filterConfig = [
     {
       label: "Status",
@@ -66,7 +63,6 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
       ref={ref}
       className="absolute right-0 top-full mt-2 z-40 w-72 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4 space-y-4"
     >
-      {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-white">Filters</span>
         <button
@@ -77,7 +73,6 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
         </button>
       </div>
 
-      {/* Dynamic Filters */}
       {filterConfig.map((item) => (
         <CustomSelect
           key={item.field}
@@ -88,7 +83,6 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
         />
       ))}
 
-      {/* Assignee */}
       <CustomSelect
         label="Assignee"
         value={filters.assigneeId}
@@ -99,7 +93,6 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
         onChange={(val) => handleChange("assigneeId", val)}
       />
 
-      {/* Sort */}
       <div className="grid grid-cols-2 gap-3">
         <CustomSelect
           label="Sort By"
@@ -124,7 +117,6 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
         />
       </div>
 
-      {/* Clear */}
       <button
         onClick={() =>
           onChange({

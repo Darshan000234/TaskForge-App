@@ -19,7 +19,6 @@ export const registerUser = async (req, res) => {
     });
     const accesstoken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-    // await redis.set(id, user.id, 'EX', 7 * 24 * 60 * 60);
 
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
@@ -27,7 +26,6 @@ export const registerUser = async (req, res) => {
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
-    // console.log('User created successfully');
     res.json({ accesstoken, message: "User created successfully" });
 };
 

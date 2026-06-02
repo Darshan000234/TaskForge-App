@@ -3,7 +3,6 @@ import { getIO } from "../utils/socket.js";
 
 export const inviteData = async (req, res) => {
   const uid = req.user.id;
-  // console.log(uid);
   try {
     const data = await prisma.teaminvitation.findMany({
       where: {
@@ -11,8 +10,6 @@ export const inviteData = async (req, res) => {
         status: "pending"
       }
     });
-    // console.log(data);
-    // if (!data) return res.status(404).json({ message: "No invite found" });
     res.status(200).json({ data });
   } catch (error) {
     console.log(error.message);
@@ -38,14 +35,11 @@ export const sendInvite = async (req, res) => {
     const receiver = await prisma.user.findUnique({
       where: { email }
     });
-    // console.log("come");
     if (!receiver) return res.status(404).json({ message: "user does not exist in system" });
-    // console.log("passes");
 
     if (uemail === email) {
       return res.status(404).json({ message: " something went wrong " });
     }
-    // console.log(receiver);
     const existingInvite = await prisma.teaminvitation.findUnique({
       where: {
         receiver_id_org_id: {
@@ -54,7 +48,6 @@ export const sendInvite = async (req, res) => {
         }
       }
     });
-    // console.log("ok1");
     if (existingInvite && existingInvite.status === "pending") {
       return res.status(404).json({ message: " something went wrong " });
     }
@@ -62,7 +55,6 @@ export const sendInvite = async (req, res) => {
     if (existingInvite && existingInvite.status === "accepted") {
       return res.status(404).json({ message: " something went wrong " });
     }
-    // console.log("ok");
     let invite = null;
     let prev = true;
     if (existingInvite && existingInvite.status === "rejected") {

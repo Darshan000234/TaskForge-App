@@ -16,7 +16,6 @@ const Notification = () => {
       try {
         const res = await api.get('/invites/data');
         setNotifications(res.data?.data || []);
-        // console.log(res.data);
       } catch (err) {
         toast.error(err.message);
       }
@@ -63,7 +62,6 @@ const Notification = () => {
   return (
     <div className="min-h-screen bg-black text-white px-12 py-10">
 
-      {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <Bell size={22} className="text-blue-500" />
         <h1 className="text-2xl font-semibold">Notifications</h1>
@@ -89,22 +87,18 @@ const Notification = () => {
             <span className="w-24 text-center">Reject</span>
           </div>
 
-          {/* Table Rows */}
           {notifications.map((invite, index) => (
             <div
               key={invite.id}
               className={`grid grid-cols-[1fr_auto_auto] gap-4 items-center px-5 py-4 hover:bg-zinc-900/60 transition-colors ${index !== notifications.length - 1 ? "border-b border-zinc-800" : ""
                 }`}
             >
-              {/* Message */}
               <div>
                 <p className="text-[15px] text-zinc-400 mt-0.5">
-                  {/* <span className="text-zinc-300">{invite.message}</span> */}
                   <span className="text-blue-400 font-medium">{invite.message}</span>
                 </p>
               </div>
 
-              {/* Accept */}
               <button
                 onClick={() => acceptInvite(invite)}
                 className="w-24 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-green-500 active:scale-95  text-[15px] font-medium transition-all cursor-pointer"
@@ -113,7 +107,6 @@ const Notification = () => {
                 Accept
               </button>
 
-              {/* Reject */}
               <button
                 onClick={() => rejectInvite(invite)}
                 className="w-24 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-red-600 active:scale-95 text-[15px] font-medium text-zinc-300 hover:text-white transition-all cursor-pointer"

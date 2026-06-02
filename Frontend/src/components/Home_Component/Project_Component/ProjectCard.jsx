@@ -8,7 +8,6 @@ const ProjectCard = ({ project, onClick, onDelete, onReassign, org }) => {
     onhold: "bg-yellow-500/15 text-yellow-400",
     cancelled: "bg-red-500/15 text-red-400",
   };
-  // console.log(project);
   const handleAction = (e, cb) => {
     e.stopPropagation();
     cb();
@@ -38,7 +37,6 @@ const ProjectCard = ({ project, onClick, onDelete, onReassign, org }) => {
         </div>
       )}
 
-      {/* Icon row — status badge hidden on hover to avoid overlap with action buttons */}
       <div className="flex items-start justify-between mb-3">
         <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition">
           <FolderOpen size={18} className="text-blue-400" />

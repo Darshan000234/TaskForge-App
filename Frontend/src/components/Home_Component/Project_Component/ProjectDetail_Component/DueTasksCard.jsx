@@ -10,7 +10,6 @@ const STATUS_ICON = {
 
 const DueTaskItem = ({ task }) => (
   <div className="px-4 py-3 border-b border-zinc-800/60 hover:bg-zinc-800/30 transition cursor-pointer last:border-b-0">
-    {/* Task name + status */}
     <div className="flex items-start justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0">
         {STATUS_ICON[task.status]}
@@ -21,7 +20,6 @@ const DueTaskItem = ({ task }) => (
       </span>
     </div>
 
-    {/* Priority + due date */}
     <div className="flex items-center gap-3 mt-1.5 text-xs">
       <span className={`flex items-center gap-1 capitalize font-medium ${PRIORITY_COLOR[task.priority]}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[task.priority]}`} />
@@ -33,7 +31,6 @@ const DueTaskItem = ({ task }) => (
       </span>
     </div>
 
-    {/* Assignee avatars */}
     {(task.assignees?.length ?? 0) > 0 && (
       <div className="flex -space-x-1.5 mt-2">
         {task.assignees.slice(0, 5).map((a, i) => (
@@ -62,7 +59,6 @@ const DueTasksCard = ({ tasks = [] }) => {
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800">
         <div className="flex items-center gap-2">
           <AlertTriangle size={16} className="text-orange-400" />
@@ -75,7 +71,6 @@ const DueTasksCard = ({ tasks = [] }) => {
         </span>
       </div>
 
-      {/* List */}
       {overdue.length === 0 ? (
         <p className="text-sm text-zinc-600 text-center py-8">No overdue tasks</p>
       ) : (

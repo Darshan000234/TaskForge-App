@@ -21,7 +21,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
 
     useEffect(() => {
         const getMembers = async () =>{
-            // console.log(org.id);
             const response = await api.get(`/orgs/${org.id}/members`);
             setMembers(response.data);
             console.log(org.id);
@@ -41,7 +40,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
             email : form.email,
             endDate: form.endDate
         });
-        // console.log(form.description);
     };
 
     const inputCls =
@@ -54,7 +52,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
                 <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 w-full max-w-lg text-zinc-200">
 
-                    {/* Header */}
                     <div className="flex items-start justify-between mb-6">
                         <div>
                             <h2 className="text-xl font-bold">Create New Project</h2>
@@ -72,7 +69,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Project Name */}
                         <div>
                             <label className={labelCls}>Project Name</label>
                             <input
@@ -84,7 +80,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                             />
                         </div>
 
-                        {/* Description */}
                         <div>
                             <label className={labelCls}>Description</label>
                             <textarea
@@ -96,7 +91,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                             />
                         </div>
 
-                        {/* Status + Priority */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className={labelCls}>Status</label>
@@ -129,7 +123,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                             </div>
                         </div>
 
-                        {/* Start Date + End Date */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className={labelCls}>End Date</label>
@@ -142,7 +135,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                             </div>
                         </div>
 
-                        {/* Project Lead */}
                         <div>
                             <label className={labelCls}>Project Lead</label>
                             <div className="relative">

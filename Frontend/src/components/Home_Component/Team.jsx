@@ -15,7 +15,6 @@ const Team = () => {
 
   useEffect(() => {
     if (!org) return;
-    // console.log(org);
     const getMembers = async () => {
       try {
         const response = await api.get(`/orgs/${org.id}/members`);

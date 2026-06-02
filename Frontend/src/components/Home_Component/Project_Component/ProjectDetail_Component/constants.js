@@ -1,4 +1,3 @@
-// ─── Style maps ───────────────────────────────────────────────────────────────
 
 export const STATUS_STYLE = {
   active:    "bg-emerald-500/15 text-emerald-400",
@@ -27,7 +26,6 @@ export const PRIORITY_DOT = {
   low:    "bg-emerald-400",
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export const isOverdue = (task) =>
   task.dueDate && task.status !== "done" && new Date(task.dueDate) < new Date();

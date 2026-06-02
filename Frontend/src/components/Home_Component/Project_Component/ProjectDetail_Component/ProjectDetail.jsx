@@ -60,7 +60,6 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
 
       <StatCards tasks={tasks} onOverdueClick={handleOverdueClick} />
 
-      {/* Tabs */}
       <div className="flex items-center gap-1 border border-zinc-800 rounded-lg p-1 bg-zinc-900 w-fit mt-8">
         {TABS.map(({ key, label, icon }) => (
           <button

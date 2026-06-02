@@ -12,7 +12,6 @@ const ProjectRow = ({ project, onClick, onDelete, onReassign, org }) => {
     e.stopPropagation();
     cb();
   };
-  // console.log(project);
   return (
     <tr
       onClick={onClick}

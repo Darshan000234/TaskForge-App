@@ -204,7 +204,6 @@ const TaskSection = ({
   proj_id,
   filterOverride = null,
   onTasksChange,
-  // onSelectedTask,
 }) => {
   const [tasks, setTasks] = useState([]);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
@@ -373,7 +372,6 @@ const TaskSection = ({
   return (
     <div className="flex-1 min-w-0">
 
-      {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap mb-5">
         <div className="relative flex-1 max-w-sm">
           <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -448,7 +446,6 @@ const TaskSection = ({
         </div>
       )}
 
-      {/* Grid */}
       {filtered.length > 0 && view === "grid" && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -468,7 +465,6 @@ const TaskSection = ({
         </>
       )}
 
-      {/* List */}
       {filtered.length > 0 && view === "list" && (
         <>
           <div className="border border-zinc-800 rounded-xl">
@@ -504,7 +500,6 @@ const TaskSection = ({
         </>
       )}
 
-      {/* Modals */}
       {org && (
         <AddTaskModal
           open={addTaskOpen}

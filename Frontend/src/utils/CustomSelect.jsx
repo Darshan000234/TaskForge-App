@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 
-/* Click outside hook (local, no hidden dependency) */
 function useClickOutside(ref, cb) {
   useEffect(() => {
     const handler = (e) => {
@@ -25,12 +24,10 @@ const CustomSelect = ({ label, value, options, onChange }) => {
 
   return (
     <div ref={ref} className="relative">
-      {/* Label */}
       <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-1">
         {label}
       </p>
 
-      {/* Trigger */}
       <button
         onClick={() => setOpen((v) => !v)}
         className="
@@ -57,7 +54,6 @@ const CustomSelect = ({ label, value, options, onChange }) => {
         />
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div
           className="
@@ -66,7 +62,6 @@ const CustomSelect = ({ label, value, options, onChange }) => {
             shadow-2xl overflow-hidden py-1
           "
         >
-          {/* All option */}
           <button
             onClick={() => {
               onChange("");
@@ -84,7 +79,6 @@ const CustomSelect = ({ label, value, options, onChange }) => {
 
           <div className="border-t border-zinc-800 my-1" />
 
-          {/* Options */}
           {options.map((o) => (
             <button
               key={o.value}

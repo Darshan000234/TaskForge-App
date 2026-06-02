@@ -17,11 +17,9 @@ const AssigneeCell = ({ assignees = [], canEdit = false, onRemoveMember }) => {
   if (!assignees.length)
     return <span className="text-zinc-600 text-xs">—</span>;
 
-  // console.log(assignees);
 
   return (
     <div className="relative" ref={ref}>
-      {/* Trigger */}
       <button
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         className="cursor-pointer flex items-center gap-1.5 group"
@@ -45,7 +43,6 @@ const AssigneeCell = ({ assignees = [], canEdit = false, onRemoveMember }) => {
         <ChevronDown size={12} className="text-zinc-500 group-hover:text-zinc-300 transition" />
       </button>
 
-      {/* Popover */}
       {open && (
         <div className="absolute top-full mt-1.5 left-0 z-30 min-w-55 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden">
           <p className="px-3 py-2 text-[10px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
@@ -64,7 +61,6 @@ const AssigneeCell = ({ assignees = [], canEdit = false, onRemoveMember }) => {
                 <p className="text-[10px] text-zinc-500 truncate">{a.email}</p>
               </div>
 
-              {/* Remove member — visible on row hover, only when canEdit */}
               {canEdit && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onRemoveMember?.(a.id); }}

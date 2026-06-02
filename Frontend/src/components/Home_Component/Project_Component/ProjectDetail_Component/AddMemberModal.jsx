@@ -3,15 +3,6 @@ import { Search, X, UserPlus, Check } from "lucide-react";
 import api from "../../../../api/api.js";
 import toast from "react-hot-toast";
 
-/**
- * AddMemberModal
- * Props:
- *  - task     : task object { id, name }
- *  - org      : { org_id, role }
- *  - proj_id  : string
- *  - onAddMember : (taskId, member) => void  — called once per selected member
- *  - onClose  : () => void
- */
 const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
   const [members, setMembers] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -36,12 +27,10 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
     fetchMembers();
   }, [task.id, proj_id, org.org_id]);
 
-  // Close on overlay click (not modal content)
   const handleOverlayClick = (e) => {
     if (e.target === overlayRef.current) onClose();
   };
 
-  // Close on Escape
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -75,7 +64,6 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
     >
       <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">
 
-        {/* ── Header ── */}
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800 shrink-0">
           <div className="flex items-center gap-2 text-sm font-medium text-white">
             <UserPlus size={15} className="text-blue-400" />
@@ -89,12 +77,10 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
           </button>
         </div>
 
-        {/* ── Task label ── */}
         <p className="px-4 pt-3 text-xs text-zinc-500 truncate shrink-0">
           Task: <span className="text-zinc-300">{task.name}</span>
         </p>
 
-        {/* ── Search ── */}
         <div className="relative px-4 pt-3 pb-2 shrink-0">
           <Search
             size={13}
@@ -110,7 +96,6 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
           />
         </div>
 
-        {/* ── Member list ── */}
         <div className="px-4 pb-2 max-h-56 overflow-y-auto">
           {loading ? (
             <p className="text-xs text-zinc-600 text-center py-6">Loading...</p>
@@ -129,17 +114,14 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
                     : "border-transparent hover:bg-zinc-800"
                 }`}
               >
-                {/* Avatar */}
                 <div className="w-7 h-7 rounded-full bg-blue-500/15 flex items-center justify-center text-[11px] font-semibold text-blue-400 shrink-0">
                   {m.receiver_email?.[0]?.toUpperCase()}
                 </div>
 
-                {/* Email */}
                 <p className="text-xs text-zinc-300 truncate flex-1 text-left">
                   {m.receiver_email}
                 </p>
 
-                {/* Checkmark */}
                 <div
                   className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition ${
                     isSelected(m)
@@ -154,7 +136,6 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
           )}
         </div>
 
-        {/* ── Footer ── */}
         <div className="flex items-center justify-between gap-2 px-4 py-3.5 border-t border-zinc-800 shrink-0">
           <span className="text-xs text-zinc-500">
             {selected.length > 0 ? `${selected.length} selected` : "Select members to add"}

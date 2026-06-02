@@ -111,7 +111,6 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
       socket.off("removed member", onRemovedMember);
     }
   }, [proj_id]);
-  // console.log(teamMembers);
   
   const handleRemoveMember = async (memberId) => {
     try {

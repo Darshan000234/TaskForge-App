@@ -6,7 +6,6 @@ const ConfirmDeleteModal = ({ project, onClose, onConfirm }) => {
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
       <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 w-full max-w-sm text-zinc-200">
         
-        {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
             <Trash2 size={18} className="text-red-400" />

@@ -1,13 +1,6 @@
 import { FolderOpen, Flag, User, Calendar, CheckSquare } from "lucide-react";
 import { STATUS_STYLE, PRIORITY_COLOR } from "./constants";
 
-/**
- * ProjectInfoCard
- *
- * Props:
- *  project   { id, name, Description, status, priority, email, endDate }
- *  taskCount number
- */
 const ProjectInfoCard = ({ project, taskCount }) => {
   const date = new Date(project.endDate)
   .toLocaleDateString("en-GB", {
@@ -16,10 +9,8 @@ const ProjectInfoCard = ({ project, taskCount }) => {
     year: "numeric",
   });
   project.endDate = date;
-  // console.log(project);
   return (
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-7">
-      {/* Title row */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -39,7 +30,6 @@ const ProjectInfoCard = ({ project, taskCount }) => {
         </span>
       </div>
 
-      {/* Meta grid */}
       <div className="border-t border-zinc-800 mt-6 pt-6 grid grid-cols-2 sm:grid-cols-4 gap-6">
         {[
           {

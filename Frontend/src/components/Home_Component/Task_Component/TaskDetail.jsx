@@ -10,7 +10,6 @@ import toast from "react-hot-toast";
 import api from "../../../api/api";
 import TaskInfoCard from "./TaskInfoCard";
 
-// ─── Style maps ───────────────────────────────────────────────────────────────
 
 const STATUS_STYLE = {
   IN_PROGRESS: "bg-blue-500/15 text-blue-400 border border-blue-500/20",
@@ -44,14 +43,12 @@ const MessageItem = ({ msg, isOwn }) => (
 
     <div className="max-w-[75%] flex flex-col gap-1">
 
-      {/* Name */}
       {!isOwn && (
         <span className="text-xs text-zinc-400">
           {msg.user?.name}
         </span>
       )}
 
-      {/* TEXT */}
       {msg.content && (
         <div
           className={`px-4 py-2.5 text-sm rounded-2xl ${isOwn
@@ -67,7 +64,6 @@ const MessageItem = ({ msg, isOwn }) => (
         </div>
       )}
 
-      {/* IMAGE */}
       {msg.fileUrl && msg.mimeType?.startsWith("image/") && (
         <a
           href={msg.fileUrl}
@@ -90,8 +86,6 @@ const MessageItem = ({ msg, isOwn }) => (
         </a>
       )}
 
-      {/* PDF PREVIEW */}
-      {/* PDF */}
       {msg.fileUrl && msg.mimeType === "application/pdf" && (
         <a
           href={msg.fileUrl}
@@ -114,7 +108,6 @@ const MessageItem = ({ msg, isOwn }) => (
         </a>
       )}
 
-      {/* OTHER FILES */}
       {msg.fileUrl &&
         !msg.mimeType?.startsWith("image/") &&
         msg.mimeType !== "application/pdf" && (
@@ -153,8 +146,8 @@ const TaskDetail = ({
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const containerRef = useRef(null); // scroll container
-  const bottomRef = useRef(null);    // bottom anchor
+  const containerRef = useRef(null);
+  const bottomRef = useRef(null);
   const [file, setFile] = useState(null);
   const fileRef = useRef(null);
   const [task, setTask] = useState(null);
@@ -206,6 +199,17 @@ const TaskDetail = ({
   }, []);
 
   useEffect(() => {
+    const handleUpdateData = async (id) => {
+      const res = await api.get(`/proj/task/chat/messageData/${id}`);
+      setMessages(res.data.result);
+    }
+    socket.on("updateTask", handleUpdateData);
+    return () => {
+      socket.off("updateTask", handleUpdateData);
+    }
+  }, []);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -218,7 +222,7 @@ const TaskDetail = ({
   }, [messages]);
 
   useEffect(() => {
-    if(!author) return;
+    if (!author) return;
     const handlenewMessage = (data) => {
       if (data.user_id == author?.id) return;
       setMessages((prev) => [...prev, data]);
@@ -292,16 +296,23 @@ const TaskDetail = ({
     setFile(selected);
   };
 
+  const handleUpdateTask = async (data) => {
+    try {
+      console.log(data);
+      
+      await api.post("proj/task/update", { data : data });
+      setTask(data);
+    } catch (error) {
+      toast.error(error.messages);
+    }
+  };
   return (
     <div className="h-scrren overflow-hidden bg-black text-white">
       <div className="max-w-7xl mx-auto px-6 h-full flex flex-col">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 h-full mt-10">
-
-          {/* ── Left: Discussion ───────────────────────────────────── */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col h-full overflow-hidden"
             style={{ minHeight: "600px", maxHeight: "80vh" }}>
 
-            {/* Header */}
             <div className="flex items-center gap-2.5 px-5 py-4 border-b border-zinc-800 shrink-0">
               <MessageCircle size={16} className="text-zinc-400" />
               <h2 className="text-sm font-semibold text-white">
@@ -310,7 +321,6 @@ const TaskDetail = ({
               </h2>
             </div>
 
-            {/* Message list */}
             <div ref={containerRef}
               className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
             >
@@ -331,7 +341,6 @@ const TaskDetail = ({
               <div ref={bottomRef} />
             </div>
 
-            {/* File preview */}
             {file && (
               <div className="px-5 pb-2 shrink-0">
                 <FilePreview file={file} onRemove={() => {
@@ -341,10 +350,8 @@ const TaskDetail = ({
               </div>
             )}
 
-            {/* Input area */}
             <div className="px-5 py-4 border-t border-zinc-800 shrink-0">
               <div className="flex items-end gap-2">
-                {/* Textarea */}
                 <div className="flex-1 relative">
                   <textarea
                     value={input}
@@ -356,9 +363,7 @@ const TaskDetail = ({
                   />
                 </div>
 
-                {/* Right-side buttons */}
                 <div className="flex flex-col gap-2 pb-0.5">
-                  {/* Upload */}
                   <button
                     onClick={() => fileRef.current?.click()}
                     title="Attach file"
@@ -375,7 +380,6 @@ const TaskDetail = ({
                     onChange={handleFileChange}
                   />
 
-                  {/* Post */}
                   <button
                     onClick={handlePost}
                     disabled={!input.trim() && !file}
@@ -386,16 +390,13 @@ const TaskDetail = ({
                 </div>
               </div>
 
-              {/* Hint */}
               <p className="text-[10px] text-zinc-700 mt-2">
                 Enter to send · Shift+Enter for new line · Attach images or .docx files
               </p>
             </div>
           </div>
-
-          {/* ── Right: Task info + Project details ─────────────────── */}
           <div className="space-y-4">
-            {task && <TaskInfoCard task={task} />}
+            {task && <TaskInfoCard task={task} onUpdate={handleUpdateTask} />}
           </div>
 
         </div>
@@ -405,5 +406,3 @@ const TaskDetail = ({
 };
 
 export default TaskDetail;
-
-// ─── Mock data (remove when wired to API) ─────────────────────────────────

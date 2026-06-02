@@ -32,7 +32,6 @@ const TeamTaskCell = ({
 
   return (
     <div className="relative w-fit" ref={ref}>
-      {/* Trigger */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -46,7 +45,6 @@ const TeamTaskCell = ({
         <ChevronDown size={12} className="text-zinc-500 cursor-pointer" />
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div className="absolute left-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-lg z-50">
 
@@ -78,7 +76,6 @@ const TeamTaskCell = ({
               {canEdit && (
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
 
-                  {/* ✅ CORRECT HANDLER */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

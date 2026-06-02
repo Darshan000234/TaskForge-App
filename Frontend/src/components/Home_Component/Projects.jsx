@@ -43,8 +43,7 @@ const Dropdown = ({ value, options, onChange, label }) => {
 };
 
 const Projects = () => {
-  // const { orgId } = useParams();       // uncomment for real routes
-  const navigate = useNavigate();      // uncomment for real routes
+  const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -156,7 +155,6 @@ const Projects = () => {
   };
 
   const handleProjectCreated = async (newProject) => {
-    // console.log(newProject);
     setShowModal(false);
     setLoading(true);
     const data = await api.post('/orgs/proj/', { proj: newProject, orgid: Number(org.id) });
@@ -168,7 +166,6 @@ const Projects = () => {
 
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Projects</h1>
@@ -184,7 +181,6 @@ const Projects = () => {
         )}
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-4 mt-10 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -209,7 +205,6 @@ const Projects = () => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mt-8">
         {loading ? (
           <div className={viewMode === "grid"

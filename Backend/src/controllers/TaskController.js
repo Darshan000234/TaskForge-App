@@ -236,6 +236,7 @@ export const RemoveMemeber = async (req, res) => {
         })
 
         io.to(`proj_${data.proj_id}`).emit("removed member", { task_id : id, user_id });
+        io.to(`task_${id}`).emit("updateTask", { id : id});
         res.status(202).json({ message: "deleted Successfully " });
     } catch (error) {
         console.log("RemoveMemeber");
@@ -247,12 +248,9 @@ export const RemoveMemeber = async (req, res) => {
 export const addmember = async (req, res) => {
     const id = Number(req.params.id);
     let { users, org_id } = req.body;
-    // console.log(users);
-    // return;
     const io = getIO();
 
     try {
-        // Normalize input (handle both object and array)
         if (!users) {
             return res.status(400).json({ message: "users is required" });
         }
@@ -263,7 +261,6 @@ export const addmember = async (req, res) => {
             return res.status(400).json({ message: "users array cannot be empty" });
         }
 
-        // Validate structure
         const invalid = users.some(u => !u.receiver_id);
         if (invalid) {
             return res.status(400).json({ message: "Invalid user format" });
@@ -274,7 +271,6 @@ export const addmember = async (req, res) => {
             return res.status(404).json({ message: "Task not found" });
         }
 
-        // Insert task assignees
         await prisma.task_assignee.createMany({
             data: users.map(u => ({
                 task_id: id,
@@ -285,7 +281,6 @@ export const addmember = async (req, res) => {
             skipDuplicates: true,
         });
 
-        // Ensure users are part of project
         await Promise.all(
             users.map(async (u) => {
                 const exists = await prisma.proj_member.findUnique({
@@ -298,7 +293,6 @@ export const addmember = async (req, res) => {
                 });
 
                 if (!exists) {
-                    // Add user to project
                     await prisma.proj_member.create({
                         data: {
                             proj_id: task.project_id,
@@ -332,6 +326,7 @@ export const addmember = async (req, res) => {
 
         io.to(`proj_${task.project_id}`).emit("member_added", result);
         io.to(`proj_${task.project_id}`).emit("Add member", taskresult);
+        io.to(`task_${id}`).emit("updateTask", { id : id});
         return res.status(201).json({ result });
     } catch (error) {
         console.error("addmember:", error);
@@ -389,3 +384,27 @@ export const addmemberData = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const UpdateTask = async (req, res) => {
+    const {data} = req.body;
+    try {
+        await prisma.task.update({
+            where : {
+                id : Number(data.id),
+            },data : {
+                name : data.name,
+                Description : data.Description,
+                Status : data.Status,
+                priority : data.priority,
+                dueDate : new Date(data.dueDate)
+            }
+        });
+
+        res.status(202).json({ message : "successfully updated"});
+    } catch (error) {
+        console.log("UpdateTask taskcontroller");
+        console.log(error.message);
+        
+        res.status(404).json({message : error.message})
+    }
+}

@@ -14,7 +14,6 @@ export const addOrganization = async (req, res) => {
     const { name } = req.body;
     const { id, email } = req.user;
     try {
-        // console.log(name);
         const org = await prisma.org.create({
             data: {
                 name: name,
@@ -90,7 +89,6 @@ export const DataOrganization = async (req, res) => {
 
 export const DataOrganizationMembers = async (req, res) => {
     const id = Number(req.params.id);
-    // console.log(id);
     try {
         const data = await prisma.teaminvitation.findMany({
             where: {
@@ -108,7 +106,6 @@ export const DataOrganizationMembers = async (req, res) => {
 export const updateactiveOrgs = async (req, res) => {
     const id = Number(req.params.id);
     const userID = req.user.id;
-    // console.log(userID);
     console.log(id);
     try {
         await prisma.user.update({
@@ -134,7 +131,6 @@ export const updateactiveOrgs = async (req, res) => {
 
 export const getActiveOrgs = async (req, res) => {
     const userID = req.user.id;
-    // console.log(userID);
     try {
         let data = await prisma.user.findUnique({
             where: {

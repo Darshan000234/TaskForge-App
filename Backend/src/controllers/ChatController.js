@@ -40,7 +40,6 @@ export const sentMessage = async (req, res) => {
     let mimeType = null;
 
     if (file) {
-      // console.log(file);
 
       const result = await uploadToCloudinary(file);
 

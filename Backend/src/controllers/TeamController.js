@@ -70,7 +70,7 @@ export const DeleteMember = async (req, res) => {
             }
         })
 
-        await prisma.task_assignee.deleteMany({
+        const task = await prisma.task_assignee.deleteMany({
             where: {
                 proj_id: id,
                 user_id: user_id
@@ -79,6 +79,7 @@ export const DeleteMember = async (req, res) => {
 
 
         io.to(`proj_${id}`).emit("Member Deleted", { id: user_id });
+        io.to(`task_${task.task_id}`).emit("updateTask", { id : task.task_id});
         res.status(202).json({ message: "deleted user from project successfully" });
     } catch (error) {
         console.log("DeleteMember teamcontroller");
@@ -99,6 +100,7 @@ export const deleteTask = async (req, res) => {
             }
         });
         io.to(`proj_${data.proj_id}`).emit("removed member", { task_id, user_id});
+        io.to(`task_${data.task_id}`).emit("updateTask", { id : data.task_id});
         res.status(202).json({ message: "successfully deleted " });
     } catch (error) {
         console.log("deleteTask from TeamController");

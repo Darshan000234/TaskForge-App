@@ -33,7 +33,6 @@ const AuditItem = ({ log }) => (
  */
 const AuditLogCard = ({ logs = [] }) => (
   <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-    {/* Header */}
     <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800">
       <div className="flex items-center gap-2">
         <History size={16} className="text-zinc-400" />
@@ -44,7 +43,6 @@ const AuditLogCard = ({ logs = [] }) => (
       </span>
     </div>
 
-    {/* Entries */}
     {logs.length === 0 ? (
       <p className="text-sm text-zinc-600 text-center py-8">No activity yet</p>
     ) : (

@@ -24,7 +24,6 @@ const navItems = [
   { icon: <Settings size={20} />, label: "Settings", path: "/user/dashboard/settings" },
 ];
 
-// const URL = import.meta.env.VITE_URL;
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [show, setShow] = useState(false);
@@ -105,7 +104,6 @@ const DashboardLayout = () => {
   return (
     <div className="text-white min-h-screen flex">
 
-      {/* SIDEBAR */}
       <motion.aside
         initial={{ width: collapsed ? 100 : 320 }}
         animate={{ width: collapsed ? 100 : 320 }}
@@ -348,7 +346,7 @@ const DashboardLayout = () => {
             />
           </div>
         </div>
-        <Outlet context={{ org: activeorg }} /> {/* render child route here this is production based route handling*/}
+        <Outlet context={{ org: activeorg }} />
       </motion.div>
       <CreateOrgModal
         isOpen={showCreateOrg}

@@ -23,10 +23,8 @@ const Dashboard = ({ }) => {
   ];
   return (
     <div>
-      {/* CONTENT */}
       <div className="px-20 pt-12 pb-16 space-y-15">
 
-        {/* Header */}
         <div className="flex justify-between">
           <div>
             <h2 className="text-[22px] leading-7">
@@ -43,7 +41,6 @@ const Dashboard = ({ }) => {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-4 gap-10">
           {stats.map((item, i) => (
             <div
@@ -130,7 +127,6 @@ const Dashboard = ({ }) => {
           </div>
 
 
-          {/* RIGHT COLUMN */}
           <div className="space-y-10">
             {sideCards.map((item, i) => (
               <div
@@ -145,7 +141,6 @@ const Dashboard = ({ }) => {
           hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
         "
               >
-                {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-[#232326] flex items-center justify-center">
@@ -162,7 +157,6 @@ const Dashboard = ({ }) => {
                   </span>
                 </div>
 
-                {/* Body */}
                 <div className="h-auto flex items-center justify-center text-zinc-400 text-[14px] p-4 py-10">
                   No {item.title.toLowerCase()}
                 </div>

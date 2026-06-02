@@ -131,7 +131,6 @@ export const addProject = async (req, res) => {
 export const projectDelete = async (req, res) => {
     const pid = Number(req.params.id);
     const io = getIO();
-    // console.log(pid);
     try {
         await prisma.project.delete({
             where: {
@@ -233,7 +232,6 @@ export const reassignProject = async (req, res) => {
 export const OneProjData = async (req, res) => {
     const id = Number(req.params.id);
     const userId = req.user.id;
-    // console.log(id);
     try {
         const data = await prisma.project.findUnique({
             where: {

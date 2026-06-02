@@ -3,9 +3,6 @@ import { X, Plus, Calendar, Flag, AlignLeft, Type, Search } from "lucide-react";
 import api from "../../../../api/api";
 import toast from "react-hot-toast";
 
-/* ─────────────────────────────────────────────
-   Constants
-───────────────────────────────────────────── */
 const STATUS_OPTIONS = [
   { value: "todo", label: "To Do", dot: "bg-zinc-500" },
   { value: "inprogress", label: "In Progress", dot: "bg-yellow-400" },
@@ -28,10 +25,6 @@ const DEFAULT_FORM = {
   assignees: [],
 };
 
-/* ─────────────────────────────────────────────
-   SegmentedPicker
-   Used for Status + Priority inline pill selects
-───────────────────────────────────────────── */
 const SegmentedPicker = ({ options, value, onChange }) => (
   <div className="flex gap-1.5 flex-wrap">
     {options.map((o) => (
@@ -67,7 +60,6 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
 
   return (
     <div className="space-y-2">
-      {/* Selected chips */}
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selected.map((m) => (
@@ -91,7 +83,6 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
         </div>
       )}
 
-      {/* Search input */}
       <div className="relative">
         <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
         <input
@@ -113,7 +104,6 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
         )}
       </div>
 
-      {/* List */}
       <div className="max-h-44 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800/60">
         {filtered.length === 0 ? (
           <p className="px-3 py-4 text-xs text-zinc-600 text-center">No members found</p>
@@ -128,7 +118,6 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
                 className={`cursor-pointer w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition ${active ? "bg-blue-500/8 hover:bg-blue-500/12" : "hover:bg-zinc-800/60"
                   }`}
               >
-                {/* Avatar */}
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${active ? "bg-blue-500 text-white" : "bg-zinc-700 text-zinc-400"
                   }`}>
                   {m.receiver_email?.[0]?.toUpperCase()}
@@ -139,7 +128,6 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
                   }</p>
                 </div>
 
-                {/* Checkmark */}
                 {active && (
                   <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
                     <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -153,7 +141,6 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
         )}
       </div>
 
-      {/* Count hint */}
       {selected.length > 0 && (
         <p className="text-[10px] text-zinc-600">
           {selected.length} member{selected.length !== 1 ? "s" : ""} selected
@@ -163,9 +150,6 @@ const AssigneePicker = ({ teamMembers, selected, onChange }) => {
   );
 };
 
-/* ─────────────────────────────────────────────
-   Field wrapper for consistent label styling
-───────────────────────────────────────────── */
 const Field = ({ icon: Icon, label, children, required }) => (
   <div className="space-y-2">
     <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-medium text-zinc-500">
@@ -177,15 +161,6 @@ const Field = ({ icon: Icon, label, children, required }) => (
   </div>
 );
 
-/* ─────────────────────────────────────────────
-   AddTaskModal
-
-   Props:
-     open          boolean
-     onClose       () => void
-     onSubmit      (task) => void   — receives form data (no id)
-     teamMembers   [{ id, name, email }]
-───────────────────────────────────────────── */
 const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
   const [form, setForm] = useState(DEFAULT_FORM);
   const [errors, setErrors] = useState({});
@@ -249,15 +224,12 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
   if (!open) return null;
 
   return (
-    /* Backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Modal */}
       <div className="relative w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-blue-600/15 flex items-center justify-center">
@@ -274,11 +246,9 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
           </button>
         </div>
 
-        {/* Body */}
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
           <div className="px-6 py-5 space-y-5">
 
-            {/* Title */}
             <Field icon={Type} label="Task Title" required>
               <input
                 ref={titleRef}
@@ -296,7 +266,6 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
               )}
             </Field>
 
-            {/* Description */}
             <Field icon={AlignLeft} label="Description">
               <textarea
                 value={form.Description}
@@ -307,7 +276,6 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
               />
             </Field>
 
-            {/* Status */}
             <Field label="Status">
               <SegmentedPicker
                 options={STATUS_OPTIONS}
@@ -316,7 +284,6 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
               />
             </Field>
 
-            {/* Priority */}
             <Field icon={Flag} label="Priority">
               <SegmentedPicker
                 options={PRIORITY_OPTIONS}
@@ -325,7 +292,6 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
               />
             </Field>
 
-            {/* Due Date */}
             <Field icon={Calendar} label="Due Date">
               <input
                 type="date"
@@ -335,7 +301,6 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
               />
             </Field>
 
-            {/* Assignees */}
             {teamMembers.length > 0 && (
               <Field label="Assignees">
                 <AssigneePicker
@@ -347,7 +312,6 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
             )}
           </div>
 
-          {/* Footer */}
           <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
