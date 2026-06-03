@@ -19,6 +19,7 @@ enum Status {
 }
 
 enum Role {
+  admin
   manager
   member 
 }  
@@ -151,7 +152,7 @@ model task_assignee {
 
   project   project @relation(fields: [proj_id], references: [id], onDelete: Cascade)
   task      task @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  user      User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [user_id], references: [id], onDelete: SetNull)
   org       org @relation(fields: [org_id], references: [id], onDelete: Cascade)
 
   @@unique([task_id, user_id])

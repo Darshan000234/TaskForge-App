@@ -1,7 +1,7 @@
 import { X, Trash2 } from "lucide-react";
 
 const ConfirmDeleteModal = ({ project, onClose, onConfirm }) => {
-  console.log(project);
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
       <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 w-full max-w-sm text-zinc-200">

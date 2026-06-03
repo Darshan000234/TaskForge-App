@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import socket from "../../../socket/socket.js";
 import {
   MessageCircle, Send, Paperclip, X, FileText,
@@ -154,7 +154,8 @@ const TaskDetail = ({
   const [author, setAuthor] = useState(null);
   const { id } = useParams();
   const isFirstLoad = useRef(true);
-
+  const navigate = useNavigate();
+  
   useEffect(() => {
     const getAuthorData = async () => {
       try {
@@ -164,14 +165,25 @@ const TaskDetail = ({
         toast.error(error.messages);
       }
     }
+    const getMessageData = async () => {
+      try {
+        const res = await api.get(`/proj/task/chat/messageData/${id}`);
+        setMessages(res.data.result);
+      } catch (error) {
+        toast.error(error.messages);
+      }
+    }
     getAuthorData();
+    getMessageData();
   }, [])
+
   useEffect(() => {
     if (isFirstLoad.current && messages.length > 0) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
       isFirstLoad.current = false;
     }
   }, [messages]);
+
   useEffect(() => {
     const getTaskData = async () => {
       try {
@@ -186,26 +198,25 @@ const TaskDetail = ({
   }, [id]);
 
   useEffect(() => {
-    const getMessageData = async () => {
-      try {
-        const res = await api.get(`/proj/task/chat/messageData/${id}`);
-        setMessages(res.data.result);
-      } catch (error) {
-        console.log(error);
-        toast.error(error.messages);
-      }
-    }
-    getMessageData();
-  }, []);
-
-  useEffect(() => {
     const handleUpdateData = async (id) => {
       const res = await api.get(`/proj/task/chat/messageData/${id}`);
       setMessages(res.data.result);
     }
+
+    const handleTaskDelete = ({ pid }) => {
+      navigate(`/user/dashboard/projects/${pid}`)
+    }
+
+    const handleDeleteProj = () => {
+      navigate('/user/dashboard/projects');
+    }
     socket.on("updateTask", handleUpdateData);
+    socket.on("deleteTask", handleTaskDelete);
+    socket.on("project_deleted", handleDeleteProj);
     return () => {
       socket.off("updateTask", handleUpdateData);
+      socket.off("deleteTask", handleTaskDelete);
+      socket.off("project_deleted", handleDeleteProj);
     }
   }, []);
 
@@ -262,7 +273,6 @@ const TaskDetail = ({
       if (file) setFile(null)
       toast.success("message sent");
     } catch (error) {
-      console.log(error);
 
       toast.error(error.messages);
     }
@@ -298,14 +308,13 @@ const TaskDetail = ({
 
   const handleUpdateTask = async (data) => {
     try {
-      console.log(data);
-      
-      await api.post("proj/task/update", { data : data });
+      await api.post("proj/task/update", { data: data });
       setTask(data);
     } catch (error) {
       toast.error(error.messages);
     }
   };
+
   return (
     <div className="h-scrren overflow-hidden bg-black text-white">
       <div className="max-w-7xl mx-auto px-6 h-full flex flex-col">

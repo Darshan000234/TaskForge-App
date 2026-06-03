@@ -68,41 +68,13 @@ const Projects = () => {
   }, [org]);
 
   useEffect(() => {
-    const AddProj = async ({ projectId }) => {
-      try {
-        const res = await api.get(`orgs/proj/one/${projectId}`);
-        setTasks((prev) => {
-          return [...prev, res.data.data];
-        });
-      } catch (error) {
-        toast.error(error.message);
-      }
-    }
-
-    socket.on("add_proj", AddProj);
-    return () => {
-      socket.off("add_proj", AddProj);
-    }
-  }, [])
-
-
-  useEffect(() => {
     const handleProjectCreated = async (data) => {
-      const project = await api.get(`/orgs/proj/one/${data.proj_id}`);
-      setLoading(true);
-      setProjects((prev) => [project, ...prev]);
-      setTimeout(() => {
-        setLoading(false);
-      }, 4000);
-      socket.emit('join_proj', { id: project.id });
+      setProjects((prev) => [data.project, ...prev]);
+      socket.emit('join_proj', { id: data.project.id });
     }
 
     const handleProjectDeleted = (data) => {
-      setLoading(true);
-      setProjects((prev) => prev.filter((p) => p.id !== data.proj_id));
-      setTimeout(() => {
-        setLoading(false);
-      }, 4000);
+      setProjects((prev) => prev.filter((p) => p.id !== data.id));
     }
 
     const handleProjectreassign = async (data) => {
@@ -156,12 +128,7 @@ const Projects = () => {
 
   const handleProjectCreated = async (newProject) => {
     setShowModal(false);
-    setLoading(true);
-    const data = await api.post('/orgs/proj/', { proj: newProject, orgid: Number(org.id) });
-    setProjects((prev) => [data.data.project, ...prev]);
-    setTimeout(() => {
-      setLoading(false);
-    }, 4000);
+    await api.post('/orgs/proj/', { proj: newProject, orgid: Number(org.id) });
   }
 
   return (

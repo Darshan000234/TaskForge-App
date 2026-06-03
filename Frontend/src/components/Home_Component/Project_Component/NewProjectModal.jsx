@@ -23,7 +23,6 @@ const NewProjectModal = ({ onClose, onCreated}) => {
         const getMembers = async () =>{
             const response = await api.get(`/orgs/${org.id}/members`);
             setMembers(response.data);
-            console.log(org.id);
         }
         getMembers();
     }, [])

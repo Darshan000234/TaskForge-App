@@ -100,13 +100,13 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
     };
     socket.on("delete Member", handleDeleteMemberSocket);
     socket.on("add task", handleMembersUpdate);
-    socket.on("delete task",handleMembersUpdate);
+    socket.on("task_deleted",handleMembersUpdate);
     socket.on("Add member", handleMembersUpdate);
     socket.on("removed member", onRemovedMember);
     return () => {
       socket.off("delete Member", handleDeleteMemberSocket);
       socket.off("add task", handleMembersUpdate);
-      socket.off("delete task",handleMembersUpdate);
+      socket.off("task_deleted",handleMembersUpdate);
       socket.off("Add member", handleMembersUpdate);
       socket.off("removed member", onRemovedMember);
     }

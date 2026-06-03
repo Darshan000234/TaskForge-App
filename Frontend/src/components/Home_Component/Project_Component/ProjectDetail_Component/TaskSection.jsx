@@ -283,13 +283,13 @@ const TaskSection = ({
       );
     }
     socket.on("add_task", onAddTask);
-    socket.on("deleted_task", onDeleteTask);
+    socket.on("task_deleted", onDeleteTask);
     socket.on("removed member", onRemovedMember);
     socket.on("member added", onMemberAdded);
     socket.on("delete member", handleDelete);
     return () => {
       socket.off("add_task", onAddTask);
-      socket.off("deleted_task", onDeleteTask);
+      socket.off("task_deleted", onDeleteTask);
       socket.off("removed member", onRemovedMember);
       socket.off("member added", onMemberAdded);
       socket.off("delete member", handleDelete);
@@ -304,7 +304,6 @@ const TaskSection = ({
     try {
       const res = await api.post(`proj/task/add`, { task, id: proj_id, orgId: org.org_id });
       toast.success("Task added");
-      setTasks((prev) => [...prev, res.data.task]);
     } catch (err) {
       toast.error(err.message);
     }

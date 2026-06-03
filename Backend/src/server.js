@@ -94,7 +94,6 @@ io.on("connection", async (socket) => {
   socket.join(`user:${socket.user.id}`);
 
   socket.on("join_org", async ({ id }) => {
-    // console.log(socket.user.email);
     socket.join(`org_${Number(id)}`);
   });
 

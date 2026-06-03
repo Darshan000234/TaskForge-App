@@ -126,7 +126,8 @@ const TaskInfoCard = ({ task: initialTask, onUpdate }) => {
 
       {editOpen && (
         <EditModal
-          task={task}
+          type="task"
+          entity={task}
           onClose={() => setEditOpen(false)}
           onSave={handleSave}
         />

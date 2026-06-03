@@ -68,6 +68,7 @@ export const projData = async (req, res) => {
         }
         res.status(200).json(data);
     } catch (error) {
+        console.log("projData");
         console.log(error.message);
         res.status(404).json({ message: error.message });
     }
@@ -110,17 +111,9 @@ export const addProject = async (req, res) => {
                 role: "admin"
             }
         })
-        const org_member = await prisma.org_member.findUnique({
-            where: {
-                member_id_org_id: {
-                    member_id: user.id,
-                    org_id: orgid
-                }
-            }
-        });
-
+        
         project.email = proj.email;
-        io.to(`org_${org_member.org_id}`).emit('project_created', { project: project });
+        io.to(`org_${orgid}`).emit('project_created', { project: project });
         res.status(201).json({ project: project });
     } catch (error) {
         console.log(error.message);
@@ -132,19 +125,33 @@ export const projectDelete = async (req, res) => {
     const pid = Number(req.params.id);
     const io = getIO();
     try {
-        await prisma.project.delete({
+        const proj = await prisma.project.delete({
             where: {
                 id: pid
             }
         });
 
-        io.to(`project_${pid}`).emit('project_deleted', { id: pid });
+        io.to(`org_${proj.org_id}`).emit('project_deleted', { id: pid });
+        io.to(`proj_${pid}`).emit('project_deleted');
+        const tasks = prisma.task.findMany({
+            where: {
+                project_id: pid
+            }
+        });
+
+        if (tasks.length > 0) {
+            for (const task of tasks) {
+                io.to(`task_${task.id}`).emit("project_deleted");
+            }
+        }
+
         const sockets = await io.in(`proj_${pid}`).fetchSockets();
         for (const socket of sockets) {
             socket.leave(`proj_${pid}`);
         }
         res.status(204).json({ message: ' project deleted successfully' });
     } catch (error) {
+        console.log("projDelete");
         console.log(error.message);
         res.status(404).json({ message: error.message });
     }
@@ -224,6 +231,7 @@ export const reassignProject = async (req, res) => {
         }
         res.status(204).json({ message: "assing to another user successfully" });
     } catch (error) {
+        console.log("reassignProject");
         console.log(error.message);
         res.status(404).json({ message: error.message });
     }
@@ -286,6 +294,32 @@ export const getMember = async (req, res) => {
     } catch (error) {
         console.log(error.message);
         console.log("getMember", "projcontroller");
+        res.status(404).json({ message: error.message });
+    }
+}
+
+export const UpdateProject = async (req, res) => {
+    const { proj } = req.body;
+
+    try {
+        const project = await prisma.project.update({
+            where: {
+                id: Number(proj.id)
+            },
+            data: {
+                name: proj.name,
+                Description: proj.Description,
+                endDate: new Date(proj.endDate),
+                status: proj.status,
+                priority: proj.priority
+            }
+        })
+
+        res.status(202).json({ data: project });
+    } catch (error) {
+        console.log("UpdateProject projcontroller.js");
+        console.log(error.message);
+
         res.status(404).json({ message: error.message });
     }
 }
