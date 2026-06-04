@@ -14,6 +14,15 @@ export const addOrganization = async (req, res) => {
     const { name } = req.body;
     const { id, email } = req.user;
     try {
+        const exist = await prisma.org.findFirst({
+            where : {
+                name : name,
+                userId : id
+            }
+        })
+
+        if(exist) res.status(409).json({ message : "name already exist"});
+
         const org = await prisma.org.create({
             data: {
                 name: name,
@@ -62,8 +71,9 @@ export const updateOrganization = async (req, res) => {
 };
 
 export const deleteOrganization = async (req, res) => {
+    console.log(0);
     const { org_id } = req.body;
-
+    
     try {
         await prisma.org.delete({
             where: {

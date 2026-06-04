@@ -77,7 +77,7 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
                 <button
                   onClick={handleClose}
                   disabled={loading}
-                  className="text-zinc-500 hover:text-white transition p-1 rounded hover:bg-zinc-800 disabled:opacity-40"
+                  className="text-zinc-500 hover:text-white transition p-1 rounded hover:bg-zinc-800 disabled:opacity-40 cursor-pointer"
                 >
                   <X size={16} />
                 </button>

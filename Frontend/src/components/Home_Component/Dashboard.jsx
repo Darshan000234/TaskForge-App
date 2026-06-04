@@ -35,7 +35,7 @@ const Dashboard = ({ }) => {
             </p>
           </div>
           <div>
-            <button className="flex items-center gap-2 px-7 py-3 text-[14px] rounded-[5px] bg-linear-to-br from-blue-500 to-blue-600 text-white space-x-2 hover:opacity-90 transition">
+            <button className="flex items-center gap-2 px-7 py-3 text-[14px] rounded-[5px] bg-linear-to-br from-blue-500 to-blue-600 text-white space-x-2 hover:opacity-90 transition cursor-pointer">
               <img className="w-4 h-4" src={plus} alt="" /> New Project
             </button>
           </div>
@@ -96,7 +96,7 @@ const Dashboard = ({ }) => {
                   alt=""
                 />
                 <p className="mt-6">No projects yet</p>
-                <button className="mt-4 px-6 py-3 text-[14px] rounded bg-linear-to-br from-blue-500 to-blue-600 text-white hover:opacity-90 transition">
+                <button className="mt-4 px-6 py-3 text-[14px] rounded bg-linear-to-br from-blue-500 to-blue-600 text-white hover:opacity-90 transition cursor-pointer">
                   Create your First Project
                 </button>
               </div>

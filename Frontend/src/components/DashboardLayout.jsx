@@ -5,6 +5,7 @@ import {
   Users,
   Settings,
   Search,
+  Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import building from '../assets/img/building.png';
@@ -37,8 +38,8 @@ const DashboardLayout = () => {
     setActiveOrg(item);
     try {
       await api.get(`/orgs/activeorgs/${item.id}`);
-      socket.emit("join_org",{id : item.id});
-      socket.emit("join_org_member", { id : item.id});
+      socket.emit("join_org", { id: item.id });
+      socket.emit("join_org_member", { id: item.id });
     } catch (error) {
       toast.error("Failed to switch org");
     }
@@ -49,8 +50,8 @@ const DashboardLayout = () => {
       setOrgs((prev) => [...prev, newOrg]);
       setActiveOrg(newOrg);
       await api.get(`/orgs/activeorgs/${newOrg.id}`);
-      socket.emit("join_org",{id : newOrg.id});
-      socket.emit("join_org_member", { id : newOrg.id});
+      socket.emit("join_org", { id: newOrg.id });
+      socket.emit("join_org_member", { id: newOrg.id });
     } catch (error) {
       console.log(error.response?.data?.message);
       toast.error("something went wrong");
@@ -73,8 +74,8 @@ const DashboardLayout = () => {
         const org = await api.get("/orgs");
         setOrgs(org.data);
         const res = await api.get('/orgs/activeorgs');
-        socket.emit("join_org",{id : res.data.id});
-        socket.emit("join_org_member", { id : res.data.id});
+        socket.emit("join_org", { id: res.data.id });
+        socket.emit("join_org_member", { id: res.data.id });
         setActiveOrg(res.data);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to fetch organizations");
@@ -100,6 +101,30 @@ const DashboardLayout = () => {
     setShow(newState ? false : show);
   };
 
+  const handleDeleteOrg = async (orgId) => {
+    if (orgs.length <= 1) {
+      toast.error("You must have at least one organization");
+      return;
+    }
+    // console.log(orgId);
+    
+    // return;
+    try {
+      await api.delete('/orgs/delete', { org_id: orgId });
+      const updated = orgs.filter((o) => o.id !== orgId);
+      setOrgs(updated);
+      if (activeorg?.id === orgId) {
+        const newActive = updated[0];
+        setActiveOrg(newActive);
+        await api.get(`/orgs/activeorgs/${newActive.id}`);
+        socket.emit("join_org", { id: newActive.id });
+        socket.emit("join_org_member", { id: newActive.id });
+      }
+      toast.success("Organization deleted");
+    } catch (err) {
+      toast.error("Delete failed");
+    }
+  };
 
   return (
     <div className="text-white min-h-screen flex">
@@ -169,44 +194,70 @@ const DashboardLayout = () => {
               </div>
 
               {orgs.map((item) => (
-                <div onClick={() => handleActiveOrg(item)} key={item.id} className="px-2 pb-2">
-                  <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition">
+                <div
+                  key={item.id}
+                  onClick={() => handleActiveOrg(item)}
+                  className="px-2 pb-2"
+                >
+                  <div className="relative px-3 py-2 rounded-md hover:bg-zinc-800 cursor-pointer transition group">
 
-                    <div className="flex-1 min-w-0">
+                    <div className="absolute top-2 right-2 flex items-center gap-2 transition">
+
+                      {activeorg && activeorg.id === item.id && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-4 h-4 text-blue-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      <div className="opacity-0 group-hover:opacity-100">
+                        {orgs.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteOrg(item.id);
+                            }}
+                            title="Delete Organization"
+                            className="p-1.5 rounded-md bg-zinc-800 
+                        hover:bg-zinc-700 
+                        text-zinc-400 hover:text-red-400 
+                        transition"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0 pr-12">
                       <p className="font-semibold text-gray-800 dark:text-white text-sm truncate">
                         {item.name}
                       </p>
+
                       <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                         Role: {item.role}
                       </p>
+
                       <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mt-1">
                         <span>Members: {item.member_count}</span>
-                        <span>Created: {new Date(item.createdAt).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric"
-                        })}
+                        <span>
+                          Created:{" "}
+                          {new Date(item.createdAt).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
                         </span>
                       </div>
                     </div>
-                    {activeorg && activeorg.id === item.id && (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="w-4 h-4 text-blue-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    )}
                   </div>
-                </div>))}
+                </div>
+              ))}
               <div className="border-t border-zinc-800" />
               <div className="px-2 py-2">
                 <div
