@@ -71,15 +71,16 @@ export const updateOrganization = async (req, res) => {
 };
 
 export const deleteOrganization = async (req, res) => {
-    console.log(0);
     const { org_id } = req.body;
-    
+    const io = getIO();
     try {
         await prisma.org.delete({
             where: {
                 id: org_id
             }
         })
+
+        io.to(`org_${org_id}`).emit("org deleted");
         res.status(204).json({ message: "Deleted successfully" });
     } catch (error) {
         console.log(error.message);

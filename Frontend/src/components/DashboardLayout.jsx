@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import building from '../assets/img/building.png';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import plus from '../assets/img/plus1.png';
 import minus from '../assets/img/minus.png';
 import notification from '../assets/img/inbox.png';
@@ -31,6 +31,7 @@ const DashboardLayout = () => {
   const [orgs, setOrgs] = useState([]);
   const [activeorg, setActiveOrg] = useState(null);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
+  const navigate = useNavigate();
 
   const handleActiveOrg = async (item) => {
     setShow(false);
@@ -89,9 +90,14 @@ const DashboardLayout = () => {
       const newOrg = payload.org;
       setOrgs((prev) => [...prev, newOrg]);
     }
+    const handleOrgDeleted = () => {
+      navigate('/user/dashboard' , { replace: true });
+    }
     socket.on("joined_org", handleCreated);
+    socket.on("org deleted",handleOrgDeleted);
     return () => {
       socket.off("joined_org", handleCreated);
+      socket.off("org deleted",handleOrgDeleted);
     }
   }, [])
 
@@ -106,9 +112,6 @@ const DashboardLayout = () => {
       toast.error("You must have at least one organization");
       return;
     }
-    // console.log(orgId);
-    
-    // return;
     try {
       await api.delete('/orgs/delete', { org_id: orgId });
       const updated = orgs.filter((o) => o.id !== orgId);

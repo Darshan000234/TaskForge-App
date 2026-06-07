@@ -3,75 +3,68 @@ import { userSockets } from "../utils/userSockets.js";
 import { getIO } from "../utils/socket.js";
 
 export const projData = async (req, res) => {
-    const { id } = req.user;
-    const orgid = Number(req.params.id);
-    const org = await prisma.org_member.findUnique({
-        where: {
-            member_id_org_id: {
-                org_id: orgid,
-                member_id: id
-            }
-        }
-    })
-    let role = org.role;
-    try {
-        let data = [];
-        if (role === "admin") {
-            data = await prisma.project.findMany({
-                where: {
-                    org_id: Number(orgid)
-                },
-                select: {
-                    id: true,
-                    name: true,
-                    org_id: true,
-                    Description: true,
-                    status: true,
-                    priority: true,
-                    endDate: true,
-                    createdAt: true,
+  const { id }  = req.user;
+  const orgid   = Number(req.params.id);
+  const limit   = Math.min(Number(req.query.limit) || 12, 50);
+  const cursor  = req.query.cursor ? Number(req.query.cursor) : undefined;
 
-                    member: {
-                        select: {
-                            email: true
-                        }
-                    }
-                }
-            });
-            data = data.map((d) => {
-                return {
-                    ...d,
-                    email: d.member.email
-                }
-            })
-        } else {
-            data = await prisma.proj_member.findMany({
-                where: {
-                    org_id: Number(orgid),
-                    member_id: id
-                },
-                include: {
-                    project: true,
-                    member: {
-                        select: {
-                            email: true
-                        }
-                    }
-                }
-            });
-            data = data.map((d) => {
-                return {
-                    ...d.project,
-                    email: d.member.email
-                }
-            });
-        }
-        res.status(200).json(data);
-    } catch (error) {
-        console.log("projData");
-        console.log(error.message);
-        res.status(404).json({ message: error.message });
+  try {
+    const org  = await prisma.org_member.findUnique({
+      where: { member_id_org_id: { org_id: orgid, member_id: id } },
+    });
+    if (!org) return res.status(403).json({ message: "Not a member of this org" });
+
+    const role = org.role;
+    let raw    = [];
+
+    if (role === "admin") {
+      raw = await prisma.project.findMany({
+        take:    limit + 1,
+        ...(cursor && { skip: 1, cursor: { id: cursor } }),
+        where:   { org_id: orgid },
+        orderBy: { id: "asc" },
+        select: {
+          id:          true,
+          name:        true,
+          org_id:      true,
+          Description: true,
+          status:      true,
+          priority:    true,
+          endDate:     true,
+          createdAt:   true,
+          member: { select: { email: true } },
+        },
+      });
+
+      raw = raw.map((d) => ({ ...d, email: d.member?.email ?? null }));
+
+    } else {
+      raw = await prisma.proj_member.findMany({
+        take:    limit + 1,
+        where:   {
+          org_id:    orgid,
+          member_id: id,
+          ...(cursor && { project_id: { gt: cursor } }),
+        },
+        orderBy: { project_id: "asc" },
+        include: {
+          project: true,
+          member:  { select: { email: true } },
+        },
+      });
+
+      raw = raw.map((d) => ({ ...d.project, email: d.member?.email ?? null }));
     }
+
+    const hasMore    = raw.length > limit;
+    const page_slice = hasMore ? raw.slice(0, limit) : raw;
+    const nextCursor = hasMore ? page_slice[page_slice.length - 1].id : null;
+
+    res.status(200).json({ result: page_slice, nextCursor, hasMore });
+  } catch (error) {
+    console.error("projData:", error.message);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const addProject = async (req, res) => {
@@ -133,17 +126,6 @@ export const projectDelete = async (req, res) => {
 
         io.to(`org_${proj.org_id}`).emit('project_deleted', { id: pid });
         io.to(`proj_${pid}`).emit('project_deleted');
-        const tasks = prisma.task.findMany({
-            where: {
-                project_id: pid
-            }
-        });
-
-        if (tasks.length > 0) {
-            for (const task of tasks) {
-                io.to(`task_${task.id}`).emit("project_deleted");
-            }
-        }
 
         const sockets = await io.in(`proj_${pid}`).fetchSockets();
         for (const socket of sockets) {

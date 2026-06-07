@@ -43,7 +43,7 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
 
   useEffect(() => {
     const handleProjectDelete = () => {
-      navigate('/user/dashboard/projects');
+      navigate('/user/dashboard/projects' , { replace: true });
     }
     socket.on("project_deleted", handleProjectDelete);
     return () => {

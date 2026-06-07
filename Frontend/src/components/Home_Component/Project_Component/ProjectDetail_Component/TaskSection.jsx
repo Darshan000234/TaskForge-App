@@ -4,7 +4,7 @@ import {
   Search, Plus, LayoutGrid, List, SlidersHorizontal,
   Circle, Clock, CheckCircle2, AlertCircle,
   AlertTriangle, Calendar, ChevronLeft, ChevronRight,
-  Trash2, UserPlus,
+  Trash2, UserPlus,Loader2 
 } from "lucide-react";
 import AssigneeCell from "./AssigneeCell.jsx";
 import FilterPanel from "./FilterPanel.jsx";
@@ -27,45 +27,7 @@ const STATUS_ICON = {
   blocked: <AlertCircle size={14} className="text-red-400" />,
 };
 
-const Pagination = ({ page, total, limit, onChange }) => {
-  const pages = Math.ceil(total / limit);
-  if (pages <= 1) return null;
-  return (
-    <div className="flex items-center justify-between px-1 pt-4">
-      <span className="text-xs text-zinc-500">
-        {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
-      </span>
-      <div className="flex items-center gap-1">
-        <button
-          disabled={page === 1}
-          onClick={() => onChange(page - 1)}
-          className="cursor-pointer p-1.5 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed transition"
-        >
-          <ChevronLeft size={14} />
-        </button>
-        {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
-          <button
-            key={p}
-            onClick={() => onChange(p)}
-            className={`cursor-pointer w-7 h-7 rounded-lg text-xs font-medium transition ${p === page
-                ? "bg-blue-600 text-white"
-                : "border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600"
-              }`}
-          >
-            {p}
-          </button>
-        ))}
-        <button
-          disabled={page === pages}
-          onClick={() => onChange(page + 1)}
-          className="cursor-pointer p-1.5 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed transition"
-        >
-          <ChevronRight size={14} />
-        </button>
-      </div>
-    </div>
-  );
-};
+
 
 const AddMemberButton = ({ onClick }) => (
   <button
@@ -205,46 +167,72 @@ const TaskSection = ({
   filterOverride = null,
   onTasksChange,
 }) => {
-  const [tasks, setTasks] = useState([]);
-  const [addTaskOpen, setAddTaskOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({});
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [view, setView] = useState("list");
-  const [page, setPage] = useState(1);
-  const [addMemberTarget, setAddMemberTarget] = useState(null);
-  const filterRef = useRef(null);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    onTasksChange?.(tasks);
-  }, [tasks]);
+  const [tasks,          setTasks]          = useState([]);
+  const [nextCursor,     setNextCursor]     = useState(null);
+  const [hasMore,        setHasMore]        = useState(false);
+  const [loadingTasks,   setLoadingTasks]   = useState(false);
+
+  const [addTaskOpen,    setAddTaskOpen]    = useState(false);
+  const [addMemberTarget, setAddMemberTarget] = useState(null);
+  const [search,         setSearch]         = useState("");
+  const [filters,        setFilters]        = useState({});
+  const [filterOpen,     setFilterOpen]     = useState(false);
+  const [view,           setView]           = useState("list");
+
+  const filterRef = useRef(null);
+  const navigate  = useNavigate();
+
+
+  useEffect(() => { onTasksChange?.(tasks); }, [tasks]);
+
 
   useEffect(() => {
     if (!proj_id) return;
-    const fetch = async () => {
-      try {
-        const res = await api.get(`proj/task/${proj_id}`);
-        setTasks(res.data.result);
-      } catch {
-        toast.error("Failed to load tasks");
-      }
-    };
-    fetch();
+    setTasks([]);
+    setNextCursor(null);
+    setHasMore(false);
+    fetchTasks(null);
   }, [proj_id]);
+
+
+  const fetchTasks = async (cursorValue) => {
+    if (loadingTasks) return;
+    setLoadingTasks(true);
+    try {
+      const params = new URLSearchParams({ limit: LIMIT });
+      if (cursorValue) params.set("cursor", cursorValue);
+
+      const res = await api.get(`proj/task/${proj_id}?${params}`);
+      const { result, nextCursor: nc, hasMore: hm } = res.data;
+
+      setTasks((prev) => cursorValue ? [...prev, ...result] : result);
+      setNextCursor(nc);
+      setHasMore(hm);
+    } catch {
+      toast.error("Failed to load tasks");
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const loadMore = () => {
+    if (hasMore && !loadingTasks) fetchTasks(nextCursor);
+  };
+
 
   useEffect(() => {
     if (!filterOverride) return;
     const { _t, ...incoming } = filterOverride;
     setFilters(incoming);
-    setPage(1);
   }, [filterOverride]);
+
 
   useEffect(() => {
     const onAddTask = async ({ taskId }) => {
       try {
         const res = await api.get(`proj/task/${taskId}/one`);
-        setTasks((prev) => [...(Array.isArray(prev) ? prev : []), res.data.result]);
+        setTasks((prev) => [res.data.result, ...(Array.isArray(prev) ? prev : [])]);
       } catch (err) {
         toast.error(err.message);
       }
@@ -264,45 +252,46 @@ const TaskSection = ({
       );
     };
 
-    const onMemberAdded = ({ member }) => { 
+    const onMemberAdded = ({ taskId: tid, member }) => {
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === taskId
+          t.id === tid
             ? { ...t, assignees: [...(t.assignees ?? []), member] }
             : t
         )
       );
     };
 
-    const handleDelete = ({ memberId }) => {
+    const onDeleteMember = ({ memberId }) => {
       setTasks((prev) =>
         prev.map((t) => ({
           ...t,
           assignees: (t.assignees ?? []).filter((a) => a.id !== memberId),
         }))
       );
-    }
-    socket.on("add_task", onAddTask);
-    socket.on("task_deleted", onDeleteTask);
+    };
+
+    socket.on("add_task",      onAddTask);
+    socket.on("task_deleted",  onDeleteTask);
     socket.on("removed member", onRemovedMember);
-    socket.on("member added", onMemberAdded);
-    socket.on("delete member", handleDelete);
+    socket.on("member added",  onMemberAdded);
+    socket.on("delete member", onDeleteMember);
+
     return () => {
-      socket.off("add_task", onAddTask);
-      socket.off("task_deleted", onDeleteTask);
+      socket.off("add_task",      onAddTask);
+      socket.off("task_deleted",  onDeleteTask);
       socket.off("removed member", onRemovedMember);
-      socket.off("member added", onMemberAdded);
-      socket.off("delete member", handleDelete);
+      socket.off("member added",  onMemberAdded);
+      socket.off("delete member", onDeleteMember);
     };
   }, []);
 
-  const handleSelectTask = (task) => {
-    navigate(`/user/dashboard/task/${task.id}`);
-  };
-  
+
+  const handleSelectTask = (task) => navigate(`/user/dashboard/task/${task.id}`);
+
   const handleAddTask = async (task) => {
     try {
-      const res = await api.post(`proj/task/add`, { task, id: proj_id, orgId: org.org_id });
+      await api.post(`proj/task/add`, { task, id: proj_id, orgId: org.org_id });
       toast.success("Task added");
     } catch (err) {
       toast.error(err.message);
@@ -321,7 +310,7 @@ const TaskSection = ({
   const handleAddMember = async (taskId, members) => {
     try {
       const res = await api.post(`proj/task/${taskId}/addmember`, {
-        users: members,
+        users:  members,
         org_id: org.org_id,
       });
       const { taskId: tid, members: newMembers } = res.data.result;
@@ -329,12 +318,12 @@ const TaskSection = ({
         prev.map((t) =>
           t.id === tid
             ? {
-              ...t,
-              assignees: [
-                ...(t.assignees ?? []).filter((a) => !newMembers.some((m) => m.id === a.id)),
-                ...newMembers,
-              ],
-            }
+                ...t,
+                assignees: [
+                  ...(t.assignees ?? []).filter((a) => !newMembers.some((m) => m.id === a.id)),
+                  ...newMembers,
+                ],
+              }
             : t
         )
       );
@@ -360,13 +349,14 @@ const TaskSection = ({
     }
   };
 
-  const handleFilters = (f) => { setFilters(f); setPage(1); };
-  const handleSearch = (v) => { setSearch(v); setPage(1); };
+  const handleFilters = (f) => setFilters(f);
+  const handleSearch  = (v) => setSearch(v);
 
-  const filtered = applyFilters(tasks, filters, search);
-  const paged = filtered.slice((page - 1) * LIMIT, page * LIMIT);
+
+  const filtered    = applyFilters(tasks, filters, search);
   const activeCount = Object.values(filters).filter(Boolean).length;
-  const isAdmin = org?.role === "admin";
+  const isAdmin     = org?.role === "admin";
+
 
   return (
     <div className="flex-1 min-w-0">
@@ -386,10 +376,11 @@ const TaskSection = ({
         <div className="relative" ref={filterRef}>
           <button
             onClick={() => setFilterOpen((o) => !o)}
-            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${activeCount > 0
+            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${
+              activeCount > 0
                 ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
                 : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
-              }`}
+            }`}
           >
             <SlidersHorizontal size={15} />
             {activeCount > 0 && (
@@ -435,10 +426,11 @@ const TaskSection = ({
 
       <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wider font-medium">
         {filtered.length} task{filtered.length !== 1 ? "s" : ""}
+        {hasMore ? "+" : ""}
         {activeCount > 0 ? " (filtered)" : ""}
       </p>
 
-      {filtered.length === 0 && (
+      {!loadingTasks && filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 border border-zinc-800 rounded-2xl bg-zinc-900/30">
           <Search size={28} className="text-zinc-600" />
           <p className="mt-3 text-sm text-zinc-500">No tasks match your filters</p>
@@ -448,7 +440,7 @@ const TaskSection = ({
       {filtered.length > 0 && view === "grid" && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {paged.map((t) => (
+            {filtered.map((t) => (
               <TaskGridCard
                 key={t.id}
                 task={t}
@@ -460,7 +452,28 @@ const TaskSection = ({
               />
             ))}
           </div>
-          <Pagination page={page} total={filtered.length} limit={LIMIT} onChange={setPage} />
+
+          {loadingTasks && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="h-36 rounded-xl bg-zinc-900 animate-pulse border border-zinc-800" />
+              ))}
+            </div>
+          )}
+
+          {hasMore && (
+            <div className="flex justify-center pt-5">
+              <button
+                onClick={loadMore}
+                disabled={loadingTasks}
+                className="cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-700 bg-zinc-900 text-sm text-zinc-400 hover:text-white hover:border-zinc-500 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loadingTasks
+                  ? <><Loader2 size={14} className="animate-spin" />Loading...</>
+                  : "Load more tasks"}
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -470,32 +483,55 @@ const TaskSection = ({
             <table className="w-full text-sm">
               <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
                 <tr className="text-left">
-                  <th className="px-5 py-3.5 font-medium first:rounded-tl-xl">Task</th>
+                  <th className="px-5 py-3.5 font-medium rounded-tl-xl">Task</th>
                   <th className="px-5 py-3.5 font-medium">Priority</th>
                   <th className="px-5 py-3.5 font-medium">Status</th>
                   <th className="px-5 py-3.5 font-medium">Assignees</th>
                   <th className="px-5 py-3.5 font-medium">Add Member</th>
                   <th className="px-5 py-3.5 font-medium">Due Date</th>
-                  {isAdmin && <th className="px-5 py-3.5 font-medium w-12 last:rounded-tr-xl" />}
+                  {isAdmin && <th className={`px-5 py-3.5 font-medium w-12 rounded-tr-xl`} />}
                 </tr>
               </thead>
               <tbody>
-                {paged.map((t, i) => (
+                {filtered.map((t, i) => (
                   <TaskTableRow
                     key={t.id}
                     task={t}
                     org={org}
-                    isLast={i === paged.length - 1}
+                    isLast={i === filtered.length - 1 && !hasMore}
                     onDeleteTask={handleDeleteTask}
                     onRemoveMember={handleRemoveMember}
                     onOpenAddMember={setAddMemberTarget}
                     onClick={() => handleSelectTask(t)}
-                    />
+                  />
+                ))}
+
+                {loadingTasks && Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={`skel-${i}`} className="border-b border-zinc-800/40">
+                    {[...Array(isAdmin ? 7 : 6)].map((_, j) => (
+                      <td key={j} className="px-5 py-4 bg-zinc-900">
+                        <div className="h-3 rounded bg-zinc-800 animate-pulse w-3/4" />
+                      </td>
+                    ))}
+                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <Pagination page={page} total={filtered.length} limit={LIMIT} onChange={setPage} />
+
+          {hasMore && (
+            <div className="flex justify-center pt-5">
+              <button
+                onClick={loadMore}
+                disabled={loadingTasks}
+                className="cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-700 bg-zinc-900 text-sm text-zinc-400 hover:text-white hover:border-zinc-500 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loadingTasks
+                  ? <><Loader2 size={14} className="animate-spin" />Loading...</>
+                  : "Load more tasks"}
+              </button>
+            </div>
+          )}
         </>
       )}
 

@@ -4,46 +4,53 @@ import { userSockets } from "../utils/userSockets.js";
 
 
 export const TaskData = async (req, res) => {
-    const id = Number(req.params.id);
-    try {
-        const tasks = await prisma.task.findMany({
-            where: { project_id: id },
-            include: {
-                assignees: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    }
-                }
+  const id     = Number(req.params.id);
+  const limit  = Math.min(Number(req.query.limit) || 10, 50);
+  const cursor = req.query.cursor ? Number(req.query.cursor) : undefined;
+
+  try {
+    const tasks = await prisma.task.findMany({
+      take:    limit + 1,
+      ...(cursor && {
+        skip:   1,
+        cursor: { id: cursor },
+      }),
+      where:   { project_id: id },
+      orderBy: { id: "asc" },
+      include: {
+        assignees: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
             },
-            orderBy: { id: 'asc' }
-        });
+          },
+        },
+      },
+    });
 
-        const result = tasks.map(t => ({
-            id: t.id,
-            name: t.name,
-            Description: t.Description,
-            Status: t.Status,
-            priority: t.priority,
-            dueDate: t.dueDate,
-            projectId: t.proj_id,
-            orgId: t.org_id,
-            assignees: t.assignees.map(a => a.user)
-        }));
+    const hasMore    = tasks.length > limit;
+    const page_slice = hasMore ? tasks.slice(0, limit) : tasks;
 
-        res.status(200).json({ result });
-    } catch (error) {
-        console.log("taskData");
-        console.log(error.message);
-        res.status(404).json({ message: error.message });
-    }
-}
+    const result = page_slice.map((t) => ({
+      id:          t.id,
+      name:        t.name,
+      Description: t.Description,
+      Status:      t.Status,
+      priority:    t.priority,
+      dueDate:     t.dueDate,
+      projectId:   t.project_id,
+      orgId:       t.org_id,
+      assignees:   t.assignees.map((a) => a.user),
+    }));
 
+    const nextCursor = hasMore ? page_slice[page_slice.length - 1].id : null;
+
+    res.status(200).json({ result, nextCursor, hasMore });
+  } catch (error) {
+    console.error("TaskData:", error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
 export const AddTask = async (req, res) => {
     const data = req.body.task;
     const projectId = Number(req.body.id);

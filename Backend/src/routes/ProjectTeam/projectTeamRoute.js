@@ -4,7 +4,7 @@ import { TeamData, DeleteMember, deleteTask, manyTeamData} from "../../controlle
 
 const router = express.Router();
 
-router.post("/:id",authMiddleware,TeamData);
+router.get("/:id",authMiddleware,TeamData);
 router.post("/:id/delete",authMiddleware,DeleteMember);
 router.post("/delete/task",authMiddleware,deleteTask);
 router.post("/:id/members", authMiddleware, manyTeamData);

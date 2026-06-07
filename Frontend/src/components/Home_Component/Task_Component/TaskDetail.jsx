@@ -204,11 +204,11 @@ const TaskDetail = ({
     }
 
     const handleTaskDelete = ({ pid }) => {
-      navigate(`/user/dashboard/projects/${pid}`)
+      navigate(`/user/dashboard/projects/${pid}`,{ replace: true });
     }
 
     const handleDeleteProj = () => {
-      navigate('/user/dashboard/projects');
+      navigate('/user/dashboard/projects' , { replace: true });
     }
     socket.on("updateTask", handleUpdateData);
     socket.on("deleteTask", handleTaskDelete);
