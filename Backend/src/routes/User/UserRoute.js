@@ -4,7 +4,8 @@ import {
     LoginUser,
     google,
     LogoutUser,
-    userData
+    userData,
+    DeleteAccount
 } from '../../controllers/UserController.js';
 
 import authMiddleware from '../../middlewares/authMiddleWare.js';
@@ -16,4 +17,6 @@ router.post('/login', LoginUser);
 router.post('/googleauth', google);
 router.post('/logout', authMiddleware, LogoutUser);
 router.get('/userdata',authMiddleware,userData);
+router.get('/delete-account',authMiddleware,DeleteAccount);
+
 export default router;

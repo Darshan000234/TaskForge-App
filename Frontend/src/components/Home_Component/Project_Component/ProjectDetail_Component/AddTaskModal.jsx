@@ -170,7 +170,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
   useEffect(() => {
     const fetchTeamembers = async () => {
       try {
-        const res = await api.post(`/orgs/proj/members/${id}`, { org_id });
+        const res = await api.post(`/orgs/proj/members/${id}`, { org_id : org_id});
         setTeamMembers(res.data.data);
       } catch (error) {
         toast.error(error.message);

@@ -1,46 +1,51 @@
 import prisma from "../config/prisma.js";
 import { getIO } from "../utils/socket.js";
 import { userSockets } from "../utils/userSockets.js";
+import { auditService } from "../services/audit.service.js";
+import { diffObjects, diffAssignees } from "../utils/diff.js";
 
+const A = { CREATED: "CREATED", UPDATED: "UPDATED", DELETED: "DELETED", ASSIGNED: "ASSIGNED", UNASSIGNED: "UNASSIGNED", STATUS_CHANGED: "STATUS_CHANGED", PRIORITY_CHANGED: "PRIORITY_CHANGED" };
+const RT = { TASK: "TASK", PROJECT: "PROJECT", MEMBER: "MEMBER", ORG: "ORG" };
+const meta = (req) => ({ ip: req.ip, userAgent: req.headers["user-agent"] ?? null });
 
 export const TaskData = async (req, res) => {
-  const id     = Number(req.params.id);
-  const limit  = Math.min(Number(req.query.limit) || 10, 50);
+  const id = Number(req.params.id);
+  const limit = Math.min(Number(req.query.limit) || 10, 50);
   const cursor = req.query.cursor ? Number(req.query.cursor) : undefined;
 
   try {
     const tasks = await prisma.task.findMany({
-      take:    limit + 1,
+      take: limit + 1,
       ...(cursor && {
-        skip:   1,
+        skip: 1,
         cursor: { id: cursor },
       }),
-      where:   { project_id: id },
+      where: { project_id: id },
       orderBy: { id: "asc" },
       include: {
         assignees: {
-          include: {
+          select: {
             user: {
-              select: { id: true, name: true, email: true },
+              select: { id: true, name: true, email: true }
             },
           },
         },
       },
     });
 
-    const hasMore    = tasks.length > limit;
+    const hasMore = tasks.length > limit;
     const page_slice = hasMore ? tasks.slice(0, limit) : tasks;
 
     const result = page_slice.map((t) => ({
-      id:          t.id,
-      name:        t.name,
+      id: t.id,
+      name: t.name,
       Description: t.Description,
-      Status:      t.Status,
-      priority:    t.priority,
-      dueDate:     t.dueDate,
-      projectId:   t.project_id,
-      orgId:       t.org_id,
-      assignees:   t.assignees.map((a) => a.user),
+      Status: t.Status,
+      priority: t.priority,
+      dueDate: t.dueDate,
+      projectId: t.project_id,
+      orgId: t.org_id,
+      assignees: t.assignees.map((a) => a.user),
     }));
 
     const nextCursor = hasMore ? page_slice[page_slice.length - 1].id : null;
@@ -51,369 +56,528 @@ export const TaskData = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-export const AddTask = async (req, res) => {
-    const data = req.body.task;
-    const projectId = Number(req.body.id);
-    const orgId = Number(req.body.orgId);
-    const io = getIO();
-
-    if (!data || !Array.isArray(data.assignees)) {
-        return res.status(400).json({ message: "Invalid task data" });
-    }
-
-    try {
-
-        const memberIds = data.assignees;
-        const existingMembers = await prisma.proj_member.findMany({
-            where: {
-                proj_id: projectId,
-            },
-            select: {
-                member_id: true
-            }
-        });
-
-        const existingIds = new Set(existingMembers.map(m => m.member_id));
-        const newMembers = memberIds.filter(id => !existingIds.has(id));
-
-        if (newMembers.length > 0) {
-            await prisma.proj_member.createMany({
-                data: newMembers.map(userId => ({
-                    proj_id: projectId,
-                    org_id: orgId,
-                    member_id: userId,
-                    role: "member"
-                })),
-                skipDuplicates: true
-            });
-        }
-
-        const task = await prisma.task.create({
-            data: {
-                name: data.name,
-                Description: data.Description,
-                Status: data.Status,
-                priority: data.priority,
-                dueDate: new Date(data.dueDate),
-                project_id: projectId,
-                org_id: orgId,
-            }
-        });
-        task.dueDate = data.dueDate;
-        await prisma.task_assignee.createMany({
-            data: memberIds.map(id => ({
-                task_id: task.id,
-                user_id: id,
-                proj_id: projectId,
-                org_id: orgId,
-            })),
-            skipDuplicates: true
-        });
-
-        newMembers.map((userId) => {
-            const sockets = userSockets.get(userId);
-            if (sockets) {
-                sockets.forEach(socketid => {
-                    io.to(socketid).emit("add_proj", {
-                        projectId: projectId
-                    });
-                });
-            };
-        });
-
-        const createdTask = await prisma.task.findUnique({
-            where: { id: task.id },
-            include: {
-                assignees: {
-                    include: {
-                        user: true
-                    }
-                }
-            }
-        });
-
-        const result = {
-            id: createdTask.id,
-            name: createdTask.name,
-            Description: createdTask.Description,
-            Status: createdTask.Status,
-            priority: createdTask.priority,
-            dueDate: createdTask.dueDate,
-            projectId: createdTask.proj_id,
-            orgId: createdTask.org_id,
-            assignees: createdTask.assignees.map(a => a.user)
-        };
-
-        if (existingIds) {
-            io.to(`project_${projectId}`).emit("add_task", { taskId: result.id });
-        }
-
-        io.to(`project_${projectId}`).emit("add task", { memberIds });
-        res.status(202).json({ task: result });
-    } catch (error) {
-        console.log(error.message);
-        console.log("AddTask");
-        res.status(404).json({ message: error.message });
-    }
-}
-
-export const DeleteTask = async (req, res) => {
-    const tid = req.body.id;
-    const io = getIO();
-    try {
-        const memberIds = await prisma.task_assignee.findMany({
-            where: {
-                task_id: tid
-            },
-            select: {
-                user_id: true
-            }
-        });
-
-        const task = await prisma.task.delete({
-            where: {
-                id: tid
-            }
-        })
-
-
-        
-        io.to(`project_${task.project_id}`).emit("task_deleted", {
-            taskId: tid,
-            memberIds: memberIds
-        });
-        io.to(`task_${tid}`).emit("deleteTask", { pid : task.project_id});
-        res.status(202).json({ message: "deleted task" });
-    } catch (error) {
-        console.log("DeleteTask");
-        console.log(error.message);
-        res.status(404).json({ message: error.message });
-    }
-}
 
 export const OneTaskData = async (req, res) => {
-    const id = Number(req.params.id);
-    try {
+  const id = Number(req.params.id);
+  try {
 
-        const tasks = await prisma.task.findUnique({
-            where: { id: id },
-            include: {
-                assignees: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    }
-                }
+    const tasks = await prisma.task.findUnique({
+      where: { id: id },
+      include: {
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
             }
-        });
+          }
+        },
+        project: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
 
-        const result = {
-            id: tasks.id,
-            name: tasks.name,
-            Description: tasks.Description,
-            Status: tasks.Status,
-            priority: tasks.priority,
-            dueDate: tasks.dueDate,
-            projectId: tasks.project_id,
-            orgId: tasks.org_id,
-            assignees: tasks.assignees.map(a => a.user)
-        };
+    const result = {
+      id: tasks.id,
+      name: tasks.name,
+      Description: tasks.Description,
+      Status: tasks.Status,
+      priority: tasks.priority,
+      dueDate: tasks.dueDate,
+      projectId: tasks.project_id,
+      proj_name: tasks.project.name,
+      orgId: tasks.org_id,
+      assignees: tasks.assignees.map(a => a.user)
+    };
+    console.log(result);
 
-        res.status(202).json({ result });
-    } catch (error) {
-        res.status(404).json({ message: error.message });
-    }
+    res.status(202).json({ result });
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
 }
-
-export const RemoveMemeber = async (req, res) => {
-    const id = Number(req.params.id);
-    const { user_id } = req.body;
-    const io = getIO();
-    try {
-        const data = await prisma.task_assignee.delete({
-            where: {
-                task_id_user_id: {
-                    task_id: id,
-                    user_id: user_id
-                }
-            }
-        })
-
-        io.to(`proj_${data.proj_id}`).emit("removed member", { task_id: id, user_id });
-        io.to(`task_${id}`).emit("updateTask", { id: id });
-        res.status(202).json({ message: "deleted Successfully " });
-    } catch (error) {
-        console.log("RemoveMemeber");
-        console.log(error.message);
-        res.status(404).json({ message: error.message });
-    }
-}
-
-export const addmember = async (req, res) => {
-    const id = Number(req.params.id);
-    let { users, org_id } = req.body;
-    const io = getIO();
-
-    try {
-        if (!users) {
-            return res.status(400).json({ message: "users is required" });
-        }
-
-        users = Array.isArray(users) ? users : [users];
-
-        if (users.length === 0) {
-            return res.status(400).json({ message: "users array cannot be empty" });
-        }
-
-        const invalid = users.some(u => !u.receiver_id);
-        if (invalid) {
-            return res.status(400).json({ message: "Invalid user format" });
-        }
-
-        const task = await prisma.task.findUnique({ where: { id } });
-        if (!task) {
-            return res.status(404).json({ message: "Task not found" });
-        }
-
-        await prisma.task_assignee.createMany({
-            data: users.map(u => ({
-                task_id: id,
-                user_id: u.receiver_id,
-                proj_id: task.project_id,
-                org_id: task.org_id,
-            })),
-            skipDuplicates: true,
-        });
-
-        await Promise.all(
-            users.map(async (u) => {
-                const exists = await prisma.proj_member.findUnique({
-                    where: {
-                        proj_id_member_id: {
-                            proj_id: task.project_id,
-                            member_id: u.receiver_id,
-                        },
-                    },
-                });
-
-                if (!exists) {
-                    await prisma.proj_member.create({
-                        data: {
-                            proj_id: task.project_id,
-                            member_id: u.receiver_id,
-                            org_id: org_id,
-                            role: "member"
-                        },
-                    });
-
-                    io.to(`org_member_${task.org_id}`).emit("project_created", {
-                        proj_id: task.project_id,
-                    });
-                }
-            })
-        );
-
-        const newUsers = await prisma.user.findMany({
-            where: {
-                id: { in: users.map(u => u.receiver_id) },
-            },
-            select: { id: true, email: true, name: true },
-        });
-
-        const result = {
-            members: newUsers,
-        };
-
-        const taskresult = newUsers.map(user => ({
-            id: user.id
-        }));
-
-        io.to(`proj_${task.project_id}`).emit("member_added", result);
-        io.to(`proj_${task.project_id}`).emit("Add member", taskresult);
-        io.to(`task_${id}`).emit("updateTask", { id: id });
-        return res.status(201).json({ result });
-    } catch (error) {
-        console.error("addmember:", error);
-
-        return res.status(500).json({
-            message: "Internal server error",
-        });
-    }
-};
 
 export const addmemberData = async (req, res) => {
-    const { projectId, org_id } = req.body;
-    const task_id = Number(req.params.id);
+  const { projectId, org_id } = req.body;
+  const task_id = Number(req.params.id);
 
-    try {
-        const proj = await prisma.project.findUnique({
-            where: { id: projectId },
-        });
+  try {
+    const proj = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
 
-        if (!proj) {
-            return res.status(404).json({ message: "Project not found" });
-        }
-
-        const assignedUsers = await prisma.task_assignee.findMany({
-            where: { task_id },
-            select: { user_id: true },
-        });
-
-        const assignedIds = assignedUsers.map((u) => u.user_id);
-
-        const users = await prisma.org_member.findMany({
-            where: {
-                org_id,
-                role: { not: "admin" },
-                member_id: {
-                    notIn: [...assignedIds, proj.assigned_to],
-                },
-            },
-            select: {
-                member_id: true,
-                member_email: true
-            },
-        });
-
-        const formatted = users.map((u) => ({
-            receiver_id: u.member_id,
-            receiver_email: u.member_email,
-        }));
-
-        res.status(200).json({ member: formatted });
-
-    } catch (error) {
-        console.log("addmemberData");
-        console.log(error.message);
-        res.status(500).json({ message: error.message });
+    if (!proj) {
+      return res.status(404).json({ message: "Project not found" });
     }
+
+    const assignedUsers = await prisma.task_assignee.findMany({
+      where: { task_id },
+      select: { user_id: true },
+    });
+
+    const assignedIds = assignedUsers.map((u) => u.user_id);
+
+    const users = await prisma.org_member.findMany({
+      where: {
+        org_id,
+        role: { not: "admin" },
+        member_id: {
+          notIn: [...assignedIds, proj.assigned_to],
+        },
+      },
+      select: {
+        member_id: true,
+        member_email: true
+      },
+    });
+
+    const formatted = users.map((u) => ({
+      receiver_id: u.member_id,
+      receiver_email: u.member_email,
+    }));
+
+    res.status(200).json({ member: formatted });
+
+  } catch (error) {
+    console.log("addmemberData");
+    console.log(error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const AddTask = async (req, res) => {
+  const data = req.body.task;
+  const projectId = Number(req.body.proj_id);
+  const orgId = Number(req.body.orgId);
+  const userId = req.user.id;
+  const io = getIO();
+
+  if (!data || !Array.isArray(data.assignees))
+    return res.status(400).json({ message: "Invalid task data" });
+
+  try {
+    const memberIds = data.assignees;
+    const existingMembers = await prisma.proj_member.findMany({
+      where: { proj_id: projectId }, select: { member_id: true },
+    });
+    const existingIds = new Set(existingMembers.map((m) => m.member_id));
+    const newMembers = memberIds.filter((id) => !existingIds.has(id));
+
+    if (newMembers.length > 0) {
+      await prisma.proj_member.createMany({
+        data: newMembers.map((uid) => ({ proj_id: projectId, org_id: orgId, member_id: uid, role: "member" })),
+        skipDuplicates: true,
+      });
+    }
+
+    const task = await prisma.task.create({
+      data: {
+        name: data.name, Description: data.Description, Status: data.Status,
+        priority: data.priority, dueDate: new Date(data.dueDate),
+        project_id: projectId, org_id: orgId,
+      },
+    });
+    task.dueDate = data.dueDate;
+
+    await prisma.task_assignee.createMany({
+      data: memberIds.map((id) => ({ task_id: task.id, user_id: id, proj_id: projectId, org_id: orgId })),
+      skipDuplicates: true,
+    });
+
+    newMembers.forEach((uid) => {
+      const sockets = userSockets.get(uid);
+      if (sockets) sockets.forEach((sid) => io.to(sid).emit("add_proj", { projectId }));
+    });
+
+    const createdTask = await prisma.task.findUnique({
+      where: { id: task.id },
+      include: { assignees: { include: { user: true } } },
+    });
+
+    const result = {
+      id: createdTask.id, name: createdTask.name, Description: createdTask.Description,
+      Status: createdTask.Status, priority: createdTask.priority, dueDate: createdTask.dueDate,
+      projectId: createdTask.project_id, orgId: createdTask.org_id,
+      assignees: createdTask.assignees.map((a) => a.user),
+    };
+
+    io.to(`project_${projectId}`).emit("add_task", { taskId: result.id });
+    io.to(`project_${projectId}`).emit("add task", { memberIds });
+
+    auditService.log({
+      orgId, proj_id: projectId, userId,
+      action: A.CREATED, resourceType: RT.TASK, resourceId: result.id,
+      newValue: { name: result.name, Status: result.Status, priority: result.priority, dueDate: result.dueDate, assignees: result.assignees.map((u) => ({ id: u.id, name: u.name })) },
+      metadata: meta(req),
+    });
+
+    return res.status(202).json({ task: result });
+  } catch (error) {
+    console.error("AddTask:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const DeleteTask = async (req, res) => {
+  const tid = req.body.id;
+  const userId = req.user.id;
+  const io = getIO();
+
+  try {
+    const memberIds = await prisma.task_assignee.findMany({ where: { task_id: tid }, select: { user_id: true } });
+
+    const oldTask = await prisma.task.findUnique({
+      where: { id: tid },
+      select: { id: true, name: true, Status: true, priority: true, dueDate: true, project_id: true, org_id: true },
+    });
+
+    const task = await prisma.task.delete({ where: { id: tid } });
+
+    io.to(`project_${task.project_id}`).emit("task_deleted", { taskId: tid, memberIds });
+    io.to(`task_${tid}`).emit("deleteTask", { pid: task.project_id });
+
+    auditService.log({
+      orgId: oldTask.org_id, proj_id: oldTask.project_id, userId,
+      action: A.DELETED, resourceType: RT.TASK, resourceId: tid,
+      oldValue: { name: oldTask.name, Status: oldTask.Status, priority: oldTask.priority, dueDate: oldTask.dueDate },
+      metadata: meta(req),
+    });
+
+    return res.status(202).json({ message: "deleted task" });
+  } catch (error) {
+    console.error("DeleteTask:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const RemoveMemeber = async (req, res) => {
+  const id = Number(req.params.id);
+  const { user_id } = req.body;
+  const userId = req.user.id;
+  const io = getIO();
+
+  try {
+    const removedUser = await prisma.user.findUnique({
+      where: { id: user_id }, select: { id: true, name: true, email: true },
+    });
+
+    const data = await prisma.task_assignee.delete({
+      where: { task_id_user_id: { task_id: id, user_id } },
+    });
+
+    io.to(`proj_${data.proj_id}`).emit("removed member", { task_id: id, user_id });
+    io.to(`task_${id}`).emit("updateTask", { id });
+
+    auditService.log({
+      orgId: data.org_id, proj_id: data.proj_id, userId,
+      action: A.UNASSIGNED, resourceType: RT.TASK, resourceId: id,
+      oldValue: { removedAssignee: removedUser },
+      metadata: { diff: { removed: [removedUser] }, ...meta(req) },
+    });
+
+    return res.status(202).json({ message: "deleted Successfully" });
+  } catch (error) {
+    console.error("RemoveMemeber:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const addmember = async (req, res) => {
+  const id = Number(req.params.id);
+  let { users, org_id } = req.body;
+  const userId = req.user.id;
+  const io = getIO();
+
+  try {
+    if (!users) return res.status(400).json({ message: "users is required" });
+    users = Array.isArray(users) ? users : [users];
+    if (!users.length) return res.status(400).json({ message: "users array cannot be empty" });
+    if (users.some((u) => !u.receiver_id)) return res.status(400).json({ message: "Invalid user format" });
+
+    const task = await prisma.task.findUnique({ where: { id } });
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const prevAssignees = await prisma.task_assignee.findMany({
+      where: { task_id: id }, include: { user: { select: { id: true, name: true } } },
+    });
+    const oldAssigneeList = prevAssignees.map((a) => a.user);
+
+    await prisma.task_assignee.createMany({
+      data: users.map((u) => ({ task_id: id, user_id: u.receiver_id, proj_id: task.project_id, org_id: task.org_id })),
+      skipDuplicates: true,
+    });
+
+    await Promise.all(users.map(async (u) => {
+      const exists = await prisma.proj_member.findUnique({
+        where: { proj_id_member_id: { proj_id: task.project_id, member_id: u.receiver_id } },
+      });
+      if (!exists) {
+        await prisma.proj_member.create({
+          data: { proj_id: task.project_id, member_id: u.receiver_id, org_id, role: "member" },
+        });
+        io.to(`org_member_${task.org_id}`).emit("project_created", { proj_id: task.project_id });
+      }
+    }));
+
+    const newUsers = await prisma.user.findMany({
+      where: { id: { in: users.map((u) => u.receiver_id) } },
+      select: { id: true, email: true, name: true },
+    });
+
+    io.to(`proj_${task.project_id}`).emit("member_added", { members: newUsers });
+    io.to(`proj_${task.project_id}`).emit("Add member", newUsers.map((u) => ({ id: u.id })));
+    io.to(`task_${id}`).emit("updateTask", { id });
+
+    const assigneeDiff = diffAssignees(
+      oldAssigneeList,
+      [...oldAssigneeList, ...newUsers.map((u) => ({ id: u.id, name: u.name }))],
+    );
+
+    if (assigneeDiff.added.length > 0) {
+      auditService.log({
+        orgId: task.org_id, proj_id: task.project_id, userId,
+        action: A.ASSIGNED, resourceType: RT.TASK, resourceId: id,
+        oldValue: { assignees: oldAssigneeList },
+        newValue: { assignees: newUsers },
+        metadata: { diff: assigneeDiff, ...meta(req) },
+      });
+    }
+
+    return res.status(201).json({ result: { taskId: id, members: newUsers } });
+  } catch (error) {
+    console.error("addmember:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 };
 
 export const UpdateTask = async (req, res) => {
-    const { data } = req.body;
-    try {
-        await prisma.task.update({
-            where: {
-                id: Number(data.id),
-            }, data: {
-                name: data.name,
-                Description: data.Description,
-                Status: data.Status,
-                priority: data.priority,
-                dueDate: new Date(data.dueDate)
-            }
+  const { data } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const oldTask = await prisma.task.findUnique({
+      where: { id: Number(data.id) },
+      select: { id: true, name: true, Description: true, Status: true, priority: true, dueDate: true, project_id: true, org_id: true },
+    });
+    if (!oldTask) return res.status(404).json({ message: "Task not found" });
+
+    const updated = await prisma.task.update({
+      where: { id: Number(data.id) },
+      data: { name: data.name, Description: data.Description, Status: data.Status, priority: data.priority, dueDate: new Date(data.dueDate) },
+      select: { id: true, name: true, Description: true, Status: true, priority: true, dueDate: true },
+    });
+
+    const diff = diffObjects(oldTask, updated, ["id", "project_id", "org_id"]);
+
+    const changedKeys = Object.keys(diff);
+    let action = A.UPDATED;
+    if (changedKeys.length === 1 && changedKeys[0] === "Status") action = A.STATUS_CHANGED;
+    if (changedKeys.length === 1 && changedKeys[0] === "priority") action = A.PRIORITY_CHANGED;
+
+    auditService.log({
+      orgId: oldTask.org_id, proj_id: oldTask.project_id, userId,
+      action, resourceType: RT.TASK, resourceId: data.id,
+      oldValue: { name: oldTask.name, Description: oldTask.Description, Status: oldTask.Status, priority: oldTask.priority, dueDate: oldTask.dueDate },
+      newValue: { name: updated.name, Description: updated.Description, Status: updated.Status, priority: updated.priority, dueDate: updated.dueDate },
+      metadata: { diff, ...meta(req) },
+    });
+
+    return res.status(202).json({ message: "successfully updated" });
+  } catch (error) {
+    console.error("UpdateTask:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const StatsData = async (req, res) => {
+  const org_id = Number(req.params.id);
+  const user_id = Number(req.user.id);
+
+  try {
+    // console.log(org_id);
+
+    const [orgMember, projectMemberships] = await Promise.all([
+      prisma.org_member.findUnique({
+        where: {
+          member_id_org_id: {
+            org_id: org_id,
+            member_id: user_id,
+          },
+        },
+        select: { role: true },
+      }),
+
+      prisma.proj_member.findMany({
+        where: {
+          org_id: org_id,
+          member_id: user_id
+        },
+        select: {
+          proj_id: true,
+          role: true,
+        },
+      }),
+    ]);
+
+    const isOrgAdmin = orgMember?.role === "admin";
+
+    const managedProjectIds = projectMemberships
+      .filter((p) => p.role === "manager")
+      .map((p) => p.proj_id);
+
+    const baseTaskFilter = { org_id };
+
+    const assignedFilter = {
+      org_id,
+      assignees: { some: { user_id } },
+    };
+
+    const managedFilter =
+      managedProjectIds.length > 0
+        ? {
+          org_id,
+          project_id: { in: managedProjectIds },
+        }
+        : null;
+
+    const mergeTasks = (arr1, arr2) => {
+      const map = new Map();
+      [...arr1, ...(arr2 || [])].forEach((t) => {
+        map.set(t.id, t);
+      });
+      return Array.from(map.values());
+    };
+
+    const getTasks = async (extraWhere, orderBy) => {
+      if (isOrgAdmin) {
+        return prisma.task.findMany({
+          where: {
+            ...baseTaskFilter,
+            ...extraWhere,
+          },
+          orderBy,
+          take: 7,
+          select: {
+            id: true,
+            name: true,
+            Status: true,
+            dueDate: true,
+          },
         });
+      }
 
-        res.status(202).json({ message: "successfully updated" });
-    } catch (error) {
-        console.log("UpdateTask taskcontroller");
-        console.log(error.message);
+      const [assignedTasks, managedTasks] = await Promise.all([
+        prisma.task.findMany({
+          where: {
+            ...assignedFilter,
+            ...extraWhere,
+          },
+          orderBy,
+          take: 7,
+          select: {
+            id: true,
+            name: true,
+            Status: true,
+            dueDate: true,
+          },
+        }),
 
-        res.status(404).json({ message: error.message })
-    }
-}
+        managedFilter
+          ? prisma.task.findMany({
+            where: {
+              ...managedFilter,
+              ...extraWhere,
+            },
+            orderBy,
+            take: 7,
+            select: {
+              id: true,
+              name: true,
+              Status: true,
+              dueDate: true,
+            },
+          })
+          : [],
+      ]);
+
+      return mergeTasks(assignedTasks, managedTasks).slice(0, 7);
+    };
+
+    const [myTasks, overdueTasks, inProgressTasks] = await Promise.all([
+      getTasks(
+        { Status: { not: "Done" } },
+        [{ dueDate: "asc" }, { createdAt: "desc" }]
+      ),
+
+      getTasks(
+        {
+          Status: { not: "Done" },
+          dueDate: { lt: new Date() },
+        },
+        { dueDate: "asc" }
+      ),
+
+      getTasks(
+        { Status: "In Progress" },
+        { dueDate: "asc" }
+      ),
+    ]);
+    const Data = await prisma.proj_member.findMany({
+      take: 8,
+      where: {
+        org_id: org_id,
+        member_id: user_id
+      },
+      orderBy: {
+        project: {
+          createdAt: "desc"
+        }
+      },
+      include: {
+        project: {
+          select: {
+            name: true,
+            Description: true,
+            status: true,
+            priority: true,
+            endDate: true,
+            member: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+    const projData = Data.map((p) => {
+      return {
+        name: p.project.name,
+        role: p.role,
+        Description: p.project.Description,
+        status: p.project.status,
+        priority: p.project.priority,
+        endDate: p.project.endDate,
+        username: p.project.member?.name
+      }
+    });
+    res.status(200).json({
+      tasks: {
+        my: myTasks,
+        overdue: overdueTasks,
+        inProgress: inProgressTasks,
+      },
+      projData
+    });
+
+  } catch (error) {
+    console.log("StatsData error:", error.message);
+    res.status(500).json({ message: error.message });
+  }
+};

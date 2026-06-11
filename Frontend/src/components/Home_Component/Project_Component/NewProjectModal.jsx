@@ -101,6 +101,7 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                                     >
                                         <option value="active">Active</option>
                                         <option value="on_hold">On Hold</option>
+                                        <option value="Completed">Completed</option>
                                     </select>
                                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                                 </div>

@@ -7,8 +7,9 @@ import {
     DataOrganization,
     DataOrganizationMembers,
     updateactiveOrgs,
-    getActiveOrgs } from '../../controllers/OrgController.js';
-import { checkRole } from "../../middlewares/RBACMiddleware.js";
+    getActiveOrgs,
+    StatsData,getOrgTasks } from '../../controllers/OrgController.js';
+import { OrgcheckRole } from "../../middlewares/RBACMiddleware.js";
 
 const router = express.Router();
 
@@ -27,11 +28,12 @@ router.get('/mine',authMiddleware, async (req, res) => {
   }
 })
 router.post('/add',authMiddleware,addOrganization);
-router.patch('/update',authMiddleware,checkRole("admin"),updateOrganization); // only can change username other than this there is nothing to change
-router.delete('/delete',authMiddleware,checkRole("admin"),deleteOrganization);
+router.patch('/update',authMiddleware,OrgcheckRole,updateOrganization); // only can change username other than this there is nothing to change
+router.delete('/delete/:org_id',authMiddleware,OrgcheckRole,deleteOrganization);
 router.get('/:id/members',authMiddleware,DataOrganizationMembers); // get all members of the organization
-router.get('/activeorgs/:id',authMiddleware,updateactiveOrgs);
 router.get('/activeorgs',authMiddleware,getActiveOrgs); // get all active orgs of the user
-
+router.get('/activeorgs/:id',authMiddleware,updateactiveOrgs);
+router.get('/stats/:id',authMiddleware,StatsData);
+router.get('/:orgId/tasks/',authMiddleware,getOrgTasks);
 
 export default router;

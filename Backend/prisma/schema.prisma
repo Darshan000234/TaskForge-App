@@ -30,6 +30,7 @@ enum MessageType {
   FILE
 }
 
+
 model User {
   id           Int          @id @default(autoincrement())
   name         String
@@ -47,6 +48,7 @@ model User {
   createdTasksmessage message[]
   task_assignee task_assignee[]
   org_member   org_member[]
+  AuditLog     AuditLog[]
 }
 
 model org {
@@ -63,7 +65,8 @@ model org {
   task         task[]
   project      project[]
   task_assignee task_assignee[]
-  
+  AuditLog      AuditLog[]
+
   @@index([userId]) 
   @@index([id])
 }
@@ -87,7 +90,7 @@ model project {
   id           Int          @id @default(autoincrement())
   name         String
   org_id       Int
-  assigned_to  Int
+  assigned_to  Int?
   Description  String 
   status       String 
   priority     String
@@ -97,9 +100,8 @@ model project {
   tasks        task[]
   task_assignee task_assignee[]
 
-  member       User    @relation(fields: [assigned_to], references: [id], onDelete: SetNull)
+  member       User?    @relation(fields: [assigned_to], references: [id], onDelete: SetNull)
   org          org     @relation(fields: [org_id], references: [id], onDelete: Cascade )
-
 
   createdAt    DateTime     @default(now())
   @@index([org_id])
@@ -113,8 +115,7 @@ model proj_member {
   role         Role 
 
   project      project     @relation(fields: [proj_id], references: [id], onDelete: Cascade)
-  member       User    @relation(fields: [member_id], references: [id], onDelete: SetNull)
-
+  member       User    @relation(fields: [member_id], references: [id], onDelete: Cascade)
   @@index([org_id, member_id])
   @@index([proj_id])
   @@unique([proj_id, member_id])
@@ -140,6 +141,9 @@ model task {
   task_message   message[]
 
   @@index([project_id])
+  @@index([org_id])
+  @@index([org_id, Status])
+  @@index([org_id, dueDate])    
   createdAt DateTime @default(now())
 }
 
@@ -152,11 +156,13 @@ model task_assignee {
 
   project   project @relation(fields: [proj_id], references: [id], onDelete: Cascade)
   task      task @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  user      User @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user      User @relation(fields: [user_id], references: [id], onDelete: Cascade)
   org       org @relation(fields: [org_id], references: [id], onDelete: Cascade)
 
   @@unique([task_id, user_id])
   @@index([proj_id,user_id])
+  @@index([user_id, org_id])
+  @@index([task_id])    
 }
 
 model teaminvitation {
@@ -170,21 +176,49 @@ model teaminvitation {
   createdAt    DateTime     @default(now())               
   @@unique([receiver_id, org_id])
   @@index([receiver_id])
+  @@index([sender_id])
+  @@index([org_id])
 }
 
 model message {
   id        Int      @id @default(autoincrement())
   task_id   Int
-  user_id   Int
+  user_id   Int?
 
   type      MessageType
   content   String?
 
-  fileUrl   String?   // S3 / Cloudinary URL
+  fileUrl   String? 
   fileName  String?
   mimeType  String?
   task      task @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  user      User @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user      User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
   @@index([task_id])
   createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  orgId        Int?
+  proj_id      Int?
+  userId       Int?
+  action       String?   // CREATED | UPDATED | DELETED | ASSIGNED | UNASSIGNED | STATUS_CHANGED | PRIORITY_CHANGED
+  resourceType String?   // ORG | PROJECT | TASK | MEMBER
+  resourceId   String?   // store as string — works for both Int IDs and UUIDs
+  
+  oldValue     Json?
+  newValue     Json?
+  metadata     Json?    // ip, userAgent
+  createdAt    DateTime @default(now())
+
+  org  org?   @relation(fields: [orgId],  references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([resourceType, resourceId])
+  @@index([userId])
+  @@index([orgId, action])
+  @@index([proj_id])
+  @@index([proj_id, createdAt(sort: Desc)])
 }

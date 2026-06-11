@@ -14,6 +14,7 @@ import projectRoute from "./routes/Project/projectRoute.js";
 import TaskRoute from "./routes/Task/TaskRoute.js";
 import projectTeamRoute from "./routes/ProjectTeam/projectTeamRoute.js";
 import ChatRoute from "./routes/Chat/ChatRoute.js";
+import AuditRoute from "./routes/Audit/AuditRoute.js";
 import { setIO } from "./utils/socket.js";
 
 dotenv.config();
@@ -44,7 +45,7 @@ app.use("/orgs/proj", projectRoute);
 app.use("/proj/task", TaskRoute);
 app.use("/proj/team", projectTeamRoute);
 app.use("/proj/task/chat",ChatRoute);
-
+app.use("/audit",AuditRoute);
 
 io.use(async (socket, next) => {
   try {

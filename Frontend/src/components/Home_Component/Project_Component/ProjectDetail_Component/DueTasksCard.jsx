@@ -47,13 +47,7 @@ const DueTaskItem = ({ task }) => (
   </div>
 );
 
-/**
- * DueTasksCard
- * Right-sidebar panel showing all overdue tasks.
- *
- * Props:
- *  tasks  task[]  — full task list; component filters internally
- */
+
 const DueTasksCard = ({ tasks = [] }) => {
   const overdue = tasks.filter(isOverdue);
 
@@ -62,7 +56,7 @@ const DueTasksCard = ({ tasks = [] }) => {
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800">
         <div className="flex items-center gap-2">
           <AlertTriangle size={16} className="text-orange-400" />
-          <span className="text-sm font-semibold text-white">Overdue</span>
+          <span className="text-sm font-semibold text-white">Overdue Today</span>
         </div>
         <span
           className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${overdue.length > 0 ? "bg-red-600 text-white" : "bg-zinc-800 text-zinc-400"}`}

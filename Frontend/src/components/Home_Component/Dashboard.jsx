@@ -1,4 +1,3 @@
-import plus from '../../assets/img/plus.png';
 import folder from '../../assets/img/folder.png';
 import blue_folder from '../../assets/img/blue_folder.png';
 import checked from '../../assets/img/checked.png';
@@ -7,167 +6,208 @@ import orange_warn from '../../assets/img/orange_warn.png';
 import user from '../../assets/img/user.png';
 import warning from '../../assets/img/warning.png';
 import clock from '../../assets/img/clock.png';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import AuditLogList from '../Home_Component/AuditLogList.jsx';
+import api from '../../api/api';
+import { useEffect, useState } from 'react';
 
-const Dashboard = ({ }) => {
+
+const STATUS_COLOR = {
+  active: "text-emerald-400",
+  completed: "text-blue-400",
+  on_hold: "text-amber-400",
+  cancelled: "text-red-400",
+};
+
+const PRIORITY_DOT = {
+  high: "bg-red-400",
+  medium: "bg-amber-400",
+  low: "bg-zinc-500",
+};
+
+const fmt = (d) =>
+  d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+const ProjectCard = ({ proj }) => (
+  <div className="flex items-start justify-between gap-4 py-3.5 border-b border-zinc-800/70 last:border-b-0">
+    <div className="min-w-0">
+      <div className="flex items-center gap-2">
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${PRIORITY_DOT[proj.priority] ?? "bg-zinc-500"}`} />
+        <p className="text-sm font-medium text-white truncate">{proj.name}</p>
+      </div>
+      <p className={`text-xs mt-0.5 capitalize font-medium ${STATUS_COLOR[proj.status?.toLowerCase()] ?? "text-zinc-400"}`}>
+        {proj.status}
+      </p>
+    </div>
+
+    <div className="flex flex-col items-end gap-1 shrink-0 text-right">
+      <span className="text-[11px] text-zinc-500 capitalize">{proj.role}</span>
+      <span className="text-[11px] text-zinc-600">{fmt(proj.endDate)}</span>
+    </div>
+  </div>
+);
+
+const TaskMiniCard = ({ task }) => (
+  <div className="flex items-center justify-between gap-3 py-2.5 border-b border-zinc-800/60 last:border-b-0">
+    <p className="text-sm text-zinc-300 truncate">{task.name}</p>
+    <span className="text-[11px] text-zinc-500 shrink-0">{fmt(task.dueDate)}</span>
+  </div>
+);
+
+const EmptyState = ({ src, label }) => (
+  <div className="flex flex-col items-center justify-center py-10 text-zinc-500 gap-3">
+    <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center">
+      <img className="w-6 h-6 opacity-60" src={src} alt="" />
+    </div>
+    <p className="text-xs">{label}</p>
+  </div>
+);
+
+const Dashboard = () => {
+  const { org } = useOutletContext();
+  const [CardData, setCardData] = useState({});
+  const [Project, setProject] = useState([]);
+  const [FewTaskData, setFewTaskData] = useState({});
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!org?.id) return;
+
+    const getCardData = async () => {
+      const res = await api.get(`/orgs/stats/${org.id}`);
+      setCardData(res.data);
+    };
+
+    const getFewTaskData = async () => {
+      const res = await api.get(`/proj/task/stats/${org.id}`);
+      setFewTaskData(res.data.tasks ?? {});
+      setProject(res.data.projData ?? []);
+    };
+
+    getCardData();
+    getFewTaskData();
+  }, [org]);
+
+  const viewAllOrg = () => {
+    navigate('/user/dashboard/projects');
+  }
+
   const stats = [
-    { title: "Total Projects", icon: blue_folder, cs: "rounded-xl bg-blue-500/10 bg-opacity-20", w: "w-8.5" },
-    { title: "Completed Projects", icon: checked, cs: "rounded-xl bg-emerald-500/10 bg-opacity-20", w: "w-7" },
-    { title: "My Tasks", icon: purple_team, cs: "rounded-xl bg-purple-500/10 bg-opacity-20", w: "w-7" },
-    { title: "Overdue", icon: orange_warn, cs: "rounded-xl bg-amber-500/10 bg-opacity-20", w: "w-7" }
+    { title: "Total Projects", icon: blue_folder, cs: "bg-blue-500/10", w: "w-8", key: "total_proj" },
+    { title: "Completed Projects", icon: checked, cs: "bg-emerald-500/10", w: "w-7", key: "completed_projects" },
+    { title: "My Tasks", icon: purple_team, cs: "bg-purple-500/10", w: "w-7", key: "my_task" },
+    { title: "Overdue", icon: orange_warn, cs: "bg-amber-500/10", w: "w-7", key: "overdue_task" },
   ];
 
   const sideCards = [
-    { title: "My Tasks", cs: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400", src: user },
-    { title: "Overdue", cs: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400", src: warning },
-    { title: "In Progress", cs: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400", src: clock },
+    { title: "My Tasks", key: "my", badge: "bg-emerald-500/15 text-emerald-400", icon: user, empty: "No tasks assigned to you" },
+    { title: "Overdue", key: "overdue", badge: "bg-red-500/15 text-red-400", icon: warning, empty: "No overdue tasks" },
+    { title: "In Progress", key: "inProgress", badge: "bg-blue-500/15 text-blue-400", icon: clock, empty: "Nothing in progress" }
   ];
+
+  const userName = org?.user?.name ?? "there";
+
   return (
-    <div>
-      <div className="px-20 pt-12 pb-16 space-y-15">
+    <div className="px-10 md:px-16 lg:px-20 pt-10 pb-16 space-y-10">
 
-        <div className="flex justify-between">
-          <div>
-            <h2 className="text-[22px] leading-7">
-              Welcome back, Coder Darsh
-            </h2>
-            <p className="text-gray-400 mt-2">
-              Here's what's happening with your projects today
-            </p>
+      <div>
+        <h2 className="text-[20px] font-semibold text-white leading-7">
+          Welcome back, {userName}
+        </h2>
+        <p className="text-sm text-zinc-500 mt-1">
+          Here's what's happening with your projects today
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        {stats.map((item) => (
+          <div
+            key={item.key}
+            className="bg-zinc-900 border border-zinc-800 rounded-xl px-6 py-5 flex items-center justify-between hover:border-zinc-700 transition-colors"
+          >
+            <div>
+              <p className="text-xs text-zinc-500 mb-1">{item.title}</p>
+              <p className="text-3xl font-bold text-white">{CardData[item.key] ?? 0}</p>
+            </div>
+            <div className={`w-11 h-11 rounded-xl ${item.cs} flex items-center justify-center shrink-0`}>
+              <img className={item.w} src={item.icon} alt="" />
+            </div>
           </div>
-          <div>
-            <button className="flex items-center gap-2 px-7 py-3 text-[14px] rounded-[5px] bg-linear-to-br from-blue-500 to-blue-600 text-white space-x-2 hover:opacity-90 transition cursor-pointer">
-              <img className="w-4 h-4" src={plus} alt="" /> New Project
-            </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <div className="lg:col-span-2 space-y-6">
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-800">
+              <h3 className="text-sm font-medium text-white">Project Overview</h3>
+              <button onClick={viewAllOrg} className="text-xs text-zinc-500 hover:text-white transition cursor-pointer">
+                View all →
+              </button>
+            </div>
+
+            <div className="px-5 max-h-72 overflow-y-auto">
+              {Project.length > 0 ? (
+                Project.map((proj, i) => <ProjectCard key={i} proj={proj} />)
+              ) : (
+                <EmptyState src={folder} label="No projects yet" />
+              )}
+            </div>
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors">
+            {org?.id ? (
+              <AuditLogList orgId={org.id} api={api} compact={true} limit={8} />
+            ) : (
+              <>
+                <div className="px-5 py-3.5 border-b border-zinc-800">
+                  <h3 className="text-sm font-medium text-white">Recent Activity</h3>
+                </div>
+                <EmptyState src={clock} label="No recent activity" />
+              </>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-10">
-          {stats.map((item, i) => (
-            <div
-              key={i}
-              className="
-                  bg-linear-to-br 
-                  from-zinc-800/70 
-                  to-zinc-900/10
-                  border border-zinc-800
-                  rounded-xl
-                  px-8 py-5
-                  flex items-center justify-between
-                  text-[14px] leading-5
-                  hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
-                "
-            >
-              <div>
-                <p className="text-zinc-400">
-                  {item.title}
-                </p>
-                <h3 className="py-2 text-[30px] leading-9 font-bold text-white">
-                  0
-                </h3>
-              </div>
-              <div className={`w-15 h-15 ${item.cs} flex items-center justify-center`}>
-                <img className={`${item.w}`} src={item.icon} alt="" />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-3 gap-10">
-          <div className="col-span-2 space-y-10">
-            <div className="
-      bg-linear-to-br 
-      from-zinc-800/60 
-      to-zinc-900/20
-      border border-zinc-800
-      rounded-xl
-      overflow-hidden
-      hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
-    ">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-                <h3 className="text-white text-[14px]">Project Overview</h3>
-                <button className="text-zinc-400 text-[14px] hover:text-white transition">
-                  View all →
-                </button>
-              </div>
-              <div className="h-90 flex flex-col items-center justify-center text-zinc-400 ">
-                <img
-                  className="w-20 h-20 p-4 bg-[#27272a] rounded-full"
-                  src={folder}
-                  alt=""
-                />
-                <p className="mt-6">No projects yet</p>
-                <button className="mt-4 px-6 py-3 text-[14px] rounded bg-linear-to-br from-blue-500 to-blue-600 text-white hover:opacity-90 transition cursor-pointer">
-                  Create your First Project
-                </button>
-              </div>
-            </div>
-            <div className="
-      bg-linear-to-br 
-      from-zinc-800/60 
-      to-zinc-900/20
-      border border-zinc-800
-      rounded-xl
-      overflow-hidden
-      hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
-    ">
-              <div className="px-6 py-4 border-b border-zinc-800">
-                <h3 className="text-white text-[14px]">Recent Activity</h3>
-              </div>
-
-              <div className="h-60 flex items-center justify-center text-zinc-400">
-                <img
-                  className="w-16 h-16 p-3 bg-[#27272a] rounded-full"
-                  src={clock}
-                  alt=""
-                />
-                <p className="ml-4">No recent activity</p>
-              </div>
-            </div>
-
-          </div>
-
-
-          <div className="space-y-10">
-            {sideCards.map((item, i) => (
+        <div className="space-y-5">
+          {sideCards.map((item) => {
+            const list = FewTaskData?.[item.key] ?? [];
+            return (
               <div
-                key={i}
-                className="
-          bg-linear-to-br 
-          from-zinc-800/60 
-          to-zinc-900/20
-          border border-zinc-800
-          rounded-xl
-          overflow-hidden
-          hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200
-        "
+                key={item.key}
+                className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors"
               >
-                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#232326] flex items-center justify-center">
-                      <img className="w-5" src={item.src} alt="" />
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
+                      <img className="w-4 h-4" src={item.icon} alt="" />
                     </div>
-
-                    <h4 className="text-white text-[14px]">
-                      {item.title}
-                    </h4>
+                    <h4 className="text-sm font-medium text-white">{item.title}</h4>
                   </div>
-
-                  <span className={`px-3 py-0.75 rounded-md text-xs font-medium ${item.cs}`}>
-                    0
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${item.badge}`}>
+                    {list.length}
                   </span>
                 </div>
 
-                <div className="h-auto flex items-center justify-center text-zinc-400 text-[14px] p-4 py-10">
-                  No {item.title.toLowerCase()}
+                <div className="px-5">
+                  {list.length > 0 ? (
+                    list.slice(0, 4).map((task) => (
+                      <TaskMiniCard key={task.id} task={task} />
+                    ))
+                  ) : (
+                    <p className="text-xs text-zinc-600 py-5 text-center">{item.empty}</p>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-
+            );
+          })}
         </div>
+
       </div>
     </div>
-  )
-}
+  );
+};
 
 export default Dashboard;

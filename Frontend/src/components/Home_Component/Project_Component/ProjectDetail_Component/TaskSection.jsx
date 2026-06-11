@@ -4,7 +4,7 @@ import {
   Search, Plus, LayoutGrid, List, SlidersHorizontal,
   Circle, Clock, CheckCircle2, AlertCircle,
   AlertTriangle, Calendar, ChevronLeft, ChevronRight,
-  Trash2, UserPlus,Loader2 
+  Trash2, UserPlus, Loader2
 } from "lucide-react";
 import AssigneeCell from "./AssigneeCell.jsx";
 import FilterPanel from "./FilterPanel.jsx";
@@ -12,7 +12,7 @@ import AddMemberModal from "./AddMemberModal.jsx";
 import AddTaskModal from "./AddTaskModal.jsx";
 import {
   TASK_STATUS_STYLE, PRIORITY_COLOR, PRIORITY_DOT,
-  applyFilters, isOverdue, TASK_STATUS_LABEL,
+  isOverdue, TASK_STATUS_LABEL,
 } from "./constants";
 import api from "../../../../api/api.js";
 import socket from "../../../../socket/socket.js";
@@ -27,8 +27,6 @@ const STATUS_ICON = {
   blocked: <AlertCircle size={14} className="text-red-400" />,
 };
 
-
-
 const AddMemberButton = ({ onClick }) => (
   <button
     onClick={(e) => { e.stopPropagation(); onClick(); }}
@@ -40,9 +38,9 @@ const AddMemberButton = ({ onClick }) => (
   </button>
 );
 
-const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember, onClick }) => (
+const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember, onClick, isAdmin }) => (
   <div onClick={() => onClick?.()} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition group relative">
-    {org?.role === "admin" && (
+    {isAdmin && (
       <button
         onClick={(e) => { e.stopPropagation(); onDeleteTask?.(task.id); }}
         title="Delete task"
@@ -69,7 +67,7 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
     <div className="mt-3 flex items-center justify-between gap-2">
       <AssigneeCell
         assignees={task.assignees ?? []}
-        canEdit={org?.role === "admin"}
+        canEdit={isAdmin}
         onRemoveMember={(memberId) => onRemoveMember?.(task.id, memberId)}
       />
       <div className="flex items-center gap-2 text-xs">
@@ -87,7 +85,7 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
       </div>
     </div>
 
-    {org?.role === "admin" && (
+    {isAdmin && (
       <div className="mt-3 pt-3 border-t border-zinc-800">
         <AddMemberButton onClick={() => onOpenAddMember(task)} />
       </div>
@@ -95,7 +93,7 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
   </div>
 );
 
-const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenAddMember,onClick }) => (
+const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenAddMember, onClick, isAdmin }) => (
   <tr onClick={() => onClick?.()} className="group border-b border-zinc-800/60 last:border-b-0">
     <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
       <div className="flex items-center gap-2.5">
@@ -125,13 +123,13 @@ const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenA
     <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 relative cursor-pointer">
       <AssigneeCell
         assignees={task.assignees ?? []}
-        canEdit={org?.role === "admin"}
+        canEdit={isAdmin === "admin"}
         onRemoveMember={(memberId) => onRemoveMember?.(task.id, memberId)}
       />
     </td>
 
     <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
-      {org?.role === "admin" ? (
+      {isAdmin ? (
         <AddMemberButton onClick={() => onOpenAddMember(task)} />
       ) : (
         <span className="text-zinc-600 text-xs">—</span>
@@ -147,7 +145,7 @@ const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenA
       </span>
     </td>
 
-    {org?.role === "admin" && (
+    {isAdmin && (
       <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-br-xl" : ""}`}>
         <button
           onClick={(e) => { e.stopPropagation(); onDeleteTask?.(task.id); }}
@@ -166,26 +164,25 @@ const TaskSection = ({
   proj_id,
   filterOverride = null,
   onTasksChange,
+  role
 }) => {
 
-  const [tasks,          setTasks]          = useState([]);
-  const [nextCursor,     setNextCursor]     = useState(null);
-  const [hasMore,        setHasMore]        = useState(false);
-  const [loadingTasks,   setLoadingTasks]   = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState(false);
 
-  const [addTaskOpen,    setAddTaskOpen]    = useState(false);
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [addMemberTarget, setAddMemberTarget] = useState(null);
-  const [search,         setSearch]         = useState("");
-  const [filters,        setFilters]        = useState({});
-  const [filterOpen,     setFilterOpen]     = useState(false);
-  const [view,           setView]           = useState("list");
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({});
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [view, setView] = useState("list");
 
   const filterRef = useRef(null);
-  const navigate  = useNavigate();
-
+  const navigate = useNavigate();
 
   useEffect(() => { onTasksChange?.(tasks); }, [tasks]);
-
 
   useEffect(() => {
     if (!proj_id) return;
@@ -198,17 +195,31 @@ const TaskSection = ({
 
   const fetchTasks = async (cursorValue) => {
     if (loadingTasks) return;
+
     setLoadingTasks(true);
+
     try {
       const params = new URLSearchParams({ limit: LIMIT });
+
       if (cursorValue) params.set("cursor", cursorValue);
 
+      // 🔥 ADD THIS
+      if (filters.status) params.set("status", filters.status);
+      if (filters.priority) params.set("priority", filters.priority);
+      if (filters.assignee) params.set("assignee", filters.assignee);
+      if (search) params.set("search", search);
+
       const res = await api.get(`proj/task/${proj_id}?${params}`);
+
       const { result, nextCursor: nc, hasMore: hm } = res.data;
 
-      setTasks((prev) => cursorValue ? [...prev, ...result] : result);
+      setTasks(prev =>
+        cursorValue ? [...prev, ...result] : result
+      );
+
       setNextCursor(nc);
       setHasMore(hm);
+
     } catch {
       toast.error("Failed to load tasks");
     } finally {
@@ -222,10 +233,15 @@ const TaskSection = ({
 
 
   useEffect(() => {
-    if (!filterOverride) return;
-    const { _t, ...incoming } = filterOverride;
-    setFilters(incoming);
-  }, [filterOverride]);
+    if (!proj_id) return;
+
+    setTasks([]);
+    setNextCursor(null);
+    setHasMore(false);
+
+    fetchTasks(null);
+
+  }, [proj_id, filters, search]);
 
 
   useEffect(() => {
@@ -253,6 +269,8 @@ const TaskSection = ({
     };
 
     const onMemberAdded = ({ taskId: tid, member }) => {
+      console.log(member);
+      
       setTasks((prev) =>
         prev.map((t) =>
           t.id === tid
@@ -271,27 +289,26 @@ const TaskSection = ({
       );
     };
 
-    socket.on("add_task",      onAddTask);
-    socket.on("task_deleted",  onDeleteTask);
+    socket.on("add_task", onAddTask);
+    socket.on("task_deleted", onDeleteTask);
     socket.on("removed member", onRemovedMember);
-    socket.on("member added",  onMemberAdded);
+    socket.on("member added", onMemberAdded);
     socket.on("delete member", onDeleteMember);
 
     return () => {
-      socket.off("add_task",      onAddTask);
-      socket.off("task_deleted",  onDeleteTask);
+      socket.off("add_task", onAddTask);
+      socket.off("task_deleted", onDeleteTask);
       socket.off("removed member", onRemovedMember);
-      socket.off("member added",  onMemberAdded);
+      socket.off("member added", onMemberAdded);
       socket.off("delete member", onDeleteMember);
     };
   }, []);
-
 
   const handleSelectTask = (task) => navigate(`/user/dashboard/task/${task.id}`);
 
   const handleAddTask = async (task) => {
     try {
-      await api.post(`proj/task/add`, { task, id: proj_id, orgId: org.org_id });
+      await api.post(`proj/task/add`, { task, proj_id: proj_id, orgId: org.org_id });
       toast.success("Task added");
     } catch (err) {
       toast.error(err.message);
@@ -300,7 +317,7 @@ const TaskSection = ({
 
   const handleDeleteTask = async (taskId) => {
     try {
-      await api.post(`/proj/task/delete`, { id: taskId });
+      await api.post(`/proj/task/delete`, { id: taskId, proj_id : proj_id });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (err) {
       toast.error(err.message);
@@ -310,20 +327,21 @@ const TaskSection = ({
   const handleAddMember = async (taskId, members) => {
     try {
       const res = await api.post(`proj/task/${taskId}/addmember`, {
-        users:  members,
+        users: members,
         org_id: org.org_id,
+        proj_id : proj_id
       });
       const { taskId: tid, members: newMembers } = res.data.result;
       setTasks((prev) =>
         prev.map((t) =>
           t.id === tid
             ? {
-                ...t,
-                assignees: [
-                  ...(t.assignees ?? []).filter((a) => !newMembers.some((m) => m.id === a.id)),
-                  ...newMembers,
-                ],
-              }
+              ...t,
+              assignees: [
+                ...(t.assignees ?? []).filter((a) => !newMembers.some((m) => m.id === a.id)),
+                ...newMembers,
+              ],
+            }
             : t
         )
       );
@@ -335,7 +353,7 @@ const TaskSection = ({
 
   const handleRemoveMember = async (taskId, memberId) => {
     try {
-      await api.post(`proj/task/${taskId}/removemember`, { user_id: memberId });
+      await api.post(`proj/task/${taskId}/removemember`, { user_id: memberId,proj_id : proj_id });
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
@@ -350,12 +368,10 @@ const TaskSection = ({
   };
 
   const handleFilters = (f) => setFilters(f);
-  const handleSearch  = (v) => setSearch(v);
+  const handleSearch = (v) => setSearch(v);
 
-
-  const filtered    = applyFilters(tasks, filters, search);
   const activeCount = Object.values(filters).filter(Boolean).length;
-  const isAdmin     = org?.role === "admin";
+  const isAdmin = (role && role==="admin" || role==="manager");
 
 
   return (
@@ -376,11 +392,10 @@ const TaskSection = ({
         <div className="relative" ref={filterRef}>
           <button
             onClick={() => setFilterOpen((o) => !o)}
-            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${
-              activeCount > 0
+            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${activeCount > 0
                 ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
                 : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
-            }`}
+              }`}
           >
             <SlidersHorizontal size={15} />
             {activeCount > 0 && (
@@ -425,26 +440,27 @@ const TaskSection = ({
       </div>
 
       <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wider font-medium">
-        {filtered.length} task{filtered.length !== 1 ? "s" : ""}
+        {tasks.length} task{tasks.length !== 1 ? "s" : ""}
         {hasMore ? "+" : ""}
         {activeCount > 0 ? " (filtered)" : ""}
       </p>
 
-      {!loadingTasks && filtered.length === 0 && (
+      {!loadingTasks && tasks.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 border border-zinc-800 rounded-2xl bg-zinc-900/30">
           <Search size={28} className="text-zinc-600" />
           <p className="mt-3 text-sm text-zinc-500">No tasks match your filters</p>
         </div>
       )}
 
-      {filtered.length > 0 && view === "grid" && (
+      {tasks.length > 0 && view === "grid" && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filtered.map((t) => (
+            {tasks.map((t) => (
               <TaskGridCard
                 key={t.id}
                 task={t}
                 org={org}
+                isAdmin={isAdmin}
                 onDeleteTask={handleDeleteTask}
                 onRemoveMember={handleRemoveMember}
                 onOpenAddMember={setAddMemberTarget}
@@ -477,7 +493,7 @@ const TaskSection = ({
         </>
       )}
 
-      {filtered.length > 0 && view === "list" && (
+      {tasks.length > 0 && view === "list" && (
         <>
           <div className="border border-zinc-800 rounded-xl">
             <table className="w-full text-sm">
@@ -493,12 +509,13 @@ const TaskSection = ({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((t, i) => (
+                {tasks.map((t, i) => (
                   <TaskTableRow
                     key={t.id}
                     task={t}
                     org={org}
-                    isLast={i === filtered.length - 1 && !hasMore}
+                    isAdmin={isAdmin}
+                    isLast={i === tasks.length - 1 && !hasMore}
                     onDeleteTask={handleDeleteTask}
                     onRemoveMember={handleRemoveMember}
                     onOpenAddMember={setAddMemberTarget}

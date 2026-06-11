@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import socket from "../../../socket/socket.js";
 import {
+  ArrowLeft,
   MessageCircle, Send, Paperclip, X, FileText,
   User, Calendar, Tag, Layers, ChevronRight, ChevronDown, ChevronUp,
   Image as ImageIcon,
@@ -146,6 +147,7 @@ const TaskDetail = ({
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [User,setUser] = useState({});
   const containerRef = useRef(null);
   const bottomRef = useRef(null);
   const [file, setFile] = useState(null);
@@ -197,6 +199,17 @@ const TaskDetail = ({
     getTaskData();
   }, [id]);
 
+  useEffect(()=>{
+    const userData = async () => {
+      try {
+        const res = await api.get(`/orgs/proj/user/${task?.projectId}`);
+        setUser(res.data);
+      } catch (error) {
+        toast.error(error.message)
+      }
+    }
+    userData();
+  },[task?.projectId]);
   useEffect(() => {
     const handleUpdateData = async (id) => {
       const res = await api.get(`/proj/task/chat/messageData/${id}`);
@@ -315,8 +328,18 @@ const TaskDetail = ({
     }
   };
 
+  const handleOnback = () => {
+    navigate(`/user/dashboard/projects/${task.projectId}`);
+  }
+
   return (
-    <div className="h-scrren overflow-hidden bg-black text-white">
+    <div className="h-scrren overflow-hidden bg-black text-white px-18 py-12">
+      <button
+        onClick={handleOnback}
+        className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition text-sm mb-8 cursor-pointer"
+      >
+        <ArrowLeft size={15} />Back to {task?.proj_name} project
+      </button>
       <div className="max-w-7xl mx-auto px-6 h-full flex flex-col">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 h-full mt-10">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col h-full overflow-hidden"
@@ -405,7 +428,7 @@ const TaskDetail = ({
             </div>
           </div>
           <div className="space-y-4">
-            {task && <TaskInfoCard task={task} onUpdate={handleUpdateTask} />}
+            {task && <TaskInfoCard role={User?.role} task={task} onUpdate={handleUpdateTask} />}
           </div>
 
         </div>

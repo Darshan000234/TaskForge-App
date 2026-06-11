@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
-import google from '../assets/img/google.png';
+import googleLogo from '../assets/img/google.png';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -262,7 +262,7 @@ const GoogleBtn = ({ label, onClick }) => (
     onClick={onClick}
     className="flex items-center justify-center px-3 w-80 h-12 gap-2 rounded-3xl bg-[whitesmoke] text-[gray] font-medium text-[16px] transition duration-200 hover:shadow-md cursor-pointer"
   >
-    <img src="/google.png" className="w-6 h-6 mr-3" alt="Google logo" />
+    <img src={googleLogo} className="w-6 h-6 mr-3" alt="Google logo" />
     <span className="truncate">{label}</span>
   </div>
 );

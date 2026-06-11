@@ -61,7 +61,7 @@ const Projects = () => {
   const [deleteTarget,   setDeleteTarget]   = useState(null);
   const [reassignTarget, setReassignTarget] = useState(null);
 
-
+  
   useEffect(() => {
     if (!org) return;
     setProjects([]);
@@ -130,7 +130,7 @@ const Projects = () => {
 
   const handleDelete = async (projectId) => {
     try {
-      await api.delete(`/orgs/proj/${projectId}`);
+      await api.delete(`/orgs/proj/${projectId}` , {data : {org_id : org.id}});
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
     } catch (err) {
       toast.error("Delete failed");
@@ -148,7 +148,7 @@ const Projects = () => {
 
   const handleProjectCreated = async (newProject) => {
     setShowModal(false);
-    await api.post("/orgs/proj/", { proj: newProject, orgid: Number(org.id) });
+    await api.post("/orgs/proj/", { proj: newProject, org_id: Number(org.id) });
   };
 
   const handleProjectClick = (project) => {
@@ -254,11 +254,7 @@ const Projects = () => {
                 </button>
               </div>
             )}
-            {!hasMore && projects.length > 0 && (
-              <p className="text-center text-xs text-zinc-700 mt-6">
-                All {projects.length} projects loaded
-              </p>
-            )}
+            
           </>
 
         ) : (

@@ -8,6 +8,7 @@ import TaskSection from "./TaskSection";
 import TeamSection from "./TeamSection";
 import DueTasksCard from "./DueTasksCard";
 import AuditLogCard from "./AuditLogCard";
+import AuditLogList from "../../AuditLogList.jsx";
 import toast from "react-hot-toast";
 import socket from "../../../../socket/socket.js";
 
@@ -17,9 +18,9 @@ const TABS = [
   { key: "audit", label: "Audit", icon: <History size={14} /> },
 ];
 
-const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
+const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
   const { id } = useParams();
-
+  const [User,setUser] = useState({});
   const [project, setProject] = useState(null);
   const [org, setOrg] = useState(null);
   const [activeSection, setActiveSection] = useState("tasks");
@@ -38,8 +39,18 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
         toast.error(err.message)
       }
     };
+    const userData = async () => {
+      try {
+        const res = await api.get(`/orgs/proj/user/${id}`);
+        setUser(res.data);
+      } catch (error) {
+        toast.error(error.message)
+      }
+    }
     fetchProject();
+    userData();
   }, [id]);
+
 
   useEffect(() => {
     const handleProjectDelete = () => {
@@ -58,7 +69,7 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
 
   const handleUpdate = async (proj) => {
     try {
-      const res = await api.post("orgs/proj/update", {proj : proj});
+      const res = await api.post("orgs/proj/update", {proj : proj,org_id : org.id});
       setProject(res.data.data);
       toast.success("successfully Updated");
     } catch (error) {
@@ -66,18 +77,23 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
     }
   }
 
+  const handleOnback = () => {
+    navigate('/user/dashboard/projects')
+  }
+  
   if (!project) return null;
 
   return (
     <div className="min-h-screen bg-black text-white px-18 py-12">
       <button
-        onClick={onBack}
+        onClick={handleOnback}
         className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition text-sm mb-8 cursor-pointer"
       >
         <ArrowLeft size={15} />Back to Projects
       </button>
 
       <ProjectInfoCard
+        role={User?.role}
         project={project}
         taskCount={tasks.length}
         org={org}
@@ -109,6 +125,7 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
             proj_id={id}
             filterOverride={filterOverride}
             onTasksChange={setTasks}
+            role={User?.role}
           />
         )}
 
@@ -126,8 +143,8 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
             <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wider font-medium flex items-center gap-2">
               <History size={12} />Activity Log — {auditLogs.length} entries
             </p>
-            <div className="border border-zinc-800 rounded-2xl overflow-hidden">
-              <AuditLogCard logs={auditLogs} />
+            <div className="border border-zinc-800 rounded-2xl">
+              <AuditLogList proj_id={id} api={api} compact={true} limit={8}/>
             </div>
           </div>
         )}
@@ -135,7 +152,6 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT, onBack }) => {
         {activeSection !== "audit" && (
           <div className="w-72 shrink-0 space-y-4">
             <DueTasksCard tasks={tasks} />
-            <AuditLogCard logs={auditLogs} />
           </div>
         )}
       </div>

@@ -2,16 +2,19 @@ import bcrypt from 'bcrypt';
 import axios from 'axios';
 import prisma from '../config/prisma.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/generateTokens.js';
-
+import { getIO } from "../utils/socket.js";
 const URL = process.env.GOOGLE_URL;
 
 export const registerUser = async (req, res) => {
-    console.log(req.body);
     
     const { fullName, email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     if (user) {
         return res.status(400).json({ message: "User already exists" });
+    }
+    const name  = await prisma.user.findFirst({ where : { name : fullName}});
+    if(name){
+        return res.status(204).json({ message : "username should be unique"});
     }
     const hashed = await bcrypt.hash(password, 10);
     await prisma.user.create({
@@ -90,7 +93,6 @@ export const google = async (req, res) => {
 };
 
 export const LogoutUser = async (req, res) => {
-    console.log('come');
     res.clearCookie('refreshToken');
     res.json({ message: "Logged out" });
 };
@@ -103,11 +105,38 @@ export const userData = async (req,res) => {
             },
             select : {
                 id : true,
-                name : true
+                name : true,
+                email : true
             }
         })
+        // console.log(user);
+        
         res.status(202).json({ data : user});
     } catch (error) {
         res.status(404).json({message : error.message});
     }
+}
+
+export const DeleteAccount = async (req, res) => {
+  const id = req.user.id;
+  const io = getIO();
+  try {
+    const org = await prisma.org_member.findMany({
+        where : {
+            member_id : id
+        }
+    })
+    await prisma.user.delete({
+        where : {
+            id : id
+        }
+    });
+    org.forEach((o)=>{
+        io.to(`org_${o.org_id}`).emit("member_removed",{id : id});
+    });
+    res.clearCookie('refreshToken');
+    res.status(202).json({ message : "deleted account successfully "});
+  } catch (error) {
+    res.status(404).json({message : error.message});
+  }
 }

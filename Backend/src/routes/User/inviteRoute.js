@@ -7,12 +7,12 @@ import {
     rejectInvite,
     DeleteInvite
 } from "../../controllers/InviteController.js";
-import { checkRole } from "../../middlewares/RBACMiddleware.js";
+import { OrgcheckRole } from "../../middlewares/RBACMiddleware.js";
 const router = express.Router();
 
-router.post("/", authMiddleware, checkRole("admin"), sendInvite);
+router.post("/", authMiddleware, OrgcheckRole, sendInvite);
 router.get("/data", authMiddleware, inviteData);
 router.post("/:id/accept", authMiddleware, acceptInvite);
 router.post("/:id/reject", authMiddleware, rejectInvite);
-router.delete("/delete/:id",authMiddleware, DeleteInvite)
+router.delete("/delete/:id",authMiddleware, OrgcheckRole,DeleteInvite)
 export default router;

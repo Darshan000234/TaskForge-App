@@ -17,6 +17,7 @@ import toast from "react-hot-toast";
 import api from "../api/api.js";
 import socket from "../socket/socket.js";
 import CreateOrgModal from "./CreateOrgModal.jsx";
+import Setting from "./Home_Component/Settings.jsx";
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/user/dashboard" },
@@ -31,6 +32,7 @@ const DashboardLayout = () => {
   const [orgs, setOrgs] = useState([]);
   const [activeorg, setActiveOrg] = useState(null);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const navigate = useNavigate();
 
   const handleActiveOrg = async (item) => {
@@ -91,13 +93,13 @@ const DashboardLayout = () => {
       setOrgs((prev) => [...prev, newOrg]);
     }
     const handleOrgDeleted = () => {
-      navigate('/user/dashboard' , { replace: true });
+      navigate('/user/dashboard', { replace: true });
     }
     socket.on("joined_org", handleCreated);
-    socket.on("org deleted",handleOrgDeleted);
+    socket.on("org deleted", handleOrgDeleted);
     return () => {
       socket.off("joined_org", handleCreated);
-      socket.off("org deleted",handleOrgDeleted);
+      socket.off("org deleted", handleOrgDeleted);
     }
   }, [])
 
@@ -113,7 +115,7 @@ const DashboardLayout = () => {
       return;
     }
     try {
-      await api.delete('/orgs/delete', { org_id: orgId });
+      await api.delete(`/orgs/delete/${orgId}`);
       const updated = orgs.filter((o) => o.id !== orgId);
       setOrgs(updated);
       if (activeorg?.id === orgId) {
@@ -281,53 +283,70 @@ const DashboardLayout = () => {
         >
           <div>
 
-            {navItems.map((item) => (
-              <Link key={item.path} to={item.path}>
+            {navItems.map((item) =>
+              item.label === "Settings" ? (
                 <motion.div
+                  key={item.path}
                   whileHover={{ scale: 1.02 }}
+                  onClick={() => setShowSettings(true)}
                   title={collapsed ? item.label : ""}
                   className={`
-            h-10 rounded-lg hover:bg-[#222225] cursor-pointer
-            flex items-center
-            ${collapsed ? "justify-center" : "gap-3 px-2"}
-          `}
+                    h-10 rounded-lg hover:bg-[#222225] cursor-pointer
+                    flex items-center
+                    ${collapsed ? "justify-center" : "gap-3 px-2"}
+                  `}
                 >
                   {item.icon}
-                  {!collapsed && (
-                    <span className="text-[16px]">{item.label}</span>
-                  )}
+                  {!collapsed && <span className="text-[16px]">{item.label}</span>}
                 </motion.div>
-              </Link>
-            ))}
+              ) : (
+                <Link key={item.path} to={item.path}>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    title={collapsed ? item.label : ""}
+                    className={`
+                      h-10 rounded-lg hover:bg-[#222225] cursor-pointer
+                      flex items-center
+                      ${collapsed ? "justify-center" : "gap-3 px-2"}
+                    `}
+                  >
+                    {item.icon}
+                    {!collapsed && <span className="text-[16px]">{item.label}</span>}
+                  </motion.div>
+                </Link>
+              )
+            )}
           </div>
 
           <div className="mt-14 flex flex-col gap-4">
-            <div
-              title={collapsed ? "My Tasks" : ""}
-              className={`
+            <Link to="/user/dashboard/task">
+              <div
+                title={collapsed ? "My Tasks" : ""}
+                className={`
         h-10 rounded-lg hover:bg-[#222225] cursor-pointer
         flex items-center
         ${collapsed ? "justify-center" : "gap-3 px-2"}
       `}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
               >
-                <path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344" />
-                <path d="m9 11 3 3L22 4" />
-              </svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-5 h-5 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344" />
+                  <path d="m9 11 3 3L22 4" />
+                </svg>
 
-              {!collapsed && (
-                <span className="text-[16px] font-medium text-zinc-300">
-                  My Tasks
-                </span>
-              )}
-            </div>
+                {!collapsed && (
+                  <span className="text-[16px] font-medium text-zinc-300">
+                    My Tasks
+                  </span>
+                )}
+              </div>
+            </Link>
             <div
               title={collapsed ? "Projects" : ""}
               className={`
@@ -376,6 +395,7 @@ const DashboardLayout = () => {
             </Link>
 
           </div>
+
         </nav>
 
         <div className="px-8 pb-6 cursor-pointer">
@@ -407,6 +427,7 @@ const DashboardLayout = () => {
         onClose={() => setShowCreateOrg(false)}
         onCreated={handleOrgCreated}
       />
+      <Setting isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

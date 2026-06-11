@@ -52,8 +52,8 @@ const Team = () => {
 
     try {
       setLoading(true);
-      const res = await api.delete(`/invites/delete/${id}`);
-      setMembers((prev)=> prev.filter((p) => p.id !== id));
+      const res = await api.delete(`/invites/delete/${id}`, {data : { org_id: org.id }});
+      setMembers((prev) => prev.filter((p) => p.id !== id));
       setLoading(false);
       toast.success(res.data.message);
     } catch (error) {
@@ -187,22 +187,24 @@ const Team = () => {
                       </button>
                     )}
                   </td>
-
-                  <td className="px-6 py-4 ">
-                    <button
-                      onClick={(e) => handleDelete(member.id)}
-                      title="Delete Project"
-                      className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition cursor-pointer"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </td>
+                  {org && org.role === "admin" && (
+                    <td className="px-6 py-4 ">
+                      <button
+                        onClick={(e) => handleDelete(member.id)}
+                        title="Delete Project"
+                        className="p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition cursor-pointer"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
       {showInvite && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 w-full max-w-md text-zinc-200">

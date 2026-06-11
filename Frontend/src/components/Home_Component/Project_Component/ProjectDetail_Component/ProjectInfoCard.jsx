@@ -4,7 +4,7 @@ import { STATUS_STYLE, PRIORITY_COLOR } from "./constants";
 import EditModal from "../../Task_Component/EditModal.jsx";
 
 
-const ProjectInfoCard = ({ project: initialProject, taskCount, org, onUpdate }) => {
+const ProjectInfoCard = ({ project: initialProject, taskCount, org, onUpdate, role }) => {
   const [project, setProject] = useState({
     ...initialProject,
     rawEndDate: initialProject.endDate,
@@ -16,7 +16,7 @@ const ProjectInfoCard = ({ project: initialProject, taskCount, org, onUpdate }) 
   });
 
   const [editOpen, setEditOpen] = useState(false);
-  const isAdmin = !org || org.role === "admin" || org.role === "manager";
+  const isAdmin = (role && role==="admin" || role==="manager") ;
 
   const handleSave = async (fields) => {
     const displayDate = fields.endDate

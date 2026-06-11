@@ -24,7 +24,7 @@ const Badge = ({ label, styleMap, fallback = "bg-zinc-700/40 text-zinc-300 borde
   </span>
 );
 
-const TaskInfoCard = ({ task: initialTask, onUpdate }) => {
+const TaskInfoCard = ({ task: initialTask, onUpdate, role }) => {
   const [task, setTask] = useState(initialTask);
   const [editOpen, setEditOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -32,7 +32,7 @@ const TaskInfoCard = ({ task: initialTask, onUpdate }) => {
   const assignees = task.assignees ?? [];
   const visibleUsers = showAll ? assignees : assignees.slice(0, 3);
   const extraCount = assignees.length - 3;
-
+  const isAdmin = role==='admin' || role==='manager'
   const handleSave = async (fields) => {
     const updated = { ...task, ...fields };
     setTask(updated);
@@ -54,14 +54,16 @@ const TaskInfoCard = ({ task: initialTask, onUpdate }) => {
               </p>
             )}
           </div>
+          {isAdmin && 
           <button
-            onClick={() => setEditOpen(true)}
-            title="Edit task"
-            className="cursor-pointer shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-500 transition text-xs font-medium"
+          onClick={() => setEditOpen(true)}
+          title="Edit task"
+          className="cursor-pointer shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-500 transition text-xs font-medium"
           >
             <Pencil size={12} />
             Edit
           </button>
+          }
         </div>
 
         <div className="flex flex-wrap gap-2">
