@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   History, Plus, Trash2, UserPlus, UserMinus,
   RefreshCw, Flag, Pencil, ChevronDown, ChevronUp,
@@ -92,7 +92,7 @@ const AuditLogRow = ({ log }) => {
   const diff = log.metadata?.diff ?? null;
   const hasDiff = diff && Object.keys(diff).length > 0;
   const hasJson = log.oldValue || log.newValue;
-  
+
   return (
     <div className="border-b border-zinc-800/60 last:border-b-0 hover:bg-zinc-900/40 transition">
       <div
@@ -165,11 +165,21 @@ const AuditLogRow = ({ log }) => {
 
 const FilterBar = ({ filters, onChange }) => {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
   const set = (k, v) => onChange({ ...filters, [k]: v || undefined });
   const activeCount = Object.values(filters).filter(Boolean).length;
 
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
         className={`cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition ${activeCount > 0
@@ -187,10 +197,22 @@ const FilterBar = ({ filters, onChange }) => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-30 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl p-4 space-y-3">
+        <div className="fixed z-[9999] w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-4 space-y-3"
+          style={{
+            top: ref.current
+              ? ref.current.getBoundingClientRect().bottom + 8
+              : 0,
+            right: window.innerWidth - (ref.current
+              ? ref.current.getBoundingClientRect().right
+              : 0),
+          }}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white">Filters</span>
-            <button onClick={() => setOpen(false)} className="cursor-pointer text-zinc-500 hover:text-zinc-300">
+            <button
+              onClick={() => setOpen(false)}
+              className="cursor-pointer text-zinc-500 hover:text-zinc-300 transition"
+            >
               <X size={13} />
             </button>
           </div>
@@ -200,30 +222,41 @@ const FilterBar = ({ filters, onChange }) => {
             { label: "Resource", field: "resourceType", options: RESOURCE_OPTIONS },
           ].map(({ label, field, options }) => (
             <div key={field}>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-1">{label}</p>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-1">
+                {label}
+              </p>
               <select
                 value={filters[field] ?? ""}
                 onChange={(e) => set(field, e.target.value)}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-zinc-500"
               >
                 {options.map((o) => (
-                  <option key={o} value={o}>{o || `All ${label}s`}</option>
+                  <option key={o} value={o}>
+                    {o || `All ${label}s`}
+                  </option>
                 ))}
               </select>
             </div>
           ))}
 
           <div>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-1">From</p>
-            <input type="date"
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-1">
+              From
+            </p>
+            <input
+              type="date"
               value={filters.from ?? ""}
               onChange={(e) => set("from", e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-zinc-500 scheme-dark"
             />
           </div>
+
           <div>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-1">To</p>
-            <input type="date"
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-1">
+              To
+            </p>
+            <input
+              type="date"
               value={filters.to ?? ""}
               onChange={(e) => set("to", e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-zinc-500 scheme-dark"
@@ -266,7 +299,7 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
       if (currentFilters.to) params.set("to", currentFilters.to);
       if (orgId) params.set("orgId", orgId);
       if (proj_id) params.set("proj_id", proj_id);
-      
+
       const res = await api.get(`/audit?${params}`);
       const { logs: newLogs, nextCursor: nc, hasMore: hm } = res.data;
 
@@ -286,7 +319,7 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
     setLogs([]);
     setNextCursor(null);
     fetchLogs(null, filters);
-  }, [orgId,proj_id,filters]);
+  }, [orgId, proj_id, filters]);
 
   const loadMore = () => {
     if (hasMore && !loadingMore) fetchLogs(nextCursor, filters);
@@ -314,11 +347,11 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
             <History size={14} className="text-zinc-400" />
             <h3 className="text-white text-[14px]">Recent Activity</h3>
           </div>
-          
+
           <FilterBar filters={filters} onChange={setFilters} />
         </div>
       )}
-      
+
       {loading && (
         <div className="space-y-0.5">
           {Array.from({ length: compact ? 4 : 8 }).map((_, i) => (
@@ -376,7 +409,7 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
               </button>
             </div>
           )}
-          
+
         </>
       )}
     </div>

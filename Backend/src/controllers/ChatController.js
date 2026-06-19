@@ -32,8 +32,32 @@ export const sentMessage = async (req, res) => {
   const user_id = req.user.id;
   const io = getIO();
   try {
-    const { task_id, type, content } = req.body;
+    const { task_id, type, content, proj_id } = req.body;
     const file = req.file;
+    const exist = await prisma.task_assignee.findUnique({
+      where: {
+        task_id_user_id: {
+          task_id: Number(task_id),
+          user_id: user_id
+        }
+      },
+      select : {
+        proj_id : true
+      }
+    })
+
+    const projectmemberShip = await prisma.proj_member.findUnique({
+      where: {
+        proj_id_member_id: {
+          proj_id: Number(proj_id),
+          member_id: user_id
+        }
+      }
+    })
+
+    if (!exist && projectmemberShip && projectmemberShip.role === 'member') {
+      return res.status(404).json({ message: "forbidden" });
+    }
 
     let fileUrl = null;
     let fileName = null;
@@ -62,18 +86,18 @@ export const sentMessage = async (req, res) => {
       });
     });
     const data = await prisma.message.findUnique({
-      where : {
-        id : msg.id
+      where: {
+        id: msg.id
       },
-      include : {
-        user : {
-          select : {
-            name : true
+      include: {
+        user: {
+          select: {
+            name: true
           }
         }
       }
     });
-    
+
     io.to(`task_${task_id}`).emit("message", data);
     res.status(200).json({ result: msg });
   } catch (error) {

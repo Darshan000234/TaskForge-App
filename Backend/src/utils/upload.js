@@ -23,7 +23,7 @@ export const uploadToCloudinary = (file) => {
 
     const publicId = `uploads/${Date.now()}`;
 
-    const stream = cloudinary.uploader.upload_stream(
+    const stream = cloudinary.uploader.upload_stream( 
       {
         resource_type: resourceType,
         public_id: publicId,

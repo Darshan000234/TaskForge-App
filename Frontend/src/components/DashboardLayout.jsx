@@ -18,6 +18,7 @@ import api from "../api/api.js";
 import socket from "../socket/socket.js";
 import CreateOrgModal from "./CreateOrgModal.jsx";
 import Setting from "./Home_Component/Settings.jsx";
+import { getAccessToken } from "../utils/authStore.js";
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/user/dashboard" },
@@ -63,12 +64,11 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     socket.auth = {
-      token: localStorage.getItem("accessToken")
+      token: getAccessToken()
     };
     socket.connect();
-    return () => {
-      socket.disconnect();
-    };
+
+    return () => socket.disconnect();
   }, []);
 
   useEffect(() => {

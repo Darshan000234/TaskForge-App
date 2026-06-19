@@ -1,39 +1,36 @@
-import express from "express"
-import authMiddleware from '../../middlewares/authMiddleWare.js';
-import { 
-    addOrganization, 
-    updateOrganization, 
-    deleteOrganization, 
-    DataOrganization,
-    DataOrganizationMembers,
-    updateactiveOrgs,
-    getActiveOrgs,
-    StatsData,getOrgTasks } from '../../controllers/OrgController.js';
+import express from "express";
+import {
+    addOrganization, updateOrganization, deleteOrganization,
+    DataOrganization, DataOrganizationMembers, updateactiveOrgs,
+    getActiveOrgs, StatsData, getOrgTasks
+} from '../../controllers/OrgController.js';
 import { OrgcheckRole } from "../../middlewares/RBACMiddleware.js";
+import { readLimiter, writeLimiter } from "../../middlewares/rateLimiter.js";
+import prisma from "../../config/prisma.js";
 
 const router = express.Router();
 
-router.get('/',authMiddleware,DataOrganization);
-router.get('/mine',authMiddleware, async (req, res) => {
-  const { id } = req.user;
-  try {
-    const data = await prisma.org.findFirst({
-        where : {
-            userId : id
-        }
-    })
-    return data;
-  } catch (error) {
-    res.status(404).json({message : error.message});
-  }
-})
-router.post('/add',authMiddleware,addOrganization);
-router.patch('/update',authMiddleware,OrgcheckRole,updateOrganization); // only can change username other than this there is nothing to change
-router.delete('/delete/:org_id',authMiddleware,OrgcheckRole,deleteOrganization);
-router.get('/:id/members',authMiddleware,DataOrganizationMembers); // get all members of the organization
-router.get('/activeorgs',authMiddleware,getActiveOrgs); // get all active orgs of the user
-router.get('/activeorgs/:id',authMiddleware,updateactiveOrgs);
-router.get('/stats/:id',authMiddleware,StatsData);
-router.get('/:orgId/tasks/',authMiddleware,getOrgTasks);
+router.get('/',                 readLimiter, DataOrganization);
+router.get('/activeorgs',       readLimiter, getActiveOrgs);
+router.get('/activeorgs/:id',   readLimiter, updateactiveOrgs);
+router.get('/stats/:id',        readLimiter, StatsData);
+router.get('/:id/members',      readLimiter, DataOrganizationMembers);
+router.get('/:orgId/tasks/',    readLimiter, getOrgTasks);
+
+router.get('/mine', readLimiter, async (req, res) => {
+    try {
+        const data = await prisma.org.findFirst({
+            where: { userId: req.user.id }
+        });
+        if (!data) return res.status(404).json({ message: "Org not found" });
+        return res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/add',             writeLimiter, addOrganization);
+router.patch('/update',         OrgcheckRole, writeLimiter, updateOrganization);
+router.delete('/delete/:org_id',OrgcheckRole, writeLimiter, deleteOrganization);
 
 export default router;

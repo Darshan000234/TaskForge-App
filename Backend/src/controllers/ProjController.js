@@ -50,9 +50,9 @@ export const projData = async (req, res) => {
                 where: {
                     org_id: orgid,
                     member_id: id,
-                    ...(cursor && { project_id: { gt: cursor } }),
+                    ...(cursor && { proj_id: { gt: cursor } }),
                 },
-                orderBy: { project_id: "asc" },
+                orderBy: { proj_id: "asc" },
                 include: {
                     project: true,
                     member: { select: { email: true } },

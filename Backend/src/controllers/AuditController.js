@@ -2,7 +2,6 @@ import { auditService } from "../services/audit.service.js";
  
 export const AuditData = async (req, res) => {
   try {
-    // console.log(req.query);
     
     const {
       orgId,
@@ -22,13 +21,11 @@ export const AuditData = async (req, res) => {
       action,
       resourceType,
       resourceId,
-      userId : req.user.id,
       from,
       to,
       cursor,
       limit
     });
-    // console.log(result);
     
     return res.status(200).json(result);
 

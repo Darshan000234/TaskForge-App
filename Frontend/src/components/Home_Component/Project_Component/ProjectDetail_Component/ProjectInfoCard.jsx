@@ -16,7 +16,7 @@ const ProjectInfoCard = ({ project: initialProject, taskCount, org, onUpdate, ro
   });
 
   const [editOpen, setEditOpen] = useState(false);
-  const isAdmin = (role && role==="admin" || role==="manager") ;
+  const isAdmin = (role && role==="admin") ;
 
   const handleSave = async (fields) => {
     const displayDate = fields.endDate

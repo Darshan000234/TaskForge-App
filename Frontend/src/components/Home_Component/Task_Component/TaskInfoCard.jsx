@@ -68,7 +68,6 @@ const TaskInfoCard = ({ task: initialTask, onUpdate, role }) => {
 
         <div className="flex flex-wrap gap-2">
           <Badge label={task.Status} styleMap={STATUS_STYLE} />
-          <Badge label="TASK" fallback="bg-zinc-700/40 text-zinc-300 border border-zinc-700" />
           <Badge label={task.priority} styleMap={PRIORITY_STYLE} />
         </div>
 

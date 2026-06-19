@@ -1,16 +1,23 @@
 import express from "express";
-import authMiddleware from "../../middlewares/authMiddleWare.js";
-import { TaskData, AddTask, DeleteTask, OneTaskData, RemoveMemeber, addmember, addmemberData, UpdateTask, StatsData } from "../../controllers/TaskController.js";
+import {
+    TaskData, AddTask, DeleteTask, OneTaskData,
+    RemoveMemeber, addmember, addmemberData,
+    UpdateTask, StatsData
+} from "../../controllers/TaskController.js";
 import { ProjCheckRole } from "../../middlewares/RBACMiddleware.js";
+import { readLimiter, writeLimiter } from "../../middlewares/rateLimiter.js";
+
 const router = express.Router();
-router.get("/:id", authMiddleware,TaskData);
-router.get("/:id/one", authMiddleware, OneTaskData);
-router.post("/add", authMiddleware,ProjCheckRole ,AddTask);
-router.post("/delete", authMiddleware, ProjCheckRole,DeleteTask);
-router.post("/:id/addmember", authMiddleware, ProjCheckRole,addmember);
-router.post("/:id/addmemberdata", authMiddleware, addmemberData);
-router.post("/:id/removemember", authMiddleware, ProjCheckRole,RemoveMemeber);
-router.post("/update",authMiddleware,ProjCheckRole,UpdateTask);
-router.get("/stats/:id",authMiddleware,StatsData);
+
+router.get("/:id",                  readLimiter, TaskData);
+router.get("/:id/one",              readLimiter, OneTaskData);
+router.get("/stats/:id",            readLimiter, StatsData);
+router.post("/:id/addmemberdata",   readLimiter, addmemberData);
+
+router.post("/add",                 ProjCheckRole, writeLimiter, AddTask);
+router.post("/delete",              ProjCheckRole, writeLimiter, DeleteTask);
+router.post("/update",              ProjCheckRole, writeLimiter, UpdateTask);
+router.post("/:id/addmember",       ProjCheckRole, writeLimiter, addmember);
+router.post("/:id/removemember",    ProjCheckRole, writeLimiter, RemoveMemeber);
 
 export default router;

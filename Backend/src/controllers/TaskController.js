@@ -95,7 +95,7 @@ export const OneTaskData = async (req, res) => {
       orgId: tasks.org_id,
       assignees: tasks.assignees.map(a => a.user)
     };
-    console.log(result);
+    // console.log(result);
 
     res.status(202).json({ result });
   } catch (error) {
@@ -216,7 +216,16 @@ export const AddTask = async (req, res) => {
       newValue: { name: result.name, Status: result.Status, priority: result.priority, dueDate: result.dueDate, assignees: result.assignees.map((u) => ({ id: u.id, name: u.name })) },
       metadata: meta(req),
     });
-
+    const delay = task.dueDate.getTime() - Date.now();
+    const taskId = task.id;
+    await reminderQueue.add(
+      "task_reminder",
+      taskId,
+      {
+        delay,
+        jobId: `task_reminder_${taskId}`,
+      }
+    );
     return res.status(202).json({ task: result });
   } catch (error) {
     console.error("AddTask:", error.message);
@@ -387,7 +396,17 @@ export const UpdateTask = async (req, res) => {
       newValue: { name: updated.name, Description: updated.Description, Status: updated.Status, priority: updated.priority, dueDate: updated.dueDate },
       metadata: { diff, ...meta(req) },
     });
-
+    await reminderQueue.remove(`task_reminder_${updated.id}`);
+    const delay = task.dueDate.getTime() - Date.now();
+    const taskId =  updated.id;
+    await reminderQueue.add(
+      "task_reminder",
+      {taskId},
+      {
+        delay,
+        jobId: `task_reminder_${taskId}`,
+      }
+    );
     return res.status(202).json({ message: "successfully updated" });
   } catch (error) {
     console.error("UpdateTask:", error.message);

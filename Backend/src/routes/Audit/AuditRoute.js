@@ -1,9 +1,9 @@
 import express from "express";
-import authMiddleware from "../../middlewares/authMiddleWare.js"; 
 import { AuditData } from "../../controllers/AuditController.js";
+import { readLimiter } from "../../middlewares/rateLimiter.js";
 
 const router = express.Router();
- 
-router.get('/',authMiddleware,AuditData);
+
+router.get('/', readLimiter, AuditData);
 
 export default router;

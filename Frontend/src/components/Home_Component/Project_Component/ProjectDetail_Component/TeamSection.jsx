@@ -140,7 +140,7 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
 
   const handleRemoveMember = async (memberId) => {
     try {
-      await api.post(`proj/team/${proj_id}/delete`, { user_id: memberId });
+      await api.post(`proj/team/${proj_id}/delete`, { user_id: memberId,proj_id: proj_id });
       setTeamMembers((prev) => prev.filter((m) => m.memberId !== memberId));
       toast.success("Member removed");
     } catch (err) {
@@ -150,7 +150,7 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
 
   const handleRemoveTaskFromMember = async (taskId, memberId) => {
     try {
-      await api.post(`proj/team/delete/task`, { task_id: taskId, user_id: memberId });
+      await api.post(`proj/team/delete/task`, { task_id: taskId, user_id: memberId,proj_id : proj_id });
       setTasks((prev) =>
         prev.map((task) =>
           task.id === taskId

@@ -200,6 +200,7 @@ const TaskDetail = ({
   }, [id]);
 
   useEffect(()=>{
+    if(!task) return;
     const userData = async () => {
       try {
         const res = await api.get(`/orgs/proj/user/${task?.projectId}`);
@@ -209,7 +210,8 @@ const TaskDetail = ({
       }
     }
     userData();
-  },[task?.projectId]);
+  },[task]);
+
   useEffect(() => {
     const handleUpdateData = async (id) => {
       const res = await api.get(`/proj/task/chat/messageData/${id}`);
@@ -264,7 +266,7 @@ const TaskDetail = ({
       const formData = new FormData();
 
       formData.append("task_id", id);
-
+      formData.append("proj_id" , task?.projectId);
       if (file) {
         if (file.type.startsWith("image/")) {
           formData.append("type", "IMAGE");
@@ -321,7 +323,7 @@ const TaskDetail = ({
 
   const handleUpdateTask = async (data) => {
     try {
-      await api.post("proj/task/update", { data: data });
+      await api.post("proj/task/update", { data: data, proj_id : task?.projectId });
       setTask(data);
     } catch (error) {
       toast.error(error.messages);

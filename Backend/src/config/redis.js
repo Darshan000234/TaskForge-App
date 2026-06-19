@@ -1,15 +1,15 @@
-// import { createClient } from 'redis';
+import IORedis from 'ioredis';
 
-// const redis = createClient({
-//     url: process.env.REDIS_URL,
-// })
+export const redis = new IORedis({
+  host: '127.0.0.1', 
+  port: 6379,
+  maxRetriesPerRequest: null
+});
 
-// try {
-//     await redis.connect();
-//     console.log("Redis connected");
-// } catch (err) {
-//     console.error("Redis connection failed:", err);
-// }
- 
-// export default redis;
- 
+// redis.on("connect", () => {
+//   console.log("✅ Redis connected");
+// });
+
+// redis.on("error", (err) => {
+//   console.error("❌ Redis error:", err.message);
+// });

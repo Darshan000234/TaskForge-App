@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import api from '../api/api.js';
 import CreateOrgModal from './CreateOrgModal';
+import { setAccessToken } from '../utils/authStore.js';
 
 const URL = import.meta.env.VITE_URL;
 
@@ -84,10 +85,10 @@ const Signup_login = () => {
       try {
         const token     = response.access_token;
         const acctoken  = await axios.post(`${URL}/user/googleauth`, { token }, { withCredentials: true });
+        setAccessToken(acctoken.data.accesstoken);
         toast.dismiss();
         toast.success('Logged in with Google successfully!');
-        localStorage.setItem('accessToken', acctoken.data.accesstoken);
-        await handlePostAuth();
+       await handlePostAuth();
       } catch (error) {
         toast.dismiss();
         toast.error(error.response?.data?.message || error.message);
@@ -108,7 +109,7 @@ const Signup_login = () => {
         : { email: formData.email, password: formData.password };
 
       const token = await axios.post(`${URL}/user${endpoint}`, payload, { withCredentials: true });
-      localStorage.setItem('accessToken', token.data.accesstoken);
+      setAccessToken(token.data.accesstoken);
       toast.success(type === 'signup' ? 'Signup successful!' : 'Login successful!');
       await handlePostAuth();
     } catch (error) {
