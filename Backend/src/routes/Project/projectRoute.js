@@ -8,14 +8,25 @@ import { readLimiter, writeLimiter } from "../../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
-router.get("/one/:id",          readLimiter, OneProjData);
-router.get("/user/:id",         readLimiter, userData);
-router.post("/:id",             readLimiter, projData);
-router.post("/members/:id",     readLimiter, getMember);
+// router.get("/one/:id",          readLimiter, OneProjData);
+// router.get("/user/:id",         readLimiter, userData);
+// router.post("/:id",             readLimiter, projData);
+// router.post("/members/:id",     readLimiter, getMember);
 
-router.post("/",                OrgcheckRole, writeLimiter, addProject);
-router.delete("/:id",           OrgcheckRole, writeLimiter, projectDelete);
-router.patch("/:id/reassign",   OrgcheckRole, writeLimiter, reassignProject);
-router.post("/update",          OrgcheckRole, writeLimiter, UpdateProject);
+// router.post("/",                OrgcheckRole(), writeLimiter, addProject);
+// router.delete("/:id",           OrgcheckRole(), writeLimiter, projectDelete);
+// router.patch("/:id/reassign",   OrgcheckRole(), writeLimiter, reassignProject);
+// router.post("/update",          OrgcheckRole(), writeLimiter, UpdateProject);
+
+router.get("/one/:id", OneProjData);
+
+router.get("/user/:id", userData);
+router.post("/:id", projData);
+router.post("/members/:id", getMember);
+
+router.post("/", OrgcheckRole(), addProject);
+router.delete("/:id", OrgcheckRole(), projectDelete);
+router.patch("/:id/reassign", OrgcheckRole(), reassignProject);
+router.post("/update", OrgcheckRole(), UpdateProject);
 
 export default router;

@@ -43,7 +43,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
-// app.use(globalLimiter);
 app.use("/user", userRoute);
 app.use("/orgs", authMiddleware,orgRoute);
 app.use("/invites", authMiddleware,inviteRoute);

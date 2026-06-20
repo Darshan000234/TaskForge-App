@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Circle, Clock, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { PRIORITY_COLOR } from "./constants";
+import toast from "react-hot-toast";
+import api from "../../../../api/api.js";
 
 function useClickOutside(ref, cb) {
   useEffect(() => {
@@ -20,42 +22,68 @@ const STATUS_ICON = {
 };
 
 const TeamTaskCell = ({
-  tasks = [],
   memberId,
   canEdit = false,
-  onRemoveTaskFromMember
+  onRemoveTaskFromMember,
+  proj_id,
+  taskCount
 }) => {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(false);
 
+  const ref = useRef(null);
   useClickOutside(ref, () => setOpen(false));
+
+  const fetchTasks = async () => {
+    if (!memberId || !proj_id) return;
+
+    setLoading(true);
+    try {
+      const res = await api.get(`/proj/team/member/${proj_id}/${memberId}`);
+      setTasks(res.data.result || []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchTasks();
+    }
+  }, [open, memberId, proj_id]); 
+
+  const toggle = (e) => {
+    e.stopPropagation();
+    setOpen((prev) => !prev);
+  };
 
   return (
     <div className="relative w-fit" ref={ref}>
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((o) => !o);
-        }}
+        onClick={toggle}
         className="flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white"
       >
         <span className="px-2 py-0.5 rounded-md bg-zinc-800 font-medium">
-          {tasks.length}
+          {taskCount}
         </span>
         <ChevronDown size={12} className="text-zinc-500 cursor-pointer" />
       </button>
 
       {open && (
         <div className="absolute left-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-lg z-50">
-
           <p className="px-3 py-2 text-[10px] text-zinc-500 uppercase border-b border-zinc-800">
             Assigned Tasks
           </p>
 
-          {tasks.length === 0 && (
-            <p className="px-3 py-3 text-xs text-zinc-500">
-              No tasks
-            </p>
+          {loading && (
+            <p className="px-3 py-3 text-xs text-zinc-500">Loading...</p>
+          )}
+
+          {!loading && tasks.length === 0 && (
+            <p className="px-3 py-3 text-xs text-zinc-500">No tasks</p>
           )}
 
           {tasks.map((t) => (
@@ -75,18 +103,18 @@ const TeamTaskCell = ({
 
               {canEdit && (
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onRemoveTaskFromMember(t.id, memberId);
+                      setTasks((prev) =>
+                        prev.filter((task) => task.id !== t.id)
+                      );
                     }}
-                    title="Remove from task"
-                    className="cursor-pointer p-1 rounded-md hover:bg-red-500/15 text-zinc-500 hover:text-red-400 transition"
+                    className="p-1 rounded-md hover:bg-red-500/15 text-zinc-500 hover:text-red-400"
                   >
                     <X size={13} />
                   </button>
-
                 </div>
               )}
             </div>

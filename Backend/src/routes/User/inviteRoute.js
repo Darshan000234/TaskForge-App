@@ -8,10 +8,15 @@ import { readLimiter, writeLimiter, sensitiveLimiter } from "../../middlewares/r
 
 const router = express.Router();
 
-router.post("/",            OrgcheckRole, writeLimiter, sendInvite);
-router.get("/data",         readLimiter, inviteData);
-router.post("/:id/accept",  sensitiveLimiter, acceptInvite);
-router.post("/:id/reject",  sensitiveLimiter, rejectInvite);
-router.delete("/delete/:id",OrgcheckRole, writeLimiter, DeleteInvite);
+// router.post("/",            OrgcheckRole, writeLimiter, sendInvite);
+// router.get("/data",         readLimiter, inviteData);
+// router.post("/:id/accept",  sensitiveLimiter, acceptInvite);
+// router.post("/:id/reject",  sensitiveLimiter, rejectInvite);
+// router.delete("/delete/:id",OrgcheckRole, writeLimiter, DeleteInvite);
 
+router.post("/", OrgcheckRole(), sendInvite);
+router.get("/data", inviteData);
+router.post("/:id/accept", acceptInvite);
+router.post("/:id/reject", rejectInvite);
+router.delete("/delete/:id", OrgcheckRole(), DeleteInvite);
 export default router;

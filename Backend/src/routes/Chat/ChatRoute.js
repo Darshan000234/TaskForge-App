@@ -8,7 +8,11 @@ const upload = multer({ storage });
 
 const router = express.Router();
 
-router.get('/messageData/:id',          readLimiter, MessageData);
-router.post('/message/sent', writeLimiter, upload.single("file"), sentMessage);
+// router.get('/messageData/:id',          readLimiter, MessageData);
+// router.post('/message/sent', writeLimiter, upload.single("file"), sentMessage);
+
+
+router.get('/messageData/:id', MessageData);
+router.post('/message/sent', upload.single("file"), sentMessage);
 
 export default router;

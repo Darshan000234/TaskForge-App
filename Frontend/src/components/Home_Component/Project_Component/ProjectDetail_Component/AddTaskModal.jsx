@@ -202,6 +202,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Title is required";
+    if(!form.dueDate) e.dueDate = "dueDate is required";
     return e;
   };
 
@@ -299,6 +300,9 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
                 onChange={(e) => set("dueDate", e.target.value)}
                 className="bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition scheme-dark"
               />
+              {errors.dueDate && (
+                <p className="text-xs text-red-400 mt-1">{errors.dueDate}</p>
+              )}
             </Field>
 
             {teamMembers.length > 0 && (

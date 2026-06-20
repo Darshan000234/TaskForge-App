@@ -3,6 +3,7 @@ import { getIO } from "../utils/socket.js";
 import { userSockets } from "../utils/userSockets.js";
 import { auditService } from "../services/audit.service.js";
 import { diffObjects, diffAssignees } from "../utils/diff.js";
+import { reminderQueue } from "../queue/reminderQueue.js";
 
 const A = { CREATED: "CREATED", UPDATED: "UPDATED", DELETED: "DELETED", ASSIGNED: "ASSIGNED", UNASSIGNED: "UNASSIGNED", STATUS_CHANGED: "STATUS_CHANGED", PRIORITY_CHANGED: "PRIORITY_CHANGED" };
 const RT = { TASK: "TASK", PROJECT: "PROJECT", MEMBER: "MEMBER", ORG: "ORG" };
@@ -396,8 +397,9 @@ export const UpdateTask = async (req, res) => {
       newValue: { name: updated.name, Description: updated.Description, Status: updated.Status, priority: updated.priority, dueDate: updated.dueDate },
       metadata: { diff, ...meta(req) },
     });
+
     await reminderQueue.remove(`task_reminder_${updated.id}`);
-    const delay = task.dueDate.getTime() - Date.now();
+    const delay = updated.dueDate.getTime() - Date.now();
     const taskId =  updated.id;
     await reminderQueue.add(
       "task_reminder",

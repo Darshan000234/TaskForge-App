@@ -115,9 +115,11 @@ const DashboardLayout = () => {
       return;
     }
     try {
-      await api.delete(`/orgs/delete/${orgId}`);
+
+      const res = await api.delete(`/orgs/delete/${orgId}`);
       const updated = orgs.filter((o) => o.id !== orgId);
       setOrgs(updated);
+
       if (activeorg?.id === orgId) {
         const newActive = updated[0];
         setActiveOrg(newActive);
@@ -127,9 +129,11 @@ const DashboardLayout = () => {
       }
       toast.success("Organization deleted");
     } catch (err) {
+      console.log("ERROR:", err.response?.status, err.response?.data);
       toast.error("Delete failed");
     }
   };
+
 
   return (
     <div className="text-white min-h-screen flex">
@@ -231,7 +235,7 @@ const DashboardLayout = () => {
                             className="p-1.5 rounded-md bg-zinc-800 
                         hover:bg-zinc-700 
                         text-zinc-400 hover:text-red-400 
-                        transition"
+                        transition cursor-pointer"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -347,35 +351,7 @@ const DashboardLayout = () => {
                 )}
               </div>
             </Link>
-            <div
-              title={collapsed ? "Projects" : ""}
-              className={`
-        h-10 rounded-lg hover:bg-[#222225] cursor-pointer
-        flex items-center
-        ${collapsed
-                  ? "justify-center"
-                  : "justify-between px-2"
-                }
-      `}
-            >
-              {!collapsed && (
-                <span className="text-[16px] text-gray-400 uppercase tracking-wide">
-                  Projects
-                </span>
-              )}
-
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M5 12h14" />
-                <path d="m12 5 7 7-7 7" />
-              </svg>
-            </div>
+            
             <Link to="/user/dashboard/notification">
               <div
                 title={collapsed ? "Invites" : ""}
@@ -411,7 +387,7 @@ const DashboardLayout = () => {
         transition={{ duration: 0.35 }}
         className="flex-1"
       >
-        <div className="h-20 flex items-center justify-between px-12 border-b border-gray-800 bg-[#18181b] sticky top-0 z-10">
+        {/* <div className="h-20 flex items-center justify-between px-12 border-b border-gray-800 bg-[#18181b] sticky top-0 z-10">
           <div className="flex items-center gap-3 bg-[#232326] px-4 py-2 rounded-lg w-105 hover:border border-blue-400">
             <Search size={18} className="text-gray-400" />
             <input
@@ -419,7 +395,7 @@ const DashboardLayout = () => {
               className="bg-transparent outline-none w-full"
             />
           </div>
-        </div>
+        </div> */}
         <Outlet context={{ org: activeorg }} />
       </motion.div>
       <CreateOrgModal

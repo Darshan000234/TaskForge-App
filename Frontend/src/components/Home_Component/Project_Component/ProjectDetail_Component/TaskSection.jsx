@@ -203,14 +203,14 @@ const TaskSection = ({
 
       if (cursorValue) params.set("cursor", cursorValue);
 
-      // 🔥 ADD THIS
       if (filters.status) params.set("status", filters.status);
       if (filters.priority) params.set("priority", filters.priority);
       if (filters.assignee) params.set("assignee", filters.assignee);
       if (search) params.set("search", search);
 
       const res = await api.get(`proj/task/${proj_id}?${params}`);
-
+      // console.log(res);
+      
       const { result, nextCursor: nc, hasMore: hm } = res.data;
 
       setTasks(prev =>

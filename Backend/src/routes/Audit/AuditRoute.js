@@ -4,6 +4,7 @@ import { readLimiter } from "../../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
-router.get('/', readLimiter, AuditData);
+// router.get('/', readLimiter, AuditData);
+router.get('/', AuditData);
 
 export default router;

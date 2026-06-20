@@ -11,14 +11,24 @@ import {
 
 const router = express.Router();
 
-router.post('/signup',      authLimiter, registerUser);
-router.post('/login',       authLimiter, LoginUser);
-router.post('/googleauth',  authLimiter, google);
-router.post('/refresh',     authLimiter, refreshToken);
+// router.post('/signup',      authLimiter, registerUser);
+// router.post('/login',       authLimiter, LoginUser);
+// router.post('/googleauth',  authLimiter, google);
+// router.post('/refresh',     authLimiter, refreshToken);
 
-router.get('/userdata',     authMiddleware, readLimiter, userData);
-router.post('/logout',      authMiddleware, readLimiter, LogoutUser);
+// router.get('/userdata',     authMiddleware, readLimiter, userData);
+// router.post('/logout',      authMiddleware, readLimiter, LogoutUser);
 
-router.delete('/delete-account', authMiddleware, sensitiveLimiter, DeleteAccount);
+// router.delete('/delete-account', authMiddleware, sensitiveLimiter, DeleteAccount);
+
+router.post('/signup', registerUser);
+router.post('/login', LoginUser);
+router.post('/googleauth', google);
+router.post('/refresh', refreshToken);
+
+router.get('/userdata', authMiddleware, userData);
+router.post('/logout', authMiddleware, LogoutUser);
+
+router.delete('/delete-account', authMiddleware, DeleteAccount);
 
 export default router;

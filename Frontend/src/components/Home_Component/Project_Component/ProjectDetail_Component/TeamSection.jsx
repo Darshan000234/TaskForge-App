@@ -6,7 +6,8 @@ import toast from "react-hot-toast";
 import socket from "../../../../socket/socket.js";
 import Pagination from "../Pagination.jsx";
 
-const TeamRow = ({ member, tasks, isLast, org, onRemoveMember, onRemoveTaskFromMember }) => (
+const TeamRow = ({ member, isLast, org, onRemoveMember, onRemoveTaskFromMember, proj_id,taskCount }) => (
+
   <tr className="group border-b border-zinc-800/60 last:border-b-0">
 
     <td className={`px-6 py-4 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
@@ -26,10 +27,11 @@ const TeamRow = ({ member, tasks, isLast, org, onRemoveMember, onRemoveTaskFromM
     <td className="px-6 py-4 bg-zinc-900 group-hover:bg-zinc-900/50 w-[320px]">
       <div className="min-w-55">
         <TeamTaskCell
-          tasks={tasks}
           memberId={member.memberId}
           canEdit={org?.role === "admin"}
           onRemoveTaskFromMember={onRemoveTaskFromMember}
+          proj_id={proj_id}
+          taskCount={taskCount}
         />
       </div>
     </td>
@@ -51,13 +53,13 @@ const TeamRow = ({ member, tasks, isLast, org, onRemoveMember, onRemoveTaskFromM
 );
 
 
-const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
+const TeamSection = ({ org, proj_id, setTasks }) => {
   const LIMIT = 10;
 
   const [teamMembers, setTeamMembers] = useState([]);
-  const [nextCursor,  setNextCursor]  = useState(null);
-  const [hasMore,     setHasMore]     = useState(false);
-  const [loading,     setLoading]     = useState(false);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
 
 
   useEffect(() => {
@@ -76,9 +78,10 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
       const params = new URLSearchParams({ limit: LIMIT });
       if (cursorValue) params.set("cursor", cursorValue);
 
-      const res     = await api.get(`/proj/team/${proj_id}?${params}`);
+      const res = await api.get(`/proj/team/${proj_id}?${params}`);
       const { result, nextCursor: nc, hasMore: hm } = res.data;
-
+      console.log(res);
+      
       setTeamMembers((prev) => cursorValue ? [...prev, ...result] : result);
       setNextCursor(nc);
       setHasMore(hm);
@@ -122,17 +125,17 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
       );
     };
 
-    socket.on("delete Member",   handleDeleteMemberSocket);
-    socket.on("add task",        handleMembersUpdate);
-    socket.on("task_deleted",    handleMembersUpdate);
-    socket.on("Add member",      handleMembersUpdate);
-    socket.on("removed member",  onRemovedMember);
+    socket.on("delete Member", handleDeleteMemberSocket);
+    socket.on("add task", handleMembersUpdate);
+    socket.on("task_deleted", handleMembersUpdate);
+    socket.on("Add member", handleMembersUpdate);
+    socket.on("removed member", onRemovedMember);
 
     return () => {
-      socket.off("delete Member",  handleDeleteMemberSocket);
-      socket.off("add task",       handleMembersUpdate);
-      socket.off("task_deleted",   handleMembersUpdate);
-      socket.off("Add member",     handleMembersUpdate);
+      socket.off("delete Member", handleDeleteMemberSocket);
+      socket.off("add task", handleMembersUpdate);
+      socket.off("task_deleted", handleMembersUpdate);
+      socket.off("Add member", handleMembersUpdate);
       socket.off("removed member", onRemovedMember);
     };
   }, [proj_id]);
@@ -140,7 +143,7 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
 
   const handleRemoveMember = async (memberId) => {
     try {
-      await api.post(`proj/team/${proj_id}/delete`, { user_id: memberId,proj_id: proj_id });
+      await api.post(`proj/team/${proj_id}/delete`, { user_id: memberId, proj_id: proj_id });
       setTeamMembers((prev) => prev.filter((m) => m.memberId !== memberId));
       toast.success("Member removed");
     } catch (err) {
@@ -150,7 +153,7 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
 
   const handleRemoveTaskFromMember = async (taskId, memberId) => {
     try {
-      await api.post(`proj/team/delete/task`, { task_id: taskId, user_id: memberId,proj_id : proj_id });
+      await api.post(`proj/team/delete/task`, { task_id: taskId, user_id: memberId, proj_id: proj_id });
       setTasks((prev) =>
         prev.map((task) =>
           task.id === taskId
@@ -193,17 +196,20 @@ const TeamSection = ({ tasks = [], org, proj_id, setTasks }) => {
                 </tr>
               </thead>
               <tbody>
-                {teamMembers.map((m, i) => (
-                  <TeamRow
-                    key={m.memberId}
-                    member={m}
-                    tasks={m.tasks}
-                    isLast={i === teamMembers.length - 1 && !hasMore}
-                    org={org}
-                    onRemoveMember={handleRemoveMember}
-                    onRemoveTaskFromMember={handleRemoveTaskFromMember}
-                  />
-                ))}
+                {teamMembers.map((m, i) => {
+                  return (
+                    <TeamRow
+                      key={m.memberId}
+                      member={m}
+                      isLast={i === teamMembers.length - 1 && !hasMore}
+                      org={org}
+                      onRemoveMember={handleRemoveMember}
+                      onRemoveTaskFromMember={handleRemoveTaskFromMember}
+                      proj_id={proj_id}
+                      taskCount={m.taskCount}
+                    />
+                  );
+                })}
 
                 {loading && Array.from({ length: 3 }).map((_, i) => (
                   <tr key={`skel-${i}`} className="border-b border-zinc-800/40">

@@ -30,7 +30,7 @@ const Signup_login = () => {
     try {
       const res = await api.get('/orgs/mine');
       const orgs = res.data ?? [];
-      if (orgs.length > 0) {
+      if (orgs) {
         navigate('/user/dashboard');
       } else {
         setOrgModalOpen(true);
@@ -88,7 +88,7 @@ const Signup_login = () => {
         setAccessToken(acctoken.data.accesstoken);
         toast.dismiss();
         toast.success('Logged in with Google successfully!');
-       await handlePostAuth();
+        await handlePostAuth();
       } catch (error) {
         toast.dismiss();
         toast.error(error.response?.data?.message || error.message);
