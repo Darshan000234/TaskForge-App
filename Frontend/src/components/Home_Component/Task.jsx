@@ -5,50 +5,50 @@ import {
   CheckCircle2, Ban, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import api from "../../api/api.js";
+import AssigneeCell from "./Project_Component/ProjectDetail_Component/AssigneeCell.jsx";
 import { useNavigate, useOutletContext } from "react-router-dom";
-
 const STATUS_ICON = {
-  todo:       <Circle size={14} className="text-zinc-500" />,
+  todo: <Circle size={14} className="text-zinc-500" />,
   inprogress: <Loader2 size={14} className="text-blue-400 animate-spin" />,
-  done:       <CheckCircle2 size={14} className="text-emerald-500" />,
-  blocked:    <Ban size={14} className="text-red-400" />,
+  done: <CheckCircle2 size={14} className="text-emerald-500" />,
+  blocked: <Ban size={14} className="text-red-400" />,
 };
 
 const PRIORITY_COLOR = {
-  high:   "text-red-400",
+  high: "text-red-400",
   medium: "text-amber-400",
-  low:    "text-zinc-400",
+  low: "text-zinc-400",
 };
 
 const PRIORITY_DOT = {
-  high:   "bg-red-400",
+  high: "bg-red-400",
   medium: "bg-amber-400",
-  low:    "bg-zinc-500",
+  low: "bg-zinc-500",
 };
 
 const TASK_STATUS_STYLE = {
-  todo:       "bg-zinc-800 text-zinc-400",
+  todo: "bg-zinc-800 text-zinc-400",
   inprogress: "bg-blue-500/15 text-blue-400",
-  done:       "bg-emerald-500/15 text-emerald-400",
-  blocked:    "bg-red-500/15 text-red-400",
+  done: "bg-emerald-500/15 text-emerald-400",
+  blocked: "bg-red-500/15 text-red-400",
 };
 
 const TASK_STATUS_LABEL = {
-  todo:       "To Do",
+  todo: "To Do",
   inprogress: "In Progress",
-  done:       "Done",
-  blocked:    "Blocked",
+  done: "Done",
+  blocked: "Blocked",
 };
 
 const isOverdue = (task) =>
   task.dueDate && task.Status !== "done" && new Date(task.dueDate) < new Date();
 
 const EMPTY_FILTERS = {
-  status:     "",
-  priority:   "",
-  due:        "",
+  status: "",
+  priority: "",
+  due: "",
   assigneeId: "",
-  projectId:  "",
+  projectId: "",
 };
 
 const CustomSelect = ({ label, value, options, onChange }) => {
@@ -135,10 +135,10 @@ const FilterPanel = ({ filters, onChange, onClose }) => {
         label="Status"
         value={filters.status}
         options={[
-          { value: "todo",       label: "To Do" },
+          { value: "todo", label: "To Do" },
           { value: "inprogress", label: "In Progress" },
-          { value: "done",       label: "Done" },
-          { value: "blocked",    label: "Blocked" },
+          { value: "done", label: "Done" },
+          { value: "blocked", label: "Blocked" },
         ]}
         onChange={(v) => set("status", v)}
       />
@@ -147,9 +147,9 @@ const FilterPanel = ({ filters, onChange, onClose }) => {
         label="Priority"
         value={filters.priority}
         options={[
-          { value: "high",   label: "High" },
+          { value: "high", label: "High" },
           { value: "medium", label: "Medium" },
-          { value: "low",    label: "Low" },
+          { value: "low", label: "Low" },
         ]}
         onChange={(v) => set("priority", v)}
       />
@@ -159,8 +159,8 @@ const FilterPanel = ({ filters, onChange, onClose }) => {
         value={filters.due}
         options={[
           { value: "overdue", label: "Overdue" },
-          { value: "today",   label: "Due Today" },
-          { value: "week",    label: "Due This Week" },
+          { value: "today", label: "Due Today" },
+          { value: "week", label: "Due This Week" },
         ]}
         onChange={(v) => set("due", v)}
       />
@@ -174,9 +174,8 @@ const FilterPanel = ({ filters, onChange, onClose }) => {
     </div>
   );
 };
-
-const TaskTableRow = ({ task, isLast,click }) => (
-  <tr onClick={()=> click(task)} className="group border-b border-zinc-800/60 last:border-b-0">
+const TaskTableRow = ({ task, isLast, click }) => (
+  <tr onClick={() => click(task)} className="group border-b border-zinc-800/60 last:border-b-0">
     <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
       <div className="flex items-center gap-2.5">
         {STATUS_ICON[task.Status]}
@@ -203,22 +202,12 @@ const TaskTableRow = ({ task, isLast,click }) => (
     </td>
 
     <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
-      {task.assignees?.length ? (
-        <div className="flex -space-x-2">
-          {task.assignees.slice(0, 3).map((a) => (
-            <div
-              key={a.user_id}
-              title={a.user?.name}
-              className="w-6 h-6 rounded-full bg-zinc-700 border border-zinc-900 flex items-center justify-center text-[10px] text-zinc-300 font-medium uppercase"
-            >
-              {a.user?.name?.[0] ?? "?"}
-            </div>
-          ))}
-          {task.assignees.length > 3 && (
-            <div className="w-6 h-6 rounded-full bg-zinc-700 border border-zinc-900 flex items-center justify-center text-[10px] text-zinc-400">
-              +{task.assignees.length - 3}
-            </div>
-          )}
+      {task.assigneeCount > 0 ? (
+        <div>
+          <AssigneeCell
+            taskId={task.id}
+            assigneeCount={task.assigneeCount}
+          />
         </div>
       ) : (
         <span className="text-zinc-600 text-xs">—</span>
@@ -246,31 +235,31 @@ const LIMIT = 20;
 
 const Task = () => {
   const { org } = useOutletContext();
-  const [tasks, setTasks]           = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [search, setSearch]         = useState("");
-  const [filters, setFilters]       = useState({ ...EMPTY_FILTERS });
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
   const [filterOpen, setFilterOpen] = useState(false);
   const [cursorStack, setCursorStack] = useState([undefined]);
   const [currentPage, setCurrentPage] = useState(0);
   const [nextCursor, setNextCursor] = useState(null);
-  const [total, setTotal]           = useState(0);
+  const [total, setTotal] = useState(0);
   const navigate = useNavigate();
-  const filterRef   = useRef(null);
+  const filterRef = useRef(null);
   const searchTimer = useRef(null);
   const activeCount = Object.values(filters).filter(Boolean).length;
   const orgId = org?.id;
-  
+
 
   const buildQuery = useCallback(
     (cursor) => {
       const p = new URLSearchParams();
       p.set("limit", LIMIT);
-      if (cursor)              p.set("cursor",     cursor);
-      if (search.trim())       p.set("search",     search.trim());
-      if (filters.status)      p.set("status",     filters.status);
-      if (filters.priority)    p.set("priority",   filters.priority);
-      if (filters.due)         p.set("due",        filters.due);
+      if (cursor) p.set("cursor", cursor);
+      if (search.trim()) p.set("search", search.trim());
+      if (filters.status) p.set("status", filters.status);
+      if (filters.priority) p.set("priority", filters.priority);
+      if (filters.due) p.set("due", filters.due);
       return p.toString();
     },
     [search, filters]
@@ -281,11 +270,11 @@ const Task = () => {
       if (!orgId) return;
       setLoading(true);
       try {
-        const res  = await api.get(`/orgs/${orgId}/tasks?${buildQuery(cursor)}`);
+        const res = await api.get(`/orgs/${orgId}/tasks?${buildQuery(cursor)}`);
         const data = await res.data;
-        setTasks(data?.tasks       ?? []);
+        setTasks(data?.formattedTasks ?? []);
         setNextCursor(data?.nextCursor ?? null);
-        setTotal(data?.total       ?? 0);
+        setTotal(data?.total ?? 0);
       } catch (err) {
         console.error(err);
       } finally {
@@ -325,7 +314,7 @@ const Task = () => {
   }
 
   const pageStart = currentPage * LIMIT + 1;
-  const pageEnd   = Math.min(pageStart + tasks.length - 1, total);
+  const pageEnd = Math.min(pageStart + tasks.length - 1, total);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-6 md:p-8">
@@ -352,11 +341,10 @@ const Task = () => {
         <div className="relative" ref={filterRef}>
           <button
             onClick={() => setFilterOpen((o) => !o)}
-            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${
-              activeCount > 0
+            className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${activeCount > 0
                 ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
                 : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
-            }`}
+              }`}
           >
             <SlidersHorizontal size={15} />
             {activeCount > 0 && (
@@ -376,7 +364,7 @@ const Task = () => {
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 overflow-hidden">
+      <div className="rounded-xl border border-zinc-800">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-zinc-500 gap-2">
             <Loader2 size={18} className="animate-spin" />
@@ -411,12 +399,13 @@ const Task = () => {
             </thead>
             <tbody>
               {tasks.map((task, idx) => (
-                <TaskTableRow
-                  key={task.id}
-                  task={task}
-                  isLast={idx === tasks.length - 1}
-                  click={handleClickTask}
-                />
+                (console.log(task),
+                  <TaskTableRow
+                    key={task.id}
+                    task={task}
+                    isLast={idx === tasks.length - 1}
+                    click={handleClickTask}
+                  />)
               ))}
             </tbody>
           </table>

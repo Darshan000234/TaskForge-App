@@ -23,12 +23,18 @@ export const TaskData = async (req, res) => {
       }),
       where: { project_id: id },
       orderBy: { id: "asc" },
-      include: {
-        assignees: {
+      select: {
+        id: true,
+        name: true,
+        Description: true,
+        Status: true,
+        priority: true,
+        dueDate: true,
+        project_id: true,
+        org_id: true,
+        _count: {
           select: {
-            user: {
-              select: { id: true, name: true, email: true }
-            },
+            assignees: true,
           },
         },
       },
@@ -46,12 +52,15 @@ export const TaskData = async (req, res) => {
       dueDate: t.dueDate,
       projectId: t.project_id,
       orgId: t.org_id,
-      assignees: t.assignees.map((a) => a.user),
+      assigneeCount: t._count.assignees,
     }));
 
-    const nextCursor = hasMore ? page_slice[page_slice.length - 1].id : null;
+    const nextCursor = hasMore
+      ? page_slice[page_slice.length - 1].id
+      : null;
 
     res.status(200).json({ result, nextCursor, hasMore });
+
   } catch (error) {
     console.error("TaskData:", error.message);
     res.status(500).json({ message: error.message });
@@ -217,13 +226,15 @@ export const AddTask = async (req, res) => {
       newValue: { name: result.name, Status: result.Status, priority: result.priority, dueDate: result.dueDate, assignees: result.assignees.map((u) => ({ id: u.id, name: u.name })) },
       metadata: meta(req),
     });
-    const delay = task.dueDate.getTime() - Date.now();
+    const REMINDER_OFFSET = 60 * 60 * 1000;
+    const dueDate = new Date(task.dueDate);
+    const delay = dueDate.getTime() - Date.now() - REMINDER_OFFSET;    
     const taskId = task.id;
     await reminderQueue.add(
       "task_reminder",
-      taskId,
+      {taskId},
       {
-        delay,
+        delay: Math.max(0,delay),
         jobId: `task_reminder_${taskId}`,
       }
     );
@@ -399,13 +410,14 @@ export const UpdateTask = async (req, res) => {
     });
 
     await reminderQueue.remove(`task_reminder_${updated.id}`);
-    const delay = updated.dueDate.getTime() - Date.now();
+    const REMINDER_OFFSET = 60 * 60 * 1000;
+    const delay = task.dueDate.getTime() - Date.now() - REMINDER_OFFSET;
     const taskId =  updated.id;
     await reminderQueue.add(
       "task_reminder",
       {taskId},
       {
-        delay,
+        delay: Math.max(0, delay),
         jobId: `task_reminder_${taskId}`,
       }
     );
@@ -600,5 +612,27 @@ export const StatsData = async (req, res) => {
   } catch (error) {
     console.log("StatsData error:", error.message);
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const getTaskAssignees = async (req, res) => {
+  const taskId = Number(req.params.id);
+
+  try {
+    const assignees = await prisma.task_assignee.findMany({
+      where: { task_id: taskId },
+      select: {
+        user: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    });
+
+    res.status(202).json({
+      users: assignees.map(a => a.user)
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

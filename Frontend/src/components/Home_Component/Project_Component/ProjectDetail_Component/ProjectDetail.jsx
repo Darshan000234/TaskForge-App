@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams,useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckSquare, Users, History } from "lucide-react";
 import api from "../../../../api/api";
 import ProjectInfoCard from "./ProjectInfoCard";
@@ -20,7 +20,7 @@ const TABS = [
 
 const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
   const { id } = useParams();
-  const [User,setUser] = useState({});
+  const [User, setUser] = useState({});
   const [project, setProject] = useState(null);
   const [org, setOrg] = useState(null);
   const [activeSection, setActiveSection] = useState("tasks");
@@ -54,14 +54,14 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
 
   useEffect(() => {
     const handleProjectDelete = () => {
-      navigate('/user/dashboard/projects' , { replace: true });
+      navigate('/user/dashboard/projects', { replace: true });
     }
     socket.on("project_deleted", handleProjectDelete);
     return () => {
       socket.off("project_deleted", handleProjectDelete);
     }
   }, []);
-  
+
   const handleOverdueClick = () => {
     setActiveSection("tasks");
     setFilterOverride({ due: "overdue", _t: Date.now() });
@@ -69,7 +69,7 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
 
   const handleUpdate = async (proj) => {
     try {
-      const res = await api.post("orgs/proj/update", {proj : proj,org_id : org.id});
+      const res = await api.post("orgs/proj/update", { proj: proj, org_id: org.id });
       setProject(res.data.data);
       toast.success("successfully Updated");
     } catch (error) {
@@ -77,10 +77,26 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
     }
   }
 
+  const handleTaskAssigneeRemoved = useCallback((taskId, memberId) => {
+    setTasks((prev) =>
+      prev.map((task) => {
+        if (task.id !== taskId) return task;
+        return {
+          ...task,
+          assignees:
+            task.assignees !== null
+              ? task.assignees.filter((a) => a.id !== memberId)
+              : null,
+          assigneeCount: Math.max((task.assigneeCount || 1) - 1, 0),
+        };
+      })
+    );
+  }, []);
+
   const handleOnback = () => {
     navigate('/user/dashboard/projects')
   }
-  
+
   if (!project) return null;
 
   return (
@@ -108,8 +124,8 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
             key={key}
             onClick={() => setActiveSection(key)}
             className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-md text-sm transition ${activeSection === key
-                ? "bg-zinc-700 text-white font-medium"
-                : "text-zinc-500 hover:text-zinc-300"
+              ? "bg-zinc-700 text-white font-medium"
+              : "text-zinc-500 hover:text-zinc-300"
               }`}
           >
             {icon}{label}
@@ -131,10 +147,9 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
 
         {activeSection === "team" && (
           <TeamSection
-            tasks={tasks}
             org={org}
             proj_id={id}
-            setTasks={setTasks}
+            onTaskAssigneeRemoved={handleTaskAssigneeRemoved}
           />
         )}
 
@@ -144,7 +159,7 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
               <History size={12} />Activity Log — {auditLogs.length} entries
             </p>
             <div className="border border-zinc-800 rounded-2xl">
-              <AuditLogList proj_id={id} api={api} compact={true} limit={8}/>
+              <AuditLogList proj_id={id} api={api} compact={true} limit={8} />
             </div>
           </div>
         )}

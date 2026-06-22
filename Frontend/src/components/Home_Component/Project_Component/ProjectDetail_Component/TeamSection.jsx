@@ -1,15 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Users, Trash2, Loader2 } from "lucide-react";
 import TeamTaskCell from "./TeamTaskCell";
 import api from "../../../../api/api";
 import toast from "react-hot-toast";
 import socket from "../../../../socket/socket.js";
-import Pagination from "../Pagination.jsx";
 
-const TeamRow = ({ member, isLast, org, onRemoveMember, onRemoveTaskFromMember, proj_id,taskCount }) => (
-
+const TeamRow = ({
+  member,
+  isLast,
+  org,
+  onRemoveMember,
+  onRemoveTask,
+  onTasksLoaded,
+  proj_id,
+}) => (
   <tr className="group border-b border-zinc-800/60 last:border-b-0">
-
     <td className={`px-6 py-4 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
       <div className="w-9 h-9 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-semibold border border-blue-400/30">
         {member.name?.charAt(0).toUpperCase()}
@@ -28,10 +33,12 @@ const TeamRow = ({ member, isLast, org, onRemoveMember, onRemoveTaskFromMember, 
       <div className="min-w-55">
         <TeamTaskCell
           memberId={member.memberId}
-          canEdit={org?.role === "admin"}
-          onRemoveTaskFromMember={onRemoveTaskFromMember}
           proj_id={proj_id}
-          taskCount={taskCount}
+          tasks={member.tasks}
+          taskCount={member.taskCount}
+          canEdit={org?.role === "admin"}
+          onRemoveTask={(taskId) => onRemoveTask(taskId, member.memberId)}
+          onTasksLoaded={onTasksLoaded}
         />
       </div>
     </td>
@@ -39,10 +46,7 @@ const TeamRow = ({ member, isLast, org, onRemoveMember, onRemoveTaskFromMember, 
     {org?.role === "admin" && (
       <td className={`px-6 py-4 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-br-xl" : ""}`}>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemoveMember(member.memberId);
-          }}
+          onClick={(e) => { e.stopPropagation(); onRemoveMember(member.memberId); }}
           className="p-2 rounded-md cursor-pointer hover:bg-red-500/15 text-zinc-500 hover:text-red-400 transition"
         >
           <Trash2 size={16} />
@@ -52,15 +56,13 @@ const TeamRow = ({ member, isLast, org, onRemoveMember, onRemoveTaskFromMember, 
   </tr>
 );
 
+const LIMIT = 10;
 
-const TeamSection = ({ org, proj_id, setTasks }) => {
-  const LIMIT = 10;
-
+const TeamSection = ({ org, proj_id, onTaskAssigneeRemoved }) => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
-
 
   useEffect(() => {
     if (!proj_id) return;
@@ -69,7 +71,6 @@ const TeamSection = ({ org, proj_id, setTasks }) => {
     setHasMore(false);
     fetchTeam(null);
   }, [proj_id]);
-
 
   const fetchTeam = async (cursorValue) => {
     if (loading) return;
@@ -80,9 +81,12 @@ const TeamSection = ({ org, proj_id, setTasks }) => {
 
       const res = await api.get(`/proj/team/${proj_id}?${params}`);
       const { result, nextCursor: nc, hasMore: hm } = res.data;
-      console.log(res);
-      
-      setTeamMembers((prev) => cursorValue ? [...prev, ...result] : result);
+
+      const normalised = result.map((m) => ({ ...m, tasks: null }));
+
+      setTeamMembers((prev) =>
+        cursorValue ? [...prev, ...normalised] : normalised
+      );
       setNextCursor(nc);
       setHasMore(hm);
     } catch (err) {
@@ -98,7 +102,7 @@ const TeamSection = ({ org, proj_id, setTasks }) => {
 
 
   useEffect(() => {
-    const handleDeleteMemberSocket = ({ data }) => {
+    const handleDeleteMember = ({ data }) => {
       setTeamMembers((prev) => prev.filter((m) => m.memberId !== data.id));
     };
 
@@ -109,41 +113,54 @@ const TeamSection = ({ org, proj_id, setTasks }) => {
         const updated = res.data.result;
         setTeamMembers((prev) => {
           const map = new Map(prev.map((m) => [m.memberId, m]));
-          updated.forEach((m) => map.set(m.memberId, m));
+          updated.forEach((m) => {
+            const existing = map.get(m.memberId);
+            map.set(m.memberId, {
+              ...m,
+              tasks: existing?.tasks ?? null,
+            });
+          });
           return Array.from(map.values());
         });
       } catch { }
     };
 
-    const onRemovedMember = ({ task_id, user_id }) => {
+    const handleRemovedMember = ({ task_id, user_id }) => {
       setTeamMembers((prev) =>
-        prev.map((m) =>
-          m.id === user_id
-            ? { ...m, tasks: (m.tasks ?? []).filter((t) => t.id !== task_id) }
-            : m
-        )
+        prev.map((m) => {
+          if (m.memberId !== user_id) return m;
+          const updatedTasks =
+            m.tasks !== null
+              ? m.tasks.filter((t) => t.id !== task_id)
+              : null;
+          return {
+            ...m,
+            tasks: updatedTasks,
+            taskCount: Math.max((m.taskCount || 1) - 1, 0),
+          };
+        })
       );
     };
 
-    socket.on("delete Member", handleDeleteMemberSocket);
+    socket.on("delete Member", handleDeleteMember);
     socket.on("add task", handleMembersUpdate);
     socket.on("task_deleted", handleMembersUpdate);
     socket.on("Add member", handleMembersUpdate);
-    socket.on("removed member", onRemovedMember);
+    socket.on("removed member", handleRemovedMember);
 
     return () => {
-      socket.off("delete Member", handleDeleteMemberSocket);
+      socket.off("delete Member", handleDeleteMember);
       socket.off("add task", handleMembersUpdate);
       socket.off("task_deleted", handleMembersUpdate);
       socket.off("Add member", handleMembersUpdate);
-      socket.off("removed member", onRemovedMember);
+      socket.off("removed member", handleRemovedMember);
     };
   }, [proj_id]);
 
 
   const handleRemoveMember = async (memberId) => {
     try {
-      await api.post(`proj/team/${proj_id}/delete`, { user_id: memberId, proj_id: proj_id });
+      await api.post(`proj/team/${proj_id}/delete`, { user_id: memberId, proj_id });
       setTeamMembers((prev) => prev.filter((m) => m.memberId !== memberId));
       toast.success("Member removed");
     } catch (err) {
@@ -151,21 +168,46 @@ const TeamSection = ({ org, proj_id, setTasks }) => {
     }
   };
 
-  const handleRemoveTaskFromMember = async (taskId, memberId) => {
+  const handleRemoveTask = async (taskId, memberId) => {
     try {
-      await api.post(`proj/team/delete/task`, { task_id: taskId, user_id: memberId, proj_id: proj_id });
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.id === taskId
-            ? { ...task, assignees: task.assignees.filter((a) => a.id !== memberId) }
-            : task
-        )
+      await api.post(`proj/team/delete/task`, {
+        task_id: taskId,
+        user_id: memberId,
+        proj_id,
+      });
+
+      setTeamMembers((prev) =>
+        prev.map((m) => {
+          if (m.memberId !== memberId) return m;
+          const updatedTasks =
+            m.tasks !== null
+              ? m.tasks.filter((t) => t.id !== taskId)
+              : null;
+          return {
+            ...m,
+            tasks: updatedTasks,
+            taskCount: Math.max((m.taskCount || 1) - 1, 0),
+          };
+        })
       );
+
+      onTaskAssigneeRemoved?.(taskId, memberId);
+
       toast.success("Task removed from member");
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     }
   };
+
+  const handleTasksLoaded = useCallback((memberId, tasks) => {
+    setTeamMembers((prev) =>
+      prev.map((m) =>
+        m.memberId === memberId
+          ? { ...m, tasks, taskCount: tasks.length }
+          : m
+      )
+    );
+  }, []);
 
 
   return (
@@ -196,20 +238,18 @@ const TeamSection = ({ org, proj_id, setTasks }) => {
                 </tr>
               </thead>
               <tbody>
-                {teamMembers.map((m, i) => {
-                  return (
-                    <TeamRow
-                      key={m.memberId}
-                      member={m}
-                      isLast={i === teamMembers.length - 1 && !hasMore}
-                      org={org}
-                      onRemoveMember={handleRemoveMember}
-                      onRemoveTaskFromMember={handleRemoveTaskFromMember}
-                      proj_id={proj_id}
-                      taskCount={m.taskCount}
-                    />
-                  );
-                })}
+                {teamMembers.map((m, i) => (
+                  <TeamRow
+                    key={m.memberId}
+                    member={m}
+                    isLast={i === teamMembers.length - 1 && !hasMore}
+                    org={org}
+                    proj_id={proj_id}
+                    onRemoveMember={handleRemoveMember}
+                    onRemoveTask={handleRemoveTask}
+                    onTasksLoaded={handleTasksLoaded}
+                  />
+                ))}
 
                 {loading && Array.from({ length: 3 }).map((_, i) => (
                   <tr key={`skel-${i}`} className="border-b border-zinc-800/40">

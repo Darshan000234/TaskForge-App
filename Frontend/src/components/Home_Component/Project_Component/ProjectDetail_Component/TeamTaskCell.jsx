@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Circle, Clock, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { ChevronDown, Circle, Clock, CheckCircle2, AlertCircle, X, Loader2 } from "lucide-react";
 import { PRIORITY_COLOR } from "./constants";
 import toast from "react-hot-toast";
 import api from "../../../../api/api.js";
@@ -15,50 +15,59 @@ function useClickOutside(ref, cb) {
 }
 
 const STATUS_ICON = {
-  todo: <Circle size={13} className="text-zinc-500" />,
-  inprogress: <Clock size={13} className="text-yellow-400" />,
-  done: <CheckCircle2 size={13} className="text-emerald-400" />,
-  blocked: <AlertCircle size={13} className="text-red-400" />,
+  todo:       <Circle       size={13} className="text-zinc-500" />,
+  inprogress: <Clock        size={13} className="text-yellow-400" />,
+  done:       <CheckCircle2 size={13} className="text-emerald-400" />,
+  blocked:    <AlertCircle  size={13} className="text-red-400" />,
 };
 
 const TeamTaskCell = ({
   memberId,
-  canEdit = false,
-  onRemoveTaskFromMember,
   proj_id,
-  taskCount
+  tasks: parentTasks = null,
+  taskCount = 0,
+  canEdit = false,
+  onRemoveTask,
+  onTasksLoaded,
 }) => {
-  const [open, setOpen] = useState(false);
-  const [tasks, setTasks] = useState([]);
+  const [open, setOpen]       = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetched, setFetched] = useState(false);
 
   const ref = useRef(null);
   useClickOutside(ref, () => setOpen(false));
 
-  const fetchTasks = async () => {
-    if (!memberId || !proj_id) return;
-
+  const fetchTasks = useCallback(async () => {
+    if (fetched || !memberId || !proj_id) return;
     setLoading(true);
     try {
       const res = await api.get(`/proj/team/member/${proj_id}/${memberId}`);
-      setTasks(res.data.result || []);
+      const result = res.data.result || [];
+      setFetched(true);
+      onTasksLoaded?.(memberId, result);
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetched, memberId, proj_id, onTasksLoaded]);
 
-  useEffect(() => {
-    if (open) {
-      fetchTasks();
-    }
-  }, [open, memberId, proj_id]); 
-
-  const toggle = (e) => {
+  const toggle = async (e) => {
     e.stopPropagation();
+    if (!open && parentTasks === null) {
+      await fetchTasks();
+    }
     setOpen((prev) => !prev);
   };
+
+  const handleRemove = (e, taskId) => {
+    e.stopPropagation();
+    onRemoveTask?.(taskId);
+  };
+
+  const hasLoaded    = parentTasks !== null;
+  const displayCount = hasLoaded ? parentTasks.length : taskCount;
+  const displayList  = parentTasks ?? [];
 
   return (
     <div className="relative w-fit" ref={ref}>
@@ -67,7 +76,7 @@ const TeamTaskCell = ({
         className="flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white"
       >
         <span className="px-2 py-0.5 rounded-md bg-zinc-800 font-medium">
-          {taskCount}
+          {displayCount}
         </span>
         <ChevronDown size={12} className="text-zinc-500 cursor-pointer" />
       </button>
@@ -79,43 +88,32 @@ const TeamTaskCell = ({
           </p>
 
           {loading && (
-            <p className="px-3 py-3 text-xs text-zinc-500">Loading...</p>
+            <p className="px-3 py-3 text-xs text-zinc-500 flex items-center gap-2">
+              <Loader2 size={12} className="animate-spin" /> Loading...
+            </p>
           )}
 
-          {!loading && tasks.length === 0 && (
+          {!loading && displayList.length === 0 && (
             <p className="px-3 py-3 text-xs text-zinc-500">No tasks</p>
           )}
 
-          {tasks.map((t) => (
+          {displayList.map((t) => (
             <div
               key={t.id}
               className="flex items-center gap-2 px-3 py-2 hover:bg-zinc-800 group"
             >
               {STATUS_ICON[t.Status]}
-
-              <span className="flex-1 text-xs text-zinc-300 truncate">
-                {t.name}
-              </span>
-
+              <span className="flex-1 text-xs text-zinc-300 truncate">{t.name}</span>
               <span className={`text-[10px] ${PRIORITY_COLOR[t.priority]}`}>
                 {t.priority}
               </span>
-
               {canEdit && (
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveTaskFromMember(t.id, memberId);
-                      setTasks((prev) =>
-                        prev.filter((task) => task.id !== t.id)
-                      );
-                    }}
-                    className="p-1 rounded-md hover:bg-red-500/15 text-zinc-500 hover:text-red-400"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => handleRemove(e, t.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-red-500/15 text-zinc-500 hover:text-red-400 transition cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
               )}
             </div>
           ))}

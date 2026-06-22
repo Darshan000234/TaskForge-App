@@ -33,7 +33,8 @@ export const generateRefreshToken = async (user) => {
 export const refreshToken = async (req, res) => {
     const token = req.cookies.refreshToken;
     if (!token) return res.status(401).json({ message: 'unauthorized' });
-
+    // console.log(0);
+    
     try {
         // console.log(token);
         const decoded = jwt.verify(token, process.env.JWT_REFRESH_TOKEN);

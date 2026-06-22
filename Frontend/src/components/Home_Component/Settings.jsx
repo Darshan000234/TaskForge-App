@@ -162,7 +162,7 @@ const Settings = ({ isOpen, onClose }) => {
                 <h2 className="text-white font-semibold text-base">Settings</h2>
                 <button
                   onClick={onClose}
-                  className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition"
+                  className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition cursor-pointer"
                 >
                   <X size={18} />
                 </button>

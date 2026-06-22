@@ -209,17 +209,22 @@ export const StatsData = async (req, res) => {
 
     const [taskcount] = await prisma.$queryRaw`
       SELECT 
-        COUNT(*) AS total_task,
-        COUNT(*) FILTER (
+        COUNT(DISTINCT t.id) AS total_task,
+        COUNT(DISTINCT t.id) FILTER (
           WHERE t."dueDate" < NOW() 
           AND t."Status" != 'completed'
         ) AS overdue_task
       FROM task t
-      INNER JOIN task_assignee ta 
-        ON ta."task_id" = t."id"
+      LEFT JOIN org o 
+        ON o.id = t.org_id
+      LEFT JOIN project p 
+        ON p.id = t.project_id
+      LEFT JOIN task_assignee ta 
+        ON ta.task_id = t.id 
+        AND ta.user_id = ${user_id}
       WHERE 
-        ta."org_id" = ${org_id}
-        AND ta."user_id" = ${user_id};
+        t.org_id = ${org_id}
+        AND ( o."userId" = ${user_id} OR p."assigned_to" = ${user_id} OR ta.user_id = ${user_id} );
     `;
 
     const result = {
@@ -344,17 +349,12 @@ export const getOrgTasks = async (req, res) => {
           priority: true,
           dueDate: true,
           createdAt: true,
-
           project: {
             select: { id: true, name: true },
           },
-
-          assignees: {
+          _count: {
             select: {
-              user_id: true,
-              user: {
-                select: { id: true, name: true },
-              },
+              assignees: true,
             },
           },
         },
@@ -362,14 +362,24 @@ export const getOrgTasks = async (req, res) => {
 
       prisma.task.count({ where }),
     ]);
-
+    const formattedTasks = tasks.map((t) => ({
+      id: t.id,
+      name: t.name,
+      Description: t.Description,
+      Status: t.Status,
+      priority: t.priority,
+      dueDate: t.dueDate,
+      createdAt: t.createdAt,
+      project: t.project,
+      assigneeCount: t._count.assignees,
+    }));
     const hasNext = tasks.length > limit;
     if (hasNext) tasks.pop();
 
     const nextCursor = hasNext ? tasks[tasks.length - 1]?.id : null;
-    
+
     return res.status(200).json({
-      tasks,
+      formattedTasks,
       nextCursor,
       total
     });

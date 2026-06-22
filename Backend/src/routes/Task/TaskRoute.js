@@ -2,7 +2,7 @@ import express from "express";
 import {
     TaskData, AddTask, DeleteTask, OneTaskData,
     RemoveMemeber, addmember, addmemberData,
-    UpdateTask, StatsData
+    UpdateTask, StatsData, getTaskAssignees
 } from "../../controllers/TaskController.js";
 import { ProjCheckRole } from "../../middlewares/RBACMiddleware.js";
 import { readLimiter, writeLimiter } from "../../middlewares/rateLimiter.js";
@@ -30,4 +30,5 @@ router.post("/delete", ProjCheckRole(), DeleteTask);
 router.post("/update", ProjCheckRole(), UpdateTask);
 router.post("/:id/addmember", ProjCheckRole(), addmember);
 router.post("/:id/removemember", ProjCheckRole(), RemoveMemeber);
+router.get("/:id/assignees", getTaskAssignees);
 export default router;

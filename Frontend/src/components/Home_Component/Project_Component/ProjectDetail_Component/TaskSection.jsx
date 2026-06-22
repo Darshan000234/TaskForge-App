@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, LayoutGrid, List, SlidersHorizontal,
@@ -38,7 +38,7 @@ const AddMemberButton = ({ onClick }) => (
   </button>
 );
 
-const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember, onClick, isAdmin }) => (
+const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember, onClick, isAdmin, onAssigneesLoaded }) => (
   <div onClick={() => onClick?.()} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition group relative">
     {isAdmin && (
       <button
@@ -66,9 +66,12 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
 
     <div className="mt-3 flex items-center justify-between gap-2">
       <AssigneeCell
-        assignees={task.assignees ?? []}
+        taskId={task.id}
+        assignees={task.assignees}
+        assigneeCount={task.assigneeCount}
         canEdit={isAdmin}
         onRemoveMember={(memberId) => onRemoveMember?.(task.id, memberId)}
+        onAssigneesLoaded={onAssigneesLoaded}
       />
       <div className="flex items-center gap-2 text-xs">
         <span className={`capitalize font-medium ${PRIORITY_COLOR[task.priority]}`}>
@@ -93,7 +96,7 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
   </div>
 );
 
-const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenAddMember, onClick, isAdmin }) => (
+const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenAddMember, onClick, isAdmin, onAssigneesLoaded }) => (
   <tr onClick={() => onClick?.()} className="group border-b border-zinc-800/60 last:border-b-0">
     <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
       <div className="flex items-center gap-2.5">
@@ -122,9 +125,12 @@ const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenA
 
     <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 relative cursor-pointer">
       <AssigneeCell
-        assignees={task.assignees ?? []}
-        canEdit={isAdmin === "admin"}
+        taskId={task.id}
+        assignees={task.assignees}
+        assigneeCount={task.assigneeCount}
+        canEdit={isAdmin}
         onRemoveMember={(memberId) => onRemoveMember?.(task.id, memberId)}
+        onAssigneesLoaded={onAssigneesLoaded}
       />
     </td>
 
@@ -209,8 +215,7 @@ const TaskSection = ({
       if (search) params.set("search", search);
 
       const res = await api.get(`proj/task/${proj_id}?${params}`);
-      // console.log(res);
-      
+
       const { result, nextCursor: nc, hasMore: hm } = res.data;
 
       setTasks(prev =>
@@ -260,32 +265,55 @@ const TaskSection = ({
 
     const onRemovedMember = ({ task_id, user_id }) => {
       setTasks((prev) =>
-        prev.map((t) =>
-          t.id === task_id
-            ? { ...t, assignees: (t.assignees ?? []).filter((a) => a.id !== user_id) }
-            : t
-        )
+        prev.map((t) => {
+          if (t.id !== task_id) return t;
+          const updatedAssignees =
+            t.assignees !== null
+              ? t.assignees.filter((a) => a.id !== user_id)
+              : null;
+          return {
+            ...t,
+            assignees: updatedAssignees,
+            assigneeCount: Math.max((t.assigneeCount || 1) - 1, 0),
+          };
+        })
       );
     };
 
     const onMemberAdded = ({ taskId: tid, member }) => {
-      console.log(member);
-      
       setTasks((prev) =>
-        prev.map((t) =>
-          t.id === tid
-            ? { ...t, assignees: [...(t.assignees ?? []), member] }
-            : t
-        )
+        prev.map((t) => {
+          if (t.id !== tid) return t;
+          const alreadyExists =
+            t.assignees !== null && t.assignees.some((a) => a.id === member.id);
+          if (alreadyExists) return t;
+          const updatedAssignees =
+            t.assignees !== null ? [...t.assignees, member] : null;
+          return {
+            ...t,
+            assignees: updatedAssignees,
+            assigneeCount: (t.assigneeCount || 0) + 1,
+          };
+        })
       );
     };
 
     const onDeleteMember = ({ memberId }) => {
       setTasks((prev) =>
-        prev.map((t) => ({
-          ...t,
-          assignees: (t.assignees ?? []).filter((a) => a.id !== memberId),
-        }))
+        prev.map((t) => {
+          const wasAssigned =
+            t.assignees !== null && t.assignees.some((a) => a.id === memberId);
+          return {
+            ...t,
+            assignees:
+              t.assignees !== null
+                ? t.assignees.filter((a) => a.id !== memberId)
+                : null,
+            assigneeCount: wasAssigned
+              ? Math.max((t.assigneeCount || 1) - 1, 0)
+              : t.assigneeCount,
+          };
+        })
       );
     };
 
@@ -317,34 +345,55 @@ const TaskSection = ({
 
   const handleDeleteTask = async (taskId) => {
     try {
-      await api.post(`/proj/task/delete`, { id: taskId, proj_id : proj_id });
+      await api.post(`/proj/task/delete`, { id: taskId, proj_id: proj_id });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (err) {
       toast.error(err.message);
     }
   };
 
+  const handleAssigneesLoaded = useCallback((taskId, users) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, assignees: users, assigneeCount: users.length }
+          : t
+      )
+    );
+  }, []);
+
   const handleAddMember = async (taskId, members) => {
     try {
       const res = await api.post(`proj/task/${taskId}/addmember`, {
         users: members,
         org_id: org.org_id,
-        proj_id : proj_id
+        proj_id,
       });
       const { taskId: tid, members: newMembers } = res.data.result;
+
       setTasks((prev) =>
-        prev.map((t) =>
-          t.id === tid
-            ? {
-              ...t,
-              assignees: [
-                ...(t.assignees ?? []).filter((a) => !newMembers.some((m) => m.id === a.id)),
+        prev.map((t) => {
+          if (t.id !== tid) return t;
+          const updatedAssignees =
+            t.assignees !== null
+              ? [
+                ...t.assignees.filter(
+                  (a) => !newMembers.some((m) => m.id === a.id)
+                ),
                 ...newMembers,
-              ],
-            }
-            : t
-        )
+              ]
+              : null;
+          return {
+            ...t,
+            assignees: updatedAssignees,
+            assigneeCount:
+              updatedAssignees !== null
+                ? updatedAssignees.length
+                : (t.assigneeCount || 0) + newMembers.length,
+          };
+        })
       );
+
       toast.success(`${newMembers.length} member${newMembers.length !== 1 ? "s" : ""} added`);
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
@@ -353,15 +402,22 @@ const TaskSection = ({
 
   const handleRemoveMember = async (taskId, memberId) => {
     try {
-      await api.post(`proj/task/${taskId}/removemember`, { user_id: memberId,proj_id : proj_id });
+      await api.post(`proj/task/${taskId}/removemember`, { user_id: memberId, proj_id });
+
       setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId
-            ? { ...t, assignees: (t.assignees ?? []).filter((a) => a.id !== memberId) }
-            : t
-        )
+        prev.map((t) => {
+          if (t.id !== taskId) return t;
+          const updatedAssignees =
+            t.assignees !== null
+              ? t.assignees.filter((a) => a.id !== memberId)
+              : null;
+          return {
+            ...t,
+            assignees: updatedAssignees,
+            assigneeCount: Math.max((t.assigneeCount || 1) - 1, 0),
+          };
+        })
       );
-      toast.success("Member removed");
     } catch (err) {
       toast.error(err.message);
     }
@@ -371,8 +427,7 @@ const TaskSection = ({
   const handleSearch = (v) => setSearch(v);
 
   const activeCount = Object.values(filters).filter(Boolean).length;
-  const isAdmin = (role && role==="admin" || role==="manager");
-
+  const isAdmin = (role && role === "admin" || role === "manager");
 
   return (
     <div className="flex-1 min-w-0">
@@ -393,8 +448,8 @@ const TaskSection = ({
           <button
             onClick={() => setFilterOpen((o) => !o)}
             className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${activeCount > 0
-                ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
-                : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
+              ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
+              : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
               }`}
           >
             <SlidersHorizontal size={15} />
@@ -465,6 +520,7 @@ const TaskSection = ({
                 onRemoveMember={handleRemoveMember}
                 onOpenAddMember={setAddMemberTarget}
                 onClick={() => handleSelectTask(t)}
+                onAssigneesLoaded={handleAssigneesLoaded}
               />
             ))}
           </div>
@@ -520,6 +576,7 @@ const TaskSection = ({
                     onRemoveMember={handleRemoveMember}
                     onOpenAddMember={setAddMemberTarget}
                     onClick={() => handleSelectTask(t)}
+                    onAssigneesLoaded={handleAssigneesLoaded}
                   />
                 ))}
 

@@ -12,14 +12,27 @@ const api = axios.create({
     withCredentials: true
 });
 
+// 🔴 ONLY THIS (no isRefreshing)
+let refreshPromise = null;
+let refreshQueue = [];
+
+const processQueue = (error, token = null) => {
+    refreshQueue.forEach(p => {
+        if (error) {
+            p.reject(error);
+        } else {
+            p.resolve(token);
+        }
+    });
+    refreshQueue = [];
+};
+
 api.interceptors.request.use(
     (config) => {
         const token = getAccessToken();
-
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
-
         return config;
     },
     (error) => Promise.reject(error)
@@ -35,35 +48,57 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
+        if (error.response.status !== 401) {
+            return Promise.reject(error);
+        }
+
         if (originalRequest._retry) {
             return Promise.reject(error);
         }
 
-        if (error.response.status === 401) {
-            originalRequest._retry = true;
+        originalRequest._retry = true;
 
-            try {
-                const res = await axios.post(
-                    `${URL}/user/refresh`,
-                    {},
-                    { withCredentials: true }
-                );
-                console.log(res);
-                
-                const newAccessToken = res.data.accessToken;
-                setAccessToken(newAccessToken);
-                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-                
-                return api(originalRequest);
-
-            } catch (refreshError) {
-                clearAccessToken();
-                window.location.reload();
-                return Promise.reject(refreshError);
-            }
+        // 🔴 If refresh already running → wait
+        if (refreshPromise) {
+            return new Promise((resolve, reject) => {
+                refreshQueue.push({
+                    resolve: (token) => {
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
+                        resolve(api(originalRequest));
+                    },
+                    reject
+                });
+            });
         }
 
-        return Promise.reject(error);
+        refreshPromise = axios.post(
+            `${URL}/user/refresh`,
+            {},
+            { withCredentials: true }
+        );
+        console.log("REFRESH CALLED");
+        try {
+            const res = await refreshPromise;
+
+            const newToken = res.data.accessToken;
+            setAccessToken(newToken);
+
+            processQueue(null, newToken);
+
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+
+        } catch (err) {
+            processQueue(err, null);
+
+            clearAccessToken();
+            window.location.reload();
+
+            return Promise.reject(err);
+
+        } finally {
+            refreshPromise = null;
+        }
     }
 );
 
