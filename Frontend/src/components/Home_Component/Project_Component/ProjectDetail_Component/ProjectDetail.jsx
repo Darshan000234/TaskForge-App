@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { ArrowLeft, CheckSquare, Users, History } from "lucide-react";
 import api from "../../../../api/api";
 import ProjectInfoCard from "./ProjectInfoCard";
@@ -7,7 +7,7 @@ import StatCards from "./StatCards";
 import TaskSection from "./TaskSection";
 import TeamSection from "./TeamSection";
 import DueTasksCard from "./DueTasksCard";
-import AuditLogCard from "./AuditLogCard";
+// import AuditLogCard from "./AuditLogCard";
 import AuditLogList from "../../AuditLogList.jsx";
 import toast from "react-hot-toast";
 import socket from "../../../../socket/socket.js";
@@ -22,7 +22,7 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
   const { id } = useParams();
   const [User, setUser] = useState({});
   const [project, setProject] = useState(null);
-  const [org, setOrg] = useState(null);
+  const { org } = useOutletContext();
   const [activeSection, setActiveSection] = useState("tasks");
   const [tasks, setTasks] = useState([]);
   const [filterOverride, setFilterOverride] = useState(null);
@@ -33,7 +33,6 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
       try {
         const res = await api.get(`/orgs/proj/one/${id}`);
         setProject(res.data.data);
-        setOrg(res.data.data.org);
         socket.emit("join_proj", id);
       } catch (err) {
         toast.error(err.message)
@@ -68,8 +67,11 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
   };
 
   const handleUpdate = async (proj) => {
+    if(!org) return;
     try {
-      const res = await api.post("orgs/proj/update", { proj: proj, org_id: org.id });
+      // console.log(org.id);
+      
+      const res = await api.post("orgs/proj/update", { proj: proj, org_id: org?.id });
       setProject(res.data.data);
       toast.success("successfully Updated");
     } catch (error) {

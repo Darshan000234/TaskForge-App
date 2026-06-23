@@ -18,15 +18,17 @@ const router = express.Router();
 // router.patch("/:id/reassign",   OrgcheckRole(), writeLimiter, reassignProject);
 // router.post("/update",          OrgcheckRole(), writeLimiter, UpdateProject);
 
-router.get("/one/:id", OneProjData);
-
-router.get("/user/:id", userData);
-router.post("/:id", projData);
-router.post("/members/:id", getMember);
 
 router.post("/", OrgcheckRole(), addProject);
-router.delete("/:id", OrgcheckRole(), projectDelete);
-router.patch("/:id/reassign", OrgcheckRole(), reassignProject);
 router.post("/update", OrgcheckRole(), UpdateProject);
+
+router.patch("/:id/reassign", OrgcheckRole(), reassignProject);
+router.delete("/:id", OrgcheckRole(), projectDelete);
+
+router.get("/one/:id", OneProjData);
+router.get("/user/:id", userData);
+router.get("/data/:orgId", projData);
+
+router.post("/members/:id", getMember);
 
 export default router;

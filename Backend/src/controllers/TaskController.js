@@ -411,7 +411,8 @@ export const UpdateTask = async (req, res) => {
 
     await reminderQueue.remove(`task_reminder_${updated.id}`);
     const REMINDER_OFFSET = 60 * 60 * 1000;
-    const delay = task.dueDate.getTime() - Date.now() - REMINDER_OFFSET;
+    const dueDate = new Date(updated.dueDate);
+    const delay = dueDate.getTime() - Date.now() - REMINDER_OFFSET; 
     const taskId =  updated.id;
     await reminderQueue.add(
       "task_reminder",

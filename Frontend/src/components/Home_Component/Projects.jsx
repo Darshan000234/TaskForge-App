@@ -11,8 +11,8 @@ import ConfirmDeleteModal from "./Project_Component/ConfirmDeleteModal";
 import ReassignManagerModal from "./Project_Component/ReassignManagerModal";
 import toast from "react-hot-toast";
 
-const STATUS_OPTIONS = ["all", "active", "completed", "cancelled", "onhold"];
-const PRIORITY_OPTIONS = ["all", "low", "medium", "high"];
+const STATUS_OPTIONS = ["all", "Active", "completed", "Cancelled","onhold"];
+const PRIORITY_OPTIONS = ["all", "Low", "Medium", "High"];
 const Dropdown = ({ value, options, onChange, label }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -44,24 +44,25 @@ const Dropdown = ({ value, options, onChange, label }) => {
 
 const Projects = () => {
   const navigate = useNavigate();
-  const { org }  = useOutletContext();
+  const { org } = useOutletContext();
+  
+  
+  const [projects, setProjects] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  console.log(projects);
 
-
-  const [projects,       setProjects]       = useState([]);
-  const [nextCursor,     setNextCursor]     = useState(null);
-  const [hasMore,        setHasMore]        = useState(false);
-  const [loading,        setLoading]        = useState(false);
-  const [loadingMore,    setLoadingMore]    = useState(false);
-
-  const [search,         setSearch]         = useState("");
-  const [statusFilter,   setStatusFilter]   = useState("all");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [viewMode,       setViewMode]       = useState("grid");
-  const [showModal,      setShowModal]      = useState(false);
-  const [deleteTarget,   setDeleteTarget]   = useState(null);
+  const [viewMode, setViewMode] = useState("grid");
+  const [showModal, setShowModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [reassignTarget, setReassignTarget] = useState(null);
 
-  
+
   useEffect(() => {
     if (!org) return;
     setProjects([]);
@@ -70,16 +71,15 @@ const Projects = () => {
     fetchProjects(null, true);
   }, [org]);
 
-
   const fetchProjects = async (cursorValue, isInitial = false) => {
     if (isInitial) setLoading(true);
-    else           setLoadingMore(true);
+    else setLoadingMore(true);
 
     try {
       const params = new URLSearchParams({ limit: 12 });
       if (cursorValue) params.set("cursor", cursorValue);
 
-      const res = await api.post(`/orgs/proj/${org.id}?${params}`);
+      const res = await api.get(`/orgs/proj/data/${org.id}?${params}`);
       const { result, nextCursor: nc, hasMore: hm } = res.data;
 
       setProjects((prev) => cursorValue ? [...prev, ...result] : result);
@@ -97,10 +97,13 @@ const Projects = () => {
     if (hasMore && !loadingMore) fetchProjects(nextCursor);
   };
 
-
   useEffect(() => {
     const handleProjectCreated = async (data) => {
-      setProjects((prev) => [data.project, ...prev]);
+      const project = data.project || data;
+
+      if (!project || !project.id) return;
+
+      setProjects((prev) => [project, ...prev]);
       socket.emit("join_proj", { id: data.project.id });
     };
 
@@ -116,13 +119,13 @@ const Projects = () => {
       } catch { }
     };
 
-    socket.on("project_created",  handleProjectCreated);
-    socket.on("project_deleted",  handleProjectDeleted);
+    socket.on("project_created", handleProjectCreated);
+    socket.on("project_deleted", handleProjectDeleted);
     socket.on("project_reassign", handleProjectReassign);
 
     return () => {
-      socket.off("project_created",  handleProjectCreated);
-      socket.off("project_deleted",  handleProjectDeleted);
+      socket.off("project_created", handleProjectCreated);
+      socket.off("project_deleted", handleProjectDeleted);
       socket.off("project_reassign", handleProjectReassign);
     };
   }, []);
@@ -130,7 +133,7 @@ const Projects = () => {
 
   const handleDelete = async (projectId) => {
     try {
-      await api.delete(`/orgs/proj/${projectId}` , {data : {org_id : org.id}});
+      await api.delete(`/orgs/proj/${projectId}`, { data: { org_id: org.id } });
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
     } catch (err) {
       toast.error("Delete failed");
@@ -155,15 +158,16 @@ const Projects = () => {
     navigate(`/user/dashboard/projects/${project.id}`, { replace: true });
   };
 
-
+  const safeProjects = projects.filter(p => p && p.id);
   const filtered = projects.filter((p) => {
-    const matchSearch   = p.name?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus   = statusFilter   === "all" || p.status   === statusFilter;
-    const matchPriority = priorityFilter === "all" || p.priority === priorityFilter;
+    const matchSearch = p?.name?.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "all" || p?.status === statusFilter;
+    const matchPriority = priorityFilter === "all" || p?.priority === priorityFilter;
     return matchSearch && matchStatus && matchPriority;
   });
 
-
+  // console.log(statusFilter,projects);
+  
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
 
@@ -193,7 +197,7 @@ const Projects = () => {
             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:border-zinc-600 transition"
           />
         </div>
-        <Dropdown label="Status"   value={statusFilter}   options={STATUS_OPTIONS}   onChange={setStatusFilter}   />
+        <Dropdown label="Status" value={statusFilter} options={STATUS_OPTIONS} onChange={setStatusFilter} />
         <Dropdown label="Priority" value={priorityFilter} options={PRIORITY_OPTIONS} onChange={setPriorityFilter} />
         <div className="ml-auto flex items-center gap-1 border border-zinc-800 rounded-lg p-1 bg-zinc-900">
           <button
@@ -230,7 +234,7 @@ const Projects = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((project) => (
                 <ProjectCard
-                  key={project.id}
+                  key={project?.id || Math.random()}
                   project={project}
                   org={org}
                   onClick={() => handleProjectClick(project)}
@@ -254,7 +258,7 @@ const Projects = () => {
                 </button>
               </div>
             )}
-            
+
           </>
 
         ) : (

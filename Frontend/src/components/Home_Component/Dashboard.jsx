@@ -76,7 +76,6 @@ const Dashboard = () => {
     const getCardData = async () => {
       const res = await api.get(`/orgs/stats/${org.id}`);
       setCardData(res.data);
-      console.log(res.data);
     };
 
     const getFewTaskData = async () => {

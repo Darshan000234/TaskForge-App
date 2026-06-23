@@ -10,10 +10,11 @@ const meta = (req) => ({ ip: req.ip, userAgent: req.headers["user-agent"] ?? nul
 
 export const projData = async (req, res) => {
     const { id } = req.user;
-    const orgid = Number(req.params.id);
+    // console.log(id);
+    const orgid = Number(req.params.orgId);
     const limit = Math.min(Number(req.query.limit) || 12, 50);
     const cursor = req.query.cursor ? Number(req.query.cursor) : undefined;
-
+    
     try {
         const org = await prisma.org_member.findUnique({
             where: { member_id_org_id: { org_id: orgid, member_id: id } },
@@ -316,4 +317,8 @@ export const userData = async (req,res) => {
     } catch (error) {
         res.status(404).json({ message : error.message });
     }
-}
+};
+
+// export const statsData = async (req, res) => {
+  
+// };

@@ -17,19 +17,20 @@ const StatCard = ({ icon, label, value, accent, onClick }) => (
 
 const StatCards = ({ tasks = [], onOverdueClick }) => {
   const isOverdue = (t) =>
-    t.dueDate && t.status !== "done" && new Date(t.dueDate) < new Date();
-
+    t.dueDate && t.Status !== "done" && new Date(t.dueDate) < new Date();
+  // console.log(tasks);
+  
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
       <StatCard
         label="Completed"
-        value={tasks.filter((t) => t.status === "done").length}
+        value={tasks.filter((t) => t.Status === "done").length}
         icon={<CheckCheck size={20} className="text-emerald-400" />}
         accent="bg-emerald-500/10"
       />
       <StatCard
         label="In Progress"
-        value={tasks.filter((t) => t.status === "inprogress").length}
+        value={tasks.filter((t) => t.Status === "inprogress").length}
         icon={<Clock size={20} className="text-yellow-400" />}
         accent="bg-yellow-500/10"
       />
