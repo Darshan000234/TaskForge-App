@@ -399,13 +399,12 @@ const Task = () => {
             </thead>
             <tbody>
               {tasks.map((task, idx) => (
-                (console.log(task),
-                  <TaskTableRow
+                <TaskTableRow
                     key={task.id}
                     task={task}
                     isLast={idx === tasks.length - 1}
                     click={handleClickTask}
-                  />)
+                />
               ))}
             </tbody>
           </table>

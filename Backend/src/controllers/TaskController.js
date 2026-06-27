@@ -10,19 +10,44 @@ const RT = { TASK: "TASK", PROJECT: "PROJECT", MEMBER: "MEMBER", ORG: "ORG" };
 const meta = (req) => ({ ip: req.ip, userAgent: req.headers["user-agent"] ?? null });
 
 export const TaskData = async (req, res) => {
-  const id = Number(req.params.id);
-  const limit = Math.min(Number(req.query.limit) || 10, 50);
-  const cursor = req.query.cursor ? Number(req.query.cursor) : undefined;
+  const proj_id = Number(req.params.proj_id);
+  const { cursor, limit = 10, status, priority, assignee, search } = req.query;
 
   try {
-    const tasks = await prisma.task.findMany({
-      take: limit + 1,
-      ...(cursor && {
-        skip: 1,
-        cursor: { id: cursor },
+    const take = Number(limit) + 1;
+
+    const where = {
+      project_id: proj_id,
+      ...(status && { Status: status }),
+      ...(priority && { priority }),
+      ...(search && {
+        OR: [
+          {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+          {
+            Description: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        ],
       }),
-      where: { project_id: id },
-      orderBy: { id: "asc" },
+      ...(assignee && {
+        assignees: {
+          some: { user_id: Number(assignee) }
+        }
+      }),
+    };
+
+    const tasks = await prisma.task.findMany({
+      where,
+      take,
+      ...(cursor && { cursor: { id: Number(cursor) }, skip: 1 }),
+      orderBy: { id: "desc" },
       select: {
         id: true,
         name: true,
@@ -30,39 +55,30 @@ export const TaskData = async (req, res) => {
         Status: true,
         priority: true,
         dueDate: true,
-        project_id: true,
-        org_id: true,
         _count: {
-          select: {
-            assignees: true,
-          },
+          select: { assignees: true }
         },
       },
     });
 
-    const hasMore = tasks.length > limit;
-    const page_slice = hasMore ? tasks.slice(0, limit) : tasks;
+    const hasMore = tasks.length > Number(limit);
+    if (hasMore) tasks.pop();
 
-    const result = page_slice.map((t) => ({
+    const result = tasks.map(t => ({
       id: t.id,
       name: t.name,
       Description: t.Description,
       Status: t.Status,
       priority: t.priority,
       dueDate: t.dueDate,
-      projectId: t.project_id,
-      orgId: t.org_id,
       assigneeCount: t._count.assignees,
+      assignees: null,
     }));
 
-    const nextCursor = hasMore
-      ? page_slice[page_slice.length - 1].id
-      : null;
-
+    const nextCursor = hasMore ? tasks[tasks.length - 1].id : null;
+   
     res.status(200).json({ result, nextCursor, hasMore });
-
   } catch (error) {
-    console.error("TaskData:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
@@ -105,7 +121,6 @@ export const OneTaskData = async (req, res) => {
       orgId: tasks.org_id,
       assignees: tasks.assignees.map(a => a.user)
     };
-    // console.log(result);
 
     res.status(202).json({ result });
   } catch (error) {
@@ -228,13 +243,13 @@ export const AddTask = async (req, res) => {
     });
     const REMINDER_OFFSET = 60 * 60 * 1000;
     const dueDate = new Date(task.dueDate);
-    const delay = dueDate.getTime() - Date.now() - REMINDER_OFFSET;    
+    const delay = dueDate.getTime() - Date.now() - REMINDER_OFFSET;
     const taskId = task.id;
     await reminderQueue.add(
       "task_reminder",
-      {taskId},
+      { taskId },
       {
-        delay: Math.max(0,delay),
+        delay: Math.max(0, delay),
         jobId: `task_reminder_${taskId}`,
       }
     );
@@ -249,7 +264,8 @@ export const DeleteTask = async (req, res) => {
   const tid = req.body.id;
   const userId = req.user.id;
   const io = getIO();
-
+  // console.log(tid);
+  
   try {
     const memberIds = await prisma.task_assignee.findMany({ where: { task_id: tid }, select: { user_id: true } });
 
@@ -412,11 +428,11 @@ export const UpdateTask = async (req, res) => {
     await reminderQueue.remove(`task_reminder_${updated.id}`);
     const REMINDER_OFFSET = 60 * 60 * 1000;
     const dueDate = new Date(updated.dueDate);
-    const delay = dueDate.getTime() - Date.now() - REMINDER_OFFSET; 
-    const taskId =  updated.id;
+    const delay = dueDate.getTime() - Date.now() - REMINDER_OFFSET;
+    const taskId = updated.id;
     await reminderQueue.add(
       "task_reminder",
-      {taskId},
+      { taskId },
       {
         delay: Math.max(0, delay),
         jobId: `task_reminder_${taskId}`,
@@ -434,7 +450,6 @@ export const StatsData = async (req, res) => {
   const user_id = Number(req.user.id);
 
   try {
-    // console.log(org_id);
 
     const [orgMember, projectMemberships] = await Promise.all([
       prisma.org_member.findUnique({

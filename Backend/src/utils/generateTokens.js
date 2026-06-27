@@ -39,7 +39,6 @@ export const refreshToken = async (req, res) => {
         // console.log(token);
         const decoded = jwt.verify(token, process.env.JWT_REFRESH_TOKEN);
         // console.log(decoded);
-        
         const hash = crypto.createHash('sha256').update(decoded.jti).digest('hex');
 
         const storedUserId = await redis.get(hash);
@@ -47,8 +46,9 @@ export const refreshToken = async (req, res) => {
             return res.status(403).json({ message: 'token reuse detected' });
         }
 
-        await redis.del(hash);
-
+        const deleted = await redis.del(hash);
+        // console.log("deleted =", deleted);
+        
         const user = { id: decoded.id, email: decoded.email };
 
         const accessToken = generateAccessToken(user);
@@ -60,7 +60,7 @@ export const refreshToken = async (req, res) => {
             secure: false,
             maxAge: REFRESH_EXPIRY * 1000
         });
-        // console.log(accessToken);
+        // console.log("access token gerneated");
         
         res.json({ accessToken });
 

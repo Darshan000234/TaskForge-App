@@ -1,43 +1,72 @@
 import { useState, useEffect } from "react";
-import {  ChevronDown,X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import api from "../../../api/api.js";
 import { useOutletContext } from "react-router-dom";
 
 const INITIAL_FORM = {
-  name: "",
-  Description: "",
-  status: "Active",
-  priority: "Medium",
-  endDate: "",
-  email: "",
-  memberIds: [],
+    name: "",
+    Description: "",
+    status: "Active",
+    priority: "Medium",
+    endDate: "",
+    email: "",
+    memberIds: [],
 };
 
-const NewProjectModal = ({ onClose, onCreated}) => {
+const NewProjectModal = ({ onClose, onCreated }) => {
     const [form, setForm] = useState(INITIAL_FORM);
     const { org } = useOutletContext();
-    const [members,setMembers] = useState([]);
-    const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+    const [members, setMembers] = useState([]);
+    const [errors, setErrors] = useState({});
+
+    const set = (key, value) => {
+        setForm((f) => ({ ...f, [key]: value }));
+
+        if (errors[key]) {
+            setErrors((e) => ({ ...e, [key]: null }));
+        }
+    };
 
     useEffect(() => {
-        const getMembers = async () =>{
+        const getMembers = async () => {
             const response = await api.get(`/orgs/${org.id}/members`);
             setMembers(response.data);
         }
         getMembers();
     }, [])
-    
+
+    const validate = () => {
+        const e = {};
+
+        if (!form.name.trim()) {
+            e.name = "Project name is required";
+        }
+
+        if (!form.endDate) {
+            e.endDate = "End date is required";
+        }
+
+        return e;
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!form.name.trim()) return;
+
+        const e2 = validate();
+
+        if (Object.keys(e2).length) {
+            setErrors(e2);
+            return;
+        }
+
         onCreated({
-            id: '',
+            id: "",
             name: form.name,
             Description: form.Description,
-            status: !form.status ? "active":form.status,
-            priority: form.priority,
-            email : form.email,
-            endDate: form.endDate
+            status: !form.status ? "active" : form.status,
+            priority: !form.priority ? "low" : form.priority,
+            email: form.email,
+            endDate: form.endDate,
         });
     };
 
@@ -75,8 +104,17 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                                 onChange={(e) => set("name", e.target.value)}
                                 type="text"
                                 placeholder="Enter project name"
-                                className={inputCls}
+                                className={`${inputCls} ${errors.name
+                                    ? "border-red-500 focus:border-red-500"
+                                    : ""
+                                    }`}
                             />
+
+                            {errors.name && (
+                                <p className="text-xs text-red-400 mt-1">
+                                    {errors.name}
+                                </p>
+                            )}
                         </div>
 
                         <div>
@@ -130,8 +168,17 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                                     type="date"
                                     value={form.endDate}
                                     onChange={(e) => set("endDate", e.target.value)}
-                                    className={inputCls}
+                                    className={`${inputCls} ${errors.endDate
+                                            ? "border-red-500 focus:border-red-500"
+                                            : ""
+                                        }`}
                                 />
+
+                                {errors.endDate && (
+                                    <p className="text-xs text-red-400 mt-1">
+                                        {errors.endDate}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
@@ -144,7 +191,7 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                                     className={selectCls}
                                 >
                                     <option value="">No lead</option>
-                                    {members.map((m,idx) => (
+                                    {members.map((m, idx) => (
                                         <option key={m.id} value={m.receiver_email}>{m.receiver_email}</option>
                                     ))}
                                 </select>
@@ -152,7 +199,7 @@ const NewProjectModal = ({ onClose, onCreated}) => {
                             </div>
                         </div>
 
-                        
+
                         <div className="flex justify-end gap-3 pt-2">
                             <button
                                 type="button"

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import api from "../../api/api.js";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { clearAccessToken } from "../../utils/authStore.js";
 
 const ConfirmModal = ({ isOpen, onClose, onConfirm, type }) => {
   const isDelete = type === "delete";
@@ -113,10 +114,10 @@ const Settings = ({ isOpen, onClose }) => {
 
   const handleSignOut = async () => {
     try {
-      await api.get("/user/signout");
-      localStorage.removeItem("accessToken");
+      await api.get("/user/logout");
+      clearAccessToken();
       toast.success("Signed out");
-      navigate("/login", { replace: true });
+      navigate("/Signup_login", { replace: true });
     } catch (err) {
       toast.error(err.message)
     }
@@ -125,7 +126,7 @@ const Settings = ({ isOpen, onClose }) => {
   const handleDeleteAccount = async () => {
     try {
       await api.delete("/user/delete-account");
-      localStorage.removeItem("accessToken");
+      clearAccessToken();
       toast.success("Account deleted");
       navigate("/login", { replace: true });
     } catch (err) {

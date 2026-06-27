@@ -366,9 +366,9 @@ const TaskDetail = ({
               ) : (
                 messages.map((msg) => (
                   <MessageItem
-                    key={msg.id}
+                    key={msg?.id}
                     msg={msg}
-                    isOwn={msg.user_id === author.id}
+                    isOwn={msg?.user_id === author?.id}
                   />
                 ))
               )}

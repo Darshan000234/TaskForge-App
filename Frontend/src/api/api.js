@@ -30,6 +30,8 @@ const processQueue = (error, token = null) => {
 api.interceptors.request.use(
     (config) => {
         const token = getAccessToken();
+        // console.log(token);
+        
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -76,13 +78,13 @@ api.interceptors.response.use(
             {},
             { withCredentials: true }
         );
-        console.log("REFRESH CALLED");
         try {
             const res = await refreshPromise;
 
             const newToken = res.data.accessToken;
+            // console.log(newToken);
             setAccessToken(newToken);
-
+            // if(newToken) console.log("refresh was successfull");
             processQueue(null, newToken);
 
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -92,7 +94,7 @@ api.interceptors.response.use(
             processQueue(err, null);
 
             clearAccessToken();
-            window.location.reload();
+            window.location.href = "/Signup_login";
 
             return Promise.reject(err);
 

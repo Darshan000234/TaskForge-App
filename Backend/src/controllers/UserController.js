@@ -98,8 +98,9 @@ export const google = async (req, res) => {
 };
 
 export const LogoutUser = async (req, res) => {
+    console.log(0);
     const token = req.cookies.refreshToken;
-
+    
     if (token) {
         try {
             const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);

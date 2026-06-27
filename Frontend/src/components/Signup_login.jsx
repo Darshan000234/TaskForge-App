@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import googleLogo from '../assets/img/google.png';
@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import api from '../api/api.js';
 import CreateOrgModal from './CreateOrgModal';
-import { setAccessToken } from '../utils/authStore.js';
+import { setAccessToken,getAccessToken } from '../utils/authStore.js';
 
 const URL = import.meta.env.VITE_URL;
 
@@ -23,6 +23,16 @@ const Signup_login = () => {
     Password: 'Password must be at least 8 characters and include letters, numbers, and special characters'
   });
 
+  useEffect(() => {
+    const validate = () => {
+      if(getAccessToken()){
+        navigate('/user/dashboard');
+      }
+    }
+  
+    validate();
+  }, [])
+  
   const validateEmail    = email    => /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
   const validatePassword = password => /^(?=.*[A-Za-z])(?=.*[\d])(?=.*[!@#$%&*^]).{8,}$/.test(password);
 
@@ -35,8 +45,8 @@ const Signup_login = () => {
       } else {
         setOrgModalOpen(true);
       }
-    } catch {
-      navigate('/user/dashboard');
+    } catch (err){
+      console.log(err);
     }
   };
 

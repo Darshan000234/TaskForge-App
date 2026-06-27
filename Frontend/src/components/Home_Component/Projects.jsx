@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Plus, ChevronDown, LayoutGrid, List } from "lucide-react";
 import ProjectRow from "./Project_Component/ProjectRow";
 import EmptyState from "./Project_Component/EmptyState";
@@ -45,14 +45,12 @@ const Dropdown = ({ value, options, onChange, label }) => {
 const Projects = () => {
   const navigate = useNavigate();
   const { org } = useOutletContext();
-  
-  
+
   const [projects, setProjects] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  console.log(projects);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -62,22 +60,26 @@ const Projects = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [reassignTarget, setReassignTarget] = useState(null);
 
-
+  // Debounce search
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef(null);
   useEffect(() => {
-    if (!org) return;
-    setProjects([]);
-    setNextCursor(null);
-    setHasMore(false);
-    fetchProjects(null, true);
-  }, [org]);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(debounceRef.current);
+  }, [search]);
 
-  const fetchProjects = async (cursorValue, isInitial = false) => {
+  const fetchProjects = useCallback(async (cursorValue = null, isInitial = false) => {
+    if (!org) return;
     if (isInitial) setLoading(true);
     else setLoadingMore(true);
 
     try {
       const params = new URLSearchParams({ limit: 12 });
       if (cursorValue) params.set("cursor", cursorValue);
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (priorityFilter !== "all") params.set("priority", priorityFilter);
 
       const res = await api.get(`/orgs/proj/data/${org.id}?${params}`);
       const { result, nextCursor: nc, hasMore: hm } = res.data;
@@ -85,44 +87,48 @@ const Projects = () => {
       setProjects((prev) => cursorValue ? [...prev, ...result] : result);
       setNextCursor(nc);
       setHasMore(hm);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load projects");
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [org, debouncedSearch, statusFilter, priorityFilter]);
+
+  // Reset and refetch whenever org or filters change
+  useEffect(() => {
+    setProjects([]);
+    setNextCursor(null);
+    setHasMore(false);
+    fetchProjects(null, true);
+  }, [fetchProjects]); // fetchProjects memoized via useCallback — changes only when deps change
 
   const loadMore = () => {
     if (hasMore && !loadingMore) fetchProjects(nextCursor);
   };
 
+  // Socket handlers — unchanged from your original
   useEffect(() => {
-    const handleProjectCreated = async (data) => {
+    const handleProjectCreated = (data) => {
       const project = data.project || data;
-
-      if (!project || !project.id) return;
-
+      if (!project?.id) return;
       setProjects((prev) => [project, ...prev]);
-      socket.emit("join_proj", { id: data.project.id });
+      socket.emit("join_proj", { id: project.id });
     };
-
     const handleProjectDeleted = (data) => {
       setProjects((prev) => prev.filter((p) => p.id !== data.id));
     };
-
     const handleProjectReassign = async (data) => {
       try {
         const res = await api.get(`/orgs/proj/one/${data.proj_id}`);
         const updated = res.data.data;
         setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-      } catch { }
+      } catch {}
     };
 
     socket.on("project_created", handleProjectCreated);
     socket.on("project_deleted", handleProjectDeleted);
     socket.on("project_reassign", handleProjectReassign);
-
     return () => {
       socket.off("project_created", handleProjectCreated);
       socket.off("project_deleted", handleProjectDeleted);
@@ -130,12 +136,11 @@ const Projects = () => {
     };
   }, []);
 
-
   const handleDelete = async (projectId) => {
     try {
       await api.delete(`/orgs/proj/${projectId}`, { data: { org_id: org.id } });
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
-    } catch (err) {
+    } catch {
       toast.error("Delete failed");
     } finally {
       setDeleteTarget(null);
@@ -143,30 +148,18 @@ const Projects = () => {
   };
 
   const handleReassigned = (updatedProject) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
-    );
+    setProjects((prev) => prev.map((p) => (p.id === updatedProject.id ? updatedProject : p)));
     setReassignTarget(null);
   };
 
   const handleProjectCreated = async (newProject) => {
     setShowModal(false);
-    await api.post("/orgs/proj/", { proj: newProject, org_id: Number(org.id) });
+    await api.post("/orgs/proj/", { proj: newProject, org_id: Number(org?.id) });
   };
 
   const handleProjectClick = (project) => {
     navigate(`/user/dashboard/projects/${project.id}`, { replace: true });
   };
-
-  const safeProjects = projects.filter(p => p && p.id);
-  const filtered = projects.filter((p) => {
-    const matchSearch = p?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || p?.status === statusFilter;
-    const matchPriority = priorityFilter === "all" || p?.priority === priorityFilter;
-    return matchSearch && matchStatus && matchPriority;
-  });
-
-  // console.log(statusFilter,projects);
   
   return (
     <div className="min-h-screen bg-black text-white px-18 py-15">
@@ -226,13 +219,13 @@ const Projects = () => {
             ))}
           </div>
 
-        ) : filtered.length === 0 && !hasMore ? (
+        ) : projects.length === 0 && !hasMore ? (
           <EmptyState onNew={() => setShowModal(true)} context={{ org }} />
 
         ) : viewMode === "grid" ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filtered.map((project) => (
+              {projects.map((project) => (
                 <ProjectCard
                   key={project?.id || Math.random()}
                   project={project}
@@ -278,7 +271,7 @@ const Projects = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((project) => (
+                  {projects.map((project) => (
                     <ProjectRow
                       key={project.id}
                       project={project}

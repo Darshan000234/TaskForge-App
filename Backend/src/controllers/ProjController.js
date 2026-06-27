@@ -10,25 +10,34 @@ const meta = (req) => ({ ip: req.ip, userAgent: req.headers["user-agent"] ?? nul
 
 export const projData = async (req, res) => {
     const { id } = req.user;
-    // console.log(id);
     const orgid = Number(req.params.orgId);
     const limit = Math.min(Number(req.query.limit) || 12, 50);
     const cursor = req.query.cursor ? Number(req.query.cursor) : undefined;
-    
+
+    const search = req.query.search?.trim() || "";
+    const status = req.query.status || "";
+    const priority = req.query.priority || "";
+
+    const projectWhere = {
+        org_id: orgid,
+        ...(search && { name: { contains: search, mode: "insensitive" } }),
+        ...(status && status !== "all" && { status }),
+        ...(priority && priority !== "all" && { priority }),
+    };
+
     try {
         const org = await prisma.org_member.findUnique({
             where: { member_id_org_id: { org_id: orgid, member_id: id } },
         });
         if (!org) return res.status(403).json({ message: "Not a member of this org" });
 
-        const role = org.role;
         let raw = [];
 
-        if (role === "admin") {
+        if (org.role === "admin") {
             raw = await prisma.project.findMany({
                 take: limit + 1,
                 ...(cursor && { skip: 1, cursor: { id: cursor } }),
-                where: { org_id: orgid },
+                where: projectWhere,
                 orderBy: { id: "asc" },
                 select: {
                     id: true,
@@ -48,14 +57,26 @@ export const projData = async (req, res) => {
         } else {
             raw = await prisma.proj_member.findMany({
                 take: limit + 1,
+                ...(cursor && { skip: 1, cursor: { proj_id_member_id: { proj_id: cursor, member_id: id } } }),
                 where: {
                     org_id: orgid,
                     member_id: id,
-                    ...(cursor && { proj_id: { gt: cursor } }),
+                    project: projectWhere,
                 },
                 orderBy: { proj_id: "asc" },
                 include: {
-                    project: true,
+                    project: {
+                        select: {
+                            id: true,
+                            name: true,
+                            org_id: true,
+                            Description: true,
+                            status: true,
+                            priority: true,
+                            endDate: true,
+                            createdAt: true,
+                        },
+                    },
                     member: { select: { email: true } },
                 },
             });
@@ -112,14 +133,14 @@ export const addProject = async (req, res) => {
     const { proj, org_id } = req.body;
     const userId = req.user.id;
     const io = getIO();
-
+    
     try {
         const user = await prisma.user.findUnique({ where: { email: proj.email } });
 
         const project = await prisma.project.create({
             data: {
                 name: proj.name,
-                org_id: orgid,
+                org_id: org_id,
                 assigned_to: user.id,
                 Description: proj.Description,
                 status: proj.status,
@@ -129,18 +150,18 @@ export const addProject = async (req, res) => {
         });
 
         await prisma.proj_member.create({
-            data: { proj_id: project.id, org_id: orgid, member_id: user.id, role: "manager" },
+            data: { proj_id: project.id, org_id: org_id, member_id: user.id, role: "manager" },
         });
         
         await prisma.proj_member.create({
-            data: { proj_id: project.id, org_id: orgid, member_id: userId, role: "admin" },
+            data: { proj_id: project.id, org_id: org_id, member_id: userId, role: "admin" },
         });
 
         project.email = proj.email;
-        io.to(`org_${orgid}`).emit("project_created", { project });
+        io.to(`org_${org_id}`).emit("project_created", { project });
 
         auditService.log({
-            orgId: orgid, proj_id: project.id, userId,
+            orgId: org_id, proj_id: project.id, userId,
             action: A.CREATED, resourceType: RT.PROJECT, resourceId: project.id,
             newValue: { name: project.name, status: project.status, priority: project.priority, endDate: project.endDate, assignedTo: proj.email },
             metadata: meta(req),
@@ -259,7 +280,7 @@ export const getMember = async (req, res) => {
                 }
             }
         });
-
+        
         res.status(202).json({ data });
     } catch (error) {
         console.log(error.message);
@@ -319,6 +340,4 @@ export const userData = async (req,res) => {
     }
 };
 
-// export const statsData = async (req, res) => {
   
-// };

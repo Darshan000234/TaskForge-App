@@ -27,7 +27,8 @@ const ProjectDetail = ({ auditLogs = MOCK_AUDIT }) => {
   const [tasks, setTasks] = useState([]);
   const [filterOverride, setFilterOverride] = useState(null);
   const navigate = useNavigate();
-
+  // console.log(org);
+  
   useEffect(() => {
     const fetchProject = async () => {
       try {

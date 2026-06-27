@@ -20,7 +20,7 @@ const router = express.Router();
 // router.post("/:id/addmember",       ProjCheckRole, writeLimiter, addmember);
 // router.post("/:id/removemember",    ProjCheckRole, writeLimiter, RemoveMemeber);
 
-router.get("/:id", TaskData);
+router.get("/:proj_id", TaskData);
 router.get("/:id/one", OneTaskData);
 router.get("/stats/:id", StatsData);
 router.post("/:id/addmemberdata", addmemberData);

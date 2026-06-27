@@ -176,8 +176,7 @@ const TaskSection = ({
   const [tasks, setTasks] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasMore, setHasMore] = useState(false);
-  const [loadingTasks, setLoadingTasks] = useState(false);
-
+  const [loadingTasks, setLoadingTasks] = useState(false)
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [addMemberTarget, setAddMemberTarget] = useState(null);
   const [search, setSearch] = useState("");
@@ -213,7 +212,8 @@ const TaskSection = ({
       if (filters.priority) params.set("priority", filters.priority);
       if (filters.assignee) params.set("assignee", filters.assignee);
       if (search) params.set("search", search);
-
+      // console.log(proj_id);
+      
       const res = await api.get(`proj/task/${proj_id}?${params}`);
 
       const { result, nextCursor: nc, hasMore: hm } = res.data;
@@ -248,6 +248,8 @@ const TaskSection = ({
 
   }, [proj_id, filters, search]);
 
+  // console.log(tasks.length);
+  
 
   useEffect(() => {
     const onAddTask = async ({ taskId }) => {
@@ -336,7 +338,7 @@ const TaskSection = ({
 
   const handleAddTask = async (task) => {
     try {
-      await api.post(`proj/task/add`, { task, proj_id: proj_id, orgId: org.org_id });
+      await api.post(`proj/task/add`, { task, proj_id: proj_id, orgId: org.id });
       toast.success("Task added");
     } catch (err) {
       toast.error(err.message);
@@ -347,6 +349,7 @@ const TaskSection = ({
     try {
       await api.post(`/proj/task/delete`, { id: taskId, proj_id: proj_id });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      if(tasks.length < 1) loadMore();
     } catch (err) {
       toast.error(err.message);
     }
@@ -613,7 +616,7 @@ const TaskSection = ({
         <AddTaskModal
           open={addTaskOpen}
           onClose={() => setAddTaskOpen(false)}
-          org_id={org.org_id}
+          org_id={org?.id}
           onSubmit={handleAddTask}
           id={proj_id}
         />

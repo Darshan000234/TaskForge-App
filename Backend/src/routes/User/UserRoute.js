@@ -27,7 +27,7 @@ router.post('/googleauth', google);
 router.post('/refresh', refreshToken);
 
 router.get('/userdata', authMiddleware, userData);
-router.post('/logout', authMiddleware, LogoutUser);
+router.get('/logout', authMiddleware, LogoutUser);
 
 router.delete('/delete-account', authMiddleware, DeleteAccount);
 
