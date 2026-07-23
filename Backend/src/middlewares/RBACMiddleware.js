@@ -44,3 +44,55 @@ export const ProjCheckRole = () => {
         next();
     }
 }
+
+export const TaskCheckRole = () => {
+  return async (req, res, next) => {
+    try {
+      const user_id = req.user.id;
+      const task_id = Number(req.params.id);
+
+      const task = await prisma.task.findUnique({
+        where: { id: task_id },
+        select: { project_id: true },
+      });
+
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const projMember = await prisma.proj_member.findUnique({
+        where: {
+          proj_id_member_id: {
+            proj_id: task.project_id,
+            member_id: user_id,
+          },
+        },
+      });
+
+      if (!projMember) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      if (projMember.role === "admin" || projMember.role === "manager") {
+        return next();
+      }
+
+      const assignment = await prisma.task_assignee.findUnique({
+        where: {
+          task_id_user_id: {
+            task_id,
+            user_id,
+          },
+        },
+      });
+
+      if (!assignment) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      next();
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+  };
+};

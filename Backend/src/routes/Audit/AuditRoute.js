@@ -1,10 +1,9 @@
 import express from "express";
 import { AuditData } from "../../controllers/AuditController.js";
-import { readLimiter } from "../../middlewares/rateLimiter.js";
+import { readLimiter } from "../../middlewares/RateLimiter.js";
 
 const router = express.Router();
 
-// router.get('/', readLimiter, AuditData);
-router.get('/', AuditData);
+router.get('/', readLimiter, AuditData);
 
 export default router;

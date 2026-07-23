@@ -2,19 +2,30 @@ import prisma from "../config/prisma.js";
 import { getIO } from "../utils/socket.js";
 import { auditService } from "../services/audit.service.js";
 import { inviteQueue } from "../queue/inviteQueue.js";
+import { redis } from "../config/redis.js";
+import { userSockets } from "../utils/userSockets.js";
 
 const RT = { MEMBER: "MEMBER", ORG: "ORG" };
 const meta = (req) => ({ ip: req.ip, userAgent: req.headers["user-agent"] ?? null });
 
 export const inviteData = async (req, res) => {
   const uid = req.user.id;
+  const cacheKey = `invites:${uid}`;
   try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.status(200).json({ data: JSON.parse(cached) });
+    }
+
     const data = await prisma.teaminvitation.findMany({
       where: {
         receiver_id: uid,
         status: "pending"
       }
     });
+
+    await redis.set(cacheKey, JSON.stringify(data), "EX", 60);
+
     res.status(200).json({ data });
   } catch (error) {
     console.log(error.message);
@@ -56,6 +67,7 @@ export const sendInvite = async (req, res) => {
     }
 
     io.to(`user:${receiver.id}`).emit("invite_received", { invite });
+    await redis.del(`invites:${receiver.id}`);
 
     auditService.log({
       orgId: org_id, userId,
@@ -63,11 +75,11 @@ export const sendInvite = async (req, res) => {
       newValue: { invitedEmail: email, status: "pending" },
       metadata: meta(req),
     });
-    const org = await prisma.org.findUnique({ where : {id : org_id},select : {name : true}});
+    const org = await prisma.org.findUnique({ where: { id: org_id }, select: { name: true } });
     const data = {
-      name : receiver.name,
-      email : email,
-      org_name : org.name
+      name: receiver.name,
+      email: email,
+      org_name: org.name
     }
     await inviteQueue.add(
       "send_invite_email",
@@ -111,6 +123,8 @@ export const acceptInvite = async (req, res) => {
     io.to(`org_${org.id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
     io.to(`user:${invite.receiver_id}`).emit("joined_org", { org });
 
+    await redis.del(`invites:${invite.receiver_id}`, `user:${invite.receiver_id}:organizations`);
+
     auditService.log({
       orgId: invite.org_id, userId,
       action: "CREATED", resourceType: RT.MEMBER, resourceId: invite.receiver_id,
@@ -136,6 +150,7 @@ export const rejectInvite = async (req, res) => {
     });
 
     io.to(`user:${receiver.sender_id}`).emit("invite_rejected", { id: invite_id, status: "rejected" });
+    await redis.del(`invites:${receiver.receiver_id}`);
 
     auditService.log({
       orgId: receiver.org_id, userId,
@@ -162,12 +177,46 @@ export const DeleteInvite = async (req, res) => {
     await prisma.teaminvitation.delete({ where: { id: invite.id } });
 
     if (invite.status === "accepted") {
-      await prisma.org_member.delete({
-        where: { member_id_org_id: { member_id: invite.receiver_id, org_id: invite.org_id } },
-      });
+      await prisma.$transaction([
+        prisma.project.updateMany({
+          where: {
+            org_id: invite.org_id,
+            assigned_to: invite.receiver_id,
+          },
+          data: {
+            assigned_to: null,
+          },
+        }),
+
+        prisma.proj_member.deleteMany({
+          where: {
+            org_id: invite.org_id,
+            member_id: invite.receiver_id,
+          },
+        }),
+
+        prisma.task_assignee.deleteMany({
+          where: {
+            org_id: invite.org_id,
+            user_id: invite.receiver_id,
+          },
+        }),
+
+        prisma.org_member.delete({
+          where: {
+            member_id_org_id: {
+              member_id: invite.receiver_id,
+              org_id: invite.org_id,
+            },
+          },
+        }),
+      ]);
     }
 
-    io.to(`org_${invite.org_id}`).emit("invite Deleted", { id: invite.id });
+    await redis.del(`invites:${invite.receiver_id}`);
+    if (invite.status === "accepted") {
+      await redis.del(`user:${invite.receiver_id}:organizations`);
+    }
 
     auditService.log({
       orgId: invite.org_id, userId,
@@ -175,7 +224,37 @@ export const DeleteInvite = async (req, res) => {
       oldValue: { email: invite.receiver_email, status: invite.status },
       metadata: meta(req),
     });
+    
+    const userData = userSockets.get(invite.receiver_id);
+    
+    if (userData) {
+      for (const socketId of userData.sockets) {
+        const socket = io.sockets.sockets.get(socketId);
+        
+        if (!socket) continue;
+        
+        socket.leave(`org_${invite.org_id}`);
+        
+        for (const orgMemberId of userData.orgMembers) {
+          socket.leave(`org_member_${orgMemberId}`);
+        }
 
+        for (const projectId of userData.projects) {
+          socket.leave(`project_${projectId}`);
+        }
+        
+        for (const taskId of userData.tasks) {
+          socket.leave(`task_${taskId}`);
+        }
+      }
+      
+      userData.orgs.clear();
+      userData.orgMembers.clear();
+      userData.projects.clear();
+      userData.tasks.clear();
+    }
+    
+    io.to(`org_${invite.org_id}`).emit("invite Deleted", { id: invite.id });
     return res.status(200).json({ message: "successfully Deleted" });
   } catch (error) {
     console.error("DeleteInvite:", error.message);

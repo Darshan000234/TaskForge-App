@@ -42,7 +42,7 @@ const formatTime = (date) => {
 const MessageItem = ({ msg, isOwn }) => (
   <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-3`}>
 
-    <div className="max-w-[75%] flex flex-col gap-1">
+    <div className="max-w-[85%] sm:max-w-[75%] flex flex-col gap-1">
 
       {!isOwn && (
         <span className="text-xs text-zinc-400">
@@ -52,7 +52,7 @@ const MessageItem = ({ msg, isOwn }) => (
 
       {msg.content && (
         <div
-          className={`px-4 py-2.5 text-sm rounded-2xl ${isOwn
+          className={`px-4 py-2.5 text-sm rounded-2xl wrap-break-word ${isOwn
             ? "bg-blue-600 text-white rounded-br-sm"
             : "bg-zinc-800 text-zinc-200 rounded-bl-sm border border-zinc-700/50"
             }`}
@@ -112,7 +112,7 @@ const MessageItem = ({ msg, isOwn }) => (
       {msg.fileUrl &&
         !msg.mimeType?.startsWith("image/") &&
         msg.mimeType !== "application/pdf" && (
-          <div className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-xs">
+          <div className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-xs break-all">
             <a
               href={msg.fileUrl}
               target="_blank"
@@ -128,7 +128,7 @@ const MessageItem = ({ msg, isOwn }) => (
 );
 
 const FilePreview = ({ file, onRemove }) => (
-  <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-zinc-300 max-w-xs">
+  <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-zinc-300 max-w-full sm:max-w-xs">
     {file.type?.startsWith("image/")
       ? <ImageIcon size={13} className="text-blue-400 shrink-0" />
       : <FileText size={13} className="text-blue-400 shrink-0" />
@@ -147,7 +147,7 @@ const TaskDetail = ({
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [User,setUser] = useState({});
+  const [User, setUser] = useState({});
   const containerRef = useRef(null);
   const bottomRef = useRef(null);
   const [file, setFile] = useState(null);
@@ -157,7 +157,7 @@ const TaskDetail = ({
   const { id } = useParams();
   const isFirstLoad = useRef(true);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const getAuthorData = async () => {
       try {
@@ -193,45 +193,65 @@ const TaskDetail = ({
         socket.emit('join_task', { id: id });
         setTask(res.data.result);
       } catch (error) {
-        toast.error(error.messages);
+        if (err.response?.status === 403) {
+          toast.error("You don't have permission to view this task.");
+          navigate(`/project/${projectId}`);
+        } else {
+          toast.error(error.messages);
+        }
       }
     };
     getTaskData();
   }, [id]);
 
-  useEffect(()=>{
-    if(!task) return;
+  useEffect(() => {
+    if (!task) return;
     const userData = async () => {
       try {
         const res = await api.get(`/orgs/proj/user/${task?.projectId}`);
-        setUser(res.data);
+        setUser(res.data.member);
       } catch (error) {
         toast.error(error.message)
       }
     }
     userData();
-  },[task]);
+  }, [task]);
 
   useEffect(() => {
-    const handleUpdateData = async (id) => {
-      const res = await api.get(`/proj/task/chat/messageData/${id}`);
-      setMessages(res.data.result);
+    const handleUpdateData = async (data) => {
+      setTask(data);
     }
 
     const handleTaskDelete = ({ pid }) => {
-      navigate(`/user/dashboard/projects/${pid}`,{ replace: true });
+      navigate(`/user/dashboard/projects/${pid}`, { replace: true });
     }
 
     const handleDeleteProj = () => {
-      navigate('/user/dashboard/projects' , { replace: true });
+      navigate('/user/dashboard/projects', { replace: true });
     }
+
+    const handleDeleteMember = ({ data }) => {
+      const { id } = data;
+
+      setTask((prev) => ({
+        ...prev,
+        assignees: prev.assignees.filter(
+          (m) => m.id !== id
+        ),
+        assigneeCount: Math.max((prev.assigneeCount || 1) - 1, 0),
+      }));
+    };
+
     socket.on("updateTask", handleUpdateData);
     socket.on("deleteTask", handleTaskDelete);
     socket.on("project_deleted", handleDeleteProj);
+    socket.on("member left", handleDeleteMember);
+
     return () => {
       socket.off("updateTask", handleUpdateData);
       socket.off("deleteTask", handleTaskDelete);
       socket.off("project_deleted", handleDeleteProj);
+      socket.off("member left", handleDeleteMember);
     }
   }, []);
 
@@ -264,9 +284,8 @@ const TaskDetail = ({
     if (!trimmed && !file) return;
     try {
       const formData = new FormData();
-
       formData.append("task_id", id);
-      formData.append("proj_id" , task?.projectId);
+      formData.append("proj_id", task?.projectId);
       if (file) {
         if (file.type.startsWith("image/")) {
           formData.append("type", "IMAGE");
@@ -323,7 +342,7 @@ const TaskDetail = ({
 
   const handleUpdateTask = async (data) => {
     try {
-      await api.post("proj/task/update", { data: data, proj_id : task?.projectId });
+      await api.post("proj/task/update", { data: data, proj_id: task?.projectId });
       setTask(data);
     } catch (error) {
       toast.error(error.messages);
@@ -335,28 +354,28 @@ const TaskDetail = ({
   }
 
   return (
-    <div className="h-scrren overflow-hidden bg-black text-white px-18 py-12">
+    <div className="h-screen overflow-hidden bg-black text-white px-4 sm:px-8 lg:px-16 pt-20 sm:pt-24 lg:pt-28 pb-6 sm:pb-10 lg:pb-12">
       <button
         onClick={handleOnback}
-        className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition text-sm mb-8 cursor-pointer"
+        className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition text-sm mb-4 sm:mb-8 cursor-pointer truncate max-w-full"
       >
-        <ArrowLeft size={15} />Back to {task?.proj_name} project
+        <ArrowLeft size={15} className="shrink-0" />
+        <span className="truncate">Back to {task?.proj_name} project</span>
       </button>
-      <div className="max-w-7xl mx-auto px-6 h-full flex flex-col">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 h-full mt-10">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col h-full overflow-hidden"
-            style={{ minHeight: "600px", maxHeight: "80vh" }}>
+      <div className="max-w-7xl mx-auto px-0 sm:px-4 lg:px-6 h-full flex flex-col">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 h-full mt-6 sm:mt-10">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col h-full overflow-hidden min-h-105 sm:min-h-125 lg:min-h-150 max-h-[75vh] lg:max-h-[80vh]">
 
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-zinc-800 shrink-0">
-              <MessageCircle size={16} className="text-zinc-400" />
-              <h2 className="text-sm font-semibold text-white">
+            <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3 sm:py-4 border-b border-zinc-800 shrink-0">
+              <MessageCircle size={16} className="text-zinc-400 shrink-0" />
+              <h2 className="text-sm font-semibold text-white truncate">
                 Task Discussion
                 <span className="ml-2 text-xs font-normal text-zinc-500">({messages.length})</span>
               </h2>
             </div>
 
             <div ref={containerRef}
-              className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+              className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 sm:py-5 flex flex-col gap-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
             >
               {messages.length == 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-16">
@@ -376,7 +395,7 @@ const TaskDetail = ({
             </div>
 
             {file && (
-              <div className="px-5 pb-2 shrink-0">
+              <div className="px-3 sm:px-5 pb-2 shrink-0">
                 <FilePreview file={file} onRemove={() => {
                   setFile(null);
                   if (fileRef.current) fileRef.current.value = "";
@@ -384,20 +403,20 @@ const TaskDetail = ({
               </div>
             )}
 
-            <div className="px-5 py-4 border-t border-zinc-800 shrink-0">
+            <div className="px-3 sm:px-5 py-3 sm:py-4 border-t border-zinc-800 shrink-0">
               <div className="flex items-end gap-2">
-                <div className="flex-1 relative">
+                <div className="flex-1 relative min-w-0">
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Write a comment..."
                     rows={3}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 resize-none transition"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 resize-none transition"
                   />
                 </div>
 
-                <div className="flex flex-col gap-2 pb-0.5">
+                <div className="flex flex-col gap-2 pb-0.5 shrink-0">
                   <button
                     onClick={() => fileRef.current?.click()}
                     title="Attach file"
@@ -424,7 +443,7 @@ const TaskDetail = ({
                 </div>
               </div>
 
-              <p className="text-[10px] text-zinc-700 mt-2">
+              <p className="text-[10px] text-zinc-700 mt-2 hidden sm:block">
                 Enter to send · Shift+Enter for new line · Attach images or .docx files
               </p>
             </div>
@@ -432,7 +451,6 @@ const TaskDetail = ({
           <div className="space-y-4">
             {task && <TaskInfoCard role={User?.role} task={task} onUpdate={handleUpdateTask} />}
           </div>
-
         </div>
       </div>
     </div>

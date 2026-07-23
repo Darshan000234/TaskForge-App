@@ -54,37 +54,37 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
           />
 
           <motion.div
-            className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
+            className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none px-4"
             initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             <div
-              className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-md mx-4 pointer-events-auto"
+              className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-md pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-zinc-800">
-                <div className="flex items-center gap-3">
-                  <div className="bg-zinc-800 p-2 rounded-lg">
+              <div className="flex items-center justify-between px-4 sm:px-6 pt-5 pb-4 border-b border-zinc-800">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="bg-zinc-800 p-2 rounded-lg shrink-0">
                     <Building2 size={18} className="text-blue-400" />
                   </div>
-                  <div>
-                    <h2 className="text-white font-semibold text-sm">Create Workspace</h2>
-                    <p className="text-zinc-500 text-xs">You'll be set as admin</p>
+                  <div className="min-w-0">
+                    <h2 className="text-white font-semibold text-sm truncate">Create Workspace</h2>
+                    <p className="text-zinc-500 text-xs truncate">You'll be set as admin</p>
                   </div>
                 </div>
                 <button
                   onClick={handleClose}
                   disabled={loading}
-                  className="text-zinc-500 hover:text-white transition p-1 rounded hover:bg-zinc-800 disabled:opacity-40 cursor-pointer"
+                  className="text-zinc-500 hover:text-white transition p-1 rounded hover:bg-zinc-800 disabled:opacity-40 cursor-pointer shrink-0"
                 >
                   <X size={16} />
                 </button>
               </div>
 
               {/* Body */}
-              <div className="px-6 py-5 space-y-4">
+              <div className="px-4 sm:px-6 py-5 space-y-4">
                 <div>
                   <label className="text-xs text-zinc-400 mb-1.5 block">
                     Workspace Name
@@ -110,7 +110,7 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
               </div>
 
               {/* Footer */}
-              <div className="px-6 pb-5 flex justify-end gap-2">
+              <div className="px-4 sm:px-6 pb-5 flex flex-col-reverse sm:flex-row justify-end gap-2">
                 <button
                   onClick={handleClose}
                   disabled={loading}
@@ -121,7 +121,7 @@ const CreateOrgModal = ({ isOpen, onClose, onCreated }) => {
                 <button
                   onClick={handleSubmit}
                   disabled={loading || !name.trim()}
-                  className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading && <Loader2 size={14} className="animate-spin" />}
                   {loading ? "Creating..." : "Create Workspace"}

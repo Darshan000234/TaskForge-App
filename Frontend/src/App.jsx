@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { useRef } from 'react';
 import axios from 'axios';
 import {
   setAccessToken,
@@ -24,7 +25,12 @@ const URL = import.meta.env.VITE_URL;
 const App = () => {
   const [loading, setLoading] = useState(true);
 
+  const didInit = useRef(false);
+
   useEffect(() => {
+    if (didInit.current) return;
+
+    didInit.current = true;
     const initAuth = async () => {
       try {
         const res = await axios.post(
@@ -32,6 +38,7 @@ const App = () => {
           {},
           { withCredentials: true }
         );
+        // console.log(res);
 
         setAccessToken(res.data.accessToken);
       } catch {
@@ -40,10 +47,10 @@ const App = () => {
         setLoading(false);
       }
     };
-
     initAuth();
   }, []);
-  
+
+
   return (
     <Router>
       <Toaster

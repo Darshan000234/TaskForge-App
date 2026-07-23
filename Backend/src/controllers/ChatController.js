@@ -2,24 +2,39 @@ import prisma from "../config/prisma.js";
 import { getIO } from "../utils/socket.js";
 import cloudinary from "../config/cloudinary.js";
 import { uploadToCloudinary } from "../utils/upload.js";
+import { redis } from "../config/redis.js";
+
 
 export const MessageData = async (req, res) => {
   const task_id = Number(req.params.id);
+  const cacheKey = `task:${task_id}:messages`;
+
   try {
+    const cached = await redis.get(cacheKey);
+
+    if (cached) {
+      return res.status(200).json({
+        result: JSON.parse(cached),
+        cache: true,
+      });
+    }
     const result = await prisma.message.findMany({
       where: {
-        task_id: task_id
+        task_id,
       },
       include: {
         user: {
           select: {
-            name: true
-          }
-        }
-      }
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
     });
-
-    res.status(202).json({ result });
+    await redis.set(cacheKey, JSON.stringify(result), "EX", 300);
+    res.status(202).json({ result,cache: false });
   } catch (error) {
     console.log("MessageData");
     console.log(error.message);
@@ -32,6 +47,7 @@ export const sentMessage = async (req, res) => {
   const user_id = req.user.id;
   const io = getIO();
   try {
+    console.count("MESSAGE API");
     const { task_id, type, content, proj_id } = req.body;
     const file = req.file;
     const exist = await prisma.task_assignee.findUnique({
@@ -97,7 +113,7 @@ export const sentMessage = async (req, res) => {
         }
       }
     });
-
+    await redis.del(`task:${task_id}:messages`);
     io.to(`task_${task_id}`).emit("message", data);
     res.status(200).json({ result: msg });
   } catch (error) {

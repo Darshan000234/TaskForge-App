@@ -26,7 +26,6 @@ export const AuditData = async (req, res) => {
       cursor,
       limit
     });
-    
     return res.status(200).json(result);
 
   } catch (error) {

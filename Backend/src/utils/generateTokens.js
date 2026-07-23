@@ -33,8 +33,7 @@ export const generateRefreshToken = async (user) => {
 export const refreshToken = async (req, res) => {
     const token = req.cookies.refreshToken;
     if (!token) return res.status(401).json({ message: 'unauthorized' });
-    // console.log(0);
-    
+
     try {
         // console.log(token);
         const decoded = jwt.verify(token, process.env.JWT_REFRESH_TOKEN);
@@ -42,13 +41,22 @@ export const refreshToken = async (req, res) => {
         const hash = crypto.createHash('sha256').update(decoded.jti).digest('hex');
 
         const storedUserId = await redis.get(hash);
-        if (!storedUserId) {
-            return res.status(403).json({ message: 'token reuse detected' });
-        }
-
-        const deleted = await redis.del(hash);
-        // console.log("deleted =", deleted);
         
+        if (!storedUserId) {
+            return res.status(403).json({
+                message: "token reuse detected"
+            });
+        }
+        
+        const deleted = await redis.del(hash);
+        
+        if (deleted !== 1) {
+            return res.status(403).json({
+                message: "refresh token already used"
+            });
+        }
+        
+        // console.log(0);
         const user = { id: decoded.id, email: decoded.email };
 
         const accessToken = generateAccessToken(user);
@@ -60,13 +68,12 @@ export const refreshToken = async (req, res) => {
             secure: false,
             maxAge: REFRESH_EXPIRY * 1000
         });
-        // console.log("access token gerneated");
-        
+
         res.json({ accessToken });
 
-    } catch (err){
+    } catch (err) {
         console.log(err.message);
-        
+
         return res.status(403).json({ message: 'invalid token' });
     }
 };

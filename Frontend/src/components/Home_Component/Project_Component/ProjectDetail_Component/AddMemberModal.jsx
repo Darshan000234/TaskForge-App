@@ -13,10 +13,7 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const res = await api.post(`proj/task/${task.id}/addmemberdata`, {
-          projectId: Number(proj_id),
-          org_id: Number(org.org_id),
-        });
+        const res = await api.get(`proj/task/${task.id}/addmemberdata/${proj_id}/${org?.id}`);
         setMembers(res.data.member ?? []);
       } catch (err) {
         toast.error(err.message);
@@ -60,9 +57,9 @@ const AddMemberModal = ({ task, org, proj_id, onAddMember, onClose }) => {
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
     >
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col">
 
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800 shrink-0">
           <div className="flex items-center gap-2 text-sm font-medium text-white">

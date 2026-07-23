@@ -14,7 +14,7 @@ new Worker (
                 text : `you have been invited by ${name} to join the org ${org_name}`
             })
 
-            console.log("Email sent to:", email);
+            // console.log("Email sent to:", email);
         }
     },
     { connection }

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { X, LogOut, Trash2, User, Mail } from "lucide-react";
+import { X, LogOut, Trash2, User, Mail, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../api/api.js";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { clearAccessToken } from "../../utils/authStore.js";
+import EditUsernameModal from "./EditUsernameModal.jsx";
 
 const ConfirmModal = ({ isOpen, onClose, onConfirm, type }) => {
   const isDelete = type === "delete";
@@ -36,7 +37,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, type }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
           onClick={onClose}
         >
           <motion.div
@@ -44,7 +45,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, type }) => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="bg-[#18181b] border border-zinc-800 rounded-xl p-6 w-full max-w-sm mx-4 shadow-xl"
+            className="bg-[#18181b] border border-zinc-800 rounded-xl p-5 sm:p-6 w-full max-w-sm shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div
@@ -83,6 +84,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, type }) => {
 const Settings = ({ isOpen, onClose }) => {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
+  const [editUsernameOpen, setEditUsernameOpen] = useState(false);
   const navigate = useNavigate();
   const panelRef = useRef(null);
 
@@ -100,17 +102,15 @@ const Settings = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || modal) return;
+    if (!isOpen || modal || editUsernameOpen) return;
     const handleClickOutside = (e) => {
       if (panelRef.current && !panelRef.current.contains(e.target)) {
-        console.log(panelRef);
-        
         onClose();
       }
     };
     if (isOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, onClose, modal]);
+  }, [isOpen, onClose, modal, editUsernameOpen]);
 
   const handleSignOut = async () => {
     try {
@@ -133,6 +133,10 @@ const Settings = ({ isOpen, onClose }) => {
       toast.error(err.response?.data?.message || "Delete failed");
       setModal(null);
     }
+  };
+
+  const handleUsernameUpdated = (updatedUser) => {
+    setUser((prev) => ({ ...prev, ...updatedUser }));
   };
 
   const initials = user?.name
@@ -159,7 +163,7 @@ const Settings = ({ isOpen, onClose }) => {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="fixed right-0 top-0 h-screen w-full max-w-sm bg-[#18181b] border-l border-zinc-800 z-50 flex flex-col"
             >
-              <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800">
+              <div className="flex items-center justify-between px-4 sm:px-6 py-5 border-b border-zinc-800">
                 <h2 className="text-white font-semibold text-base">Settings</h2>
                 <button
                   onClick={onClose}
@@ -169,7 +173,7 @@ const Settings = ({ isOpen, onClose }) => {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6">
                 <div>
                   <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">
                     Account
@@ -192,12 +196,19 @@ const Settings = ({ isOpen, onClose }) => {
                   <div className="mt-4 space-y-3">
                     <div className="flex items-center gap-3 px-4 py-3 bg-zinc-900 rounded-lg border border-zinc-800">
                       <User size={15} className="text-zinc-500 shrink-0" />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-zinc-500">Username</p>
                         <p className="text-sm text-white truncate">
                           {user?.name ?? "—"}
                         </p>
                       </div>
+                      <button
+                        onClick={() => setEditUsernameOpen(true)}
+                        className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-500 hover:text-white transition cursor-pointer shrink-0"
+                        aria-label="Edit username"
+                      >
+                        <Pencil size={14} />
+                      </button>
                     </div>
 
                     <div className="flex items-center gap-3 px-4 py-3 bg-zinc-900 rounded-lg border border-zinc-800">
@@ -259,6 +270,12 @@ const Settings = ({ isOpen, onClose }) => {
         onClose={() => setModal(null)}
         onConfirm={handleDeleteAccount}
         type="delete"
+      />
+      <EditUsernameModal
+        isOpen={editUsernameOpen}
+        onClose={() => setEditUsernameOpen(false)}
+        currentUsername={user?.name ?? ""}
+        onUpdated={handleUsernameUpdated}
       />
     </>
   );

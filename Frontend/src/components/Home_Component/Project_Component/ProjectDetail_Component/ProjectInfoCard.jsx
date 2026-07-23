@@ -10,26 +10,26 @@ const ProjectInfoCard = ({ project: initialProject, taskCount, org, onUpdate, ro
     rawEndDate: initialProject.endDate,
     endDate: initialProject.endDate
       ? new Date(initialProject.endDate).toLocaleDateString("en-GB", {
-          day: "2-digit", month: "short", year: "numeric",
-        })
+        day: "2-digit", month: "short", year: "numeric",
+      })
       : "Not set",
   });
 
   const [editOpen, setEditOpen] = useState(false);
-  const isAdmin = (role && role==="admin") ;
+  const isAdmin = (role && role === "admin");
 
   const handleSave = async (fields) => {
     const displayDate = fields.endDate
       ? new Date(fields.endDate).toLocaleDateString("en-GB", {
-          day: "2-digit", month: "short", year: "numeric",
-        })
+        day: "2-digit", month: "short", year: "numeric",
+      })
       : "Not set";
 
     setProject((prev) => ({
       ...prev,
       ...fields,
       rawEndDate: fields.endDate,
-      endDate:    displayDate,
+      endDate: displayDate,
     }));
 
     await onUpdate?.(fields);
@@ -67,16 +67,17 @@ const ProjectInfoCard = ({ project: initialProject, taskCount, org, onUpdate, ro
           </div>
         </div>
 
-        <div className="border-t border-zinc-800 mt-6 pt-6 grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div className="border-t border-zinc-800 mt-6 pt-6 grid grid-cols-2 sm:grid-cols-4 gap-6 h-auto">
           {[
-            { label: "Priority",    icon: <Flag size={13} />,        value: project.priority ?? "—",       cls: `capitalize ${PRIORITY_COLOR[project.priority] ?? "text-zinc-400"}` },
-            { label: "Assigned To", icon: <User size={13} />,        value: project.email ?? "Unassigned", cls: "text-white" },
-            { label: "End Date",    icon: <Calendar size={13} />,    value: project.endDate ?? "Not set",  cls: "text-zinc-300" },
-            { label: "Total Tasks", icon: <CheckSquare size={13} />, value: `${taskCount} tasks`,          cls: "text-zinc-300" },
+            { label: "Priority", icon: <Flag size={13} />, value: project.priority ?? "—", cls: `capitalize ${PRIORITY_COLOR[project.priority] ?? "text-zinc-400"}` },
+            { label: "Assigned To", icon: <User size={13} />, value: project.email ?? "Unassigned", cls: "text-white" },
+            { label: "End Date", icon: <Calendar size={13} />, value: project.endDate ?? "Not set", cls: "text-zinc-300" },
+            { label: "Total Tasks", icon: <CheckSquare size={13} />, value: `${taskCount} tasks`, cls: "text-zinc-300" },
           ].map(({ label, icon, value, cls }) => (
             <div key={label} className="flex flex-col gap-1">
-              <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{label}</span>
-              <span className={`flex items-center gap-1.5 text-sm font-medium ${cls}`}>{icon}{value}</span>
+              <span className={`flex items-center gap-1.5 text-sm font-medium ${cls}`}>{icon}
+                <span className="truncate min-w-0 max-w-full">{value}</span>
+              </span>
             </div>
           ))}
         </div>

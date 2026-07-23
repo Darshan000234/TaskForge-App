@@ -10,8 +10,9 @@ import { useOutletContext, useNavigate } from "react-router-dom";
 import ConfirmDeleteModal from "./Project_Component/ConfirmDeleteModal";
 import ReassignManagerModal from "./Project_Component/ReassignManagerModal";
 import toast from "react-hot-toast";
+import useDebounce from "../../utils/debounce.js";
 
-const STATUS_OPTIONS = ["all", "Active", "completed", "Cancelled","onhold"];
+const STATUS_OPTIONS = ["all", "Active", "completed", "Cancelled", "onhold"];
 const PRIORITY_OPTIONS = ["all", "Low", "Medium", "High"];
 const Dropdown = ({ value, options, onChange, label }) => {
   const [open, setOpen] = useState(false);
@@ -19,7 +20,7 @@ const Dropdown = ({ value, options, onChange, label }) => {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="cursor-pointer flex items-center gap-2 border border-zinc-700 rounded-lg px-4 py-2.5 text-sm text-zinc-300 hover:border-zinc-500 transition bg-zinc-900"
+        className="cursor-pointer flex items-center gap-2 border border-zinc-700 rounded-lg px-3 sm:px-4 py-2.5 text-sm text-zinc-300 hover:border-zinc-500 transition bg-zinc-900 whitespace-nowrap"
       >
         {label}: <span className="capitalize text-white">{value}</span>
         <ChevronDown size={14} className="text-zinc-400" />
@@ -30,7 +31,7 @@ const Dropdown = ({ value, options, onChange, label }) => {
             <button
               key={opt}
               onClick={() => { onChange(opt); setOpen(false); }}
-              className={`cursor-pointer w-full text-left px-4 py-2 text-sm capitalize hover:bg-zinc-800 transition ${value === opt ? "text-white font-medium" : "text-zinc-400"
+              className={`cursor-pointer w-full text-left px-4 py-2 text-sm capitalize hover:bg-zinc-800 transition whitespace-nowrap ${value === opt ? "text-white font-medium" : "text-zinc-400"
                 }`}
             >
               {opt === "all" ? `All ${label}` : opt}
@@ -45,29 +46,22 @@ const Dropdown = ({ value, options, onChange, label }) => {
 const Projects = () => {
   const navigate = useNavigate();
   const { org } = useOutletContext();
-
+  
+  
   const [projects, setProjects] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput, 300);
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
   const [showModal, setShowModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [reassignTarget, setReassignTarget] = useState(null);
-
-  // Debounce search
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const debounceRef = useRef(null);
-  useEffect(() => {
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(debounceRef.current);
-  }, [search]);
 
   const fetchProjects = useCallback(async (cursorValue = null, isInitial = false) => {
     if (!org) return;
@@ -77,7 +71,7 @@ const Projects = () => {
     try {
       const params = new URLSearchParams({ limit: 12 });
       if (cursorValue) params.set("cursor", cursorValue);
-      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (search) params.set("search", search);
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (priorityFilter !== "all") params.set("priority", priorityFilter);
 
@@ -93,21 +87,19 @@ const Projects = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [org, debouncedSearch, statusFilter, priorityFilter]);
+  }, [org, search, statusFilter, priorityFilter]);
 
-  // Reset and refetch whenever org or filters change
   useEffect(() => {
     setProjects([]);
     setNextCursor(null);
     setHasMore(false);
     fetchProjects(null, true);
-  }, [fetchProjects]); // fetchProjects memoized via useCallback — changes only when deps change
+  }, [fetchProjects]);
 
   const loadMore = () => {
     if (hasMore && !loadingMore) fetchProjects(nextCursor);
   };
 
-  // Socket handlers — unchanged from your original
   useEffect(() => {
     const handleProjectCreated = (data) => {
       const project = data.project || data;
@@ -115,24 +107,36 @@ const Projects = () => {
       setProjects((prev) => [project, ...prev]);
       socket.emit("join_proj", { id: project.id });
     };
+
     const handleProjectDeleted = (data) => {
       setProjects((prev) => prev.filter((p) => p.id !== data.id));
     };
+
     const handleProjectReassign = async (data) => {
-      try {
-        const res = await api.get(`/orgs/proj/one/${data.proj_id}`);
-        const updated = res.data.data;
-        setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-      } catch {}
+      const project = data;
+      setProjects((prev) => prev.map((p) => (p.id === project.id ? project : p)));
     };
+
+    const handleMemberDeleted = async (data) => {
+      const updatedProjectIds = new Set(data.updatedProjects);
+      setProjects(prev =>
+        prev.map(project =>
+          updatedProjectIds.has(project.id)
+            ? { ...project, assigned_to: null }
+            : project
+        )
+      );
+    }
 
     socket.on("project_created", handleProjectCreated);
     socket.on("project_deleted", handleProjectDeleted);
     socket.on("project_reassign", handleProjectReassign);
+    socket.on("member deleted", handleMemberDeleted);
     return () => {
       socket.off("project_created", handleProjectCreated);
       socket.off("project_deleted", handleProjectDeleted);
       socket.off("project_reassign", handleProjectReassign);
+      socket.on("member deleted", handleMemberDeleted);
     };
   }, []);
 
@@ -160,39 +164,39 @@ const Projects = () => {
   const handleProjectClick = (project) => {
     navigate(`/user/dashboard/projects/${project.id}`, { replace: true });
   };
-  
-  return (
-    <div className="min-h-screen bg-black text-white px-18 py-15">
 
-      <div className="flex items-start justify-between">
+  return (
+    <div className="min-h-screen bg-black text-white px-4 sm:px-8 md:px-18 py-6 sm:py-10 md:py-15">
+
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold">Projects</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold">Projects</h1>
           <p className="text-zinc-400 mt-1">Manage and track your projects</p>
         </div>
         {org?.role === "admin" && (
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer w-full sm:w-auto"
           >
             <Plus size={18} />New Project
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-4 mt-10 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center gap-3 sm:gap-4 mt-6 sm:mt-10 flex-wrap">
+        <div className="relative flex-1 min-w-45 max-w-sm">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search projects..."
             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:border-zinc-600 transition"
           />
         </div>
         <Dropdown label="Status" value={statusFilter} options={STATUS_OPTIONS} onChange={setStatusFilter} />
         <Dropdown label="Priority" value={priorityFilter} options={PRIORITY_OPTIONS} onChange={setPriorityFilter} />
-        <div className="ml-auto flex items-center gap-1 border border-zinc-800 rounded-lg p-1 bg-zinc-900">
+        <div className="sm:ml-auto flex items-center gap-1 border border-zinc-800 rounded-lg p-1 bg-zinc-900">
           <button
             onClick={() => setViewMode("grid")}
             className={`cursor-pointer p-2 rounded-md transition ${viewMode === "grid" ? "bg-zinc-700 text-white" : "text-zinc-500 hover:text-zinc-300"}`}
@@ -256,17 +260,17 @@ const Projects = () => {
 
         ) : (
           <>
-            <div className="border border-zinc-800 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border border-zinc-800 rounded-xl overflow-x-auto">
+              <table className="w-full min-w-190 text-sm">
                 <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
                   <tr className="text-left">
-                    <th className="px-6 py-4 font-medium">Name</th>
-                    <th className="px-6 py-4 font-medium">Description</th>
-                    <th className="px-6 py-4 font-medium">Status</th>
-                    <th className="px-6 py-4 font-medium">Assigned to</th>
-                    <th className="px-6 py-4 font-medium">Last Updated</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium whitespace-nowrap">Name</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium whitespace-nowrap">Description</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium whitespace-nowrap">Status</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium whitespace-nowrap">Assigned to</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium whitespace-nowrap">Last Updated</th>
                     {org?.role === "admin" && (
-                      <th className="px-6 py-4 font-medium">Actions</th>
+                      <th className="px-4 sm:px-6 py-4 font-medium whitespace-nowrap">Actions</th>
                     )}
                   </tr>
                 </thead>
@@ -285,7 +289,7 @@ const Projects = () => {
                   {loadingMore && Array.from({ length: 3 }).map((_, i) => (
                     <tr key={`skel-${i}`} className="border-b border-zinc-800/40">
                       {Array.from({ length: org?.role === "admin" ? 6 : 5 }).map((_, j) => (
-                        <td key={j} className="px-6 py-4 bg-zinc-900">
+                        <td key={j} className="px-4 sm:px-6 py-4 bg-zinc-900">
                           <div className="h-3 rounded bg-zinc-800 animate-pulse w-3/4" />
                         </td>
                       ))}

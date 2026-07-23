@@ -108,10 +108,10 @@ const Dashboard = () => {
   const userName = org?.user?.name ?? "there";
 
   return (
-    <div className="px-10 md:px-16 lg:px-20 pt-10 pb-16 space-y-10">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-16 xl:px-20 pt-6 sm:pt-10 pb-16 space-y-8 sm:space-y-10">
 
       <div>
-        <h2 className="text-[20px] font-semibold text-white leading-7">
+        <h2 className="text-lg sm:text-[20px] font-semibold text-white leading-7">
           Welcome back, {userName}
         </h2>
         <p className="text-sm text-zinc-500 mt-1">
@@ -119,17 +119,17 @@ const Dashboard = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5">
         {stats.map((item) => (
           <div
             key={item.key}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl px-6 py-5 flex items-center justify-between hover:border-zinc-700 transition-colors"
+            className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between hover:border-zinc-700 transition-colors"
           >
-            <div>
-              <p className="text-xs text-zinc-500 mb-1">{item.title}</p>
-              <p className="text-3xl font-bold text-white">{CardData[item.key] ?? 0}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-zinc-500 mb-1 truncate">{item.title}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white">{CardData[item.key] ?? 0}</p>
             </div>
-            <div className={`w-11 h-11 rounded-xl ${item.cs} flex items-center justify-center shrink-0`}>
+            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl ${item.cs} flex items-center justify-center shrink-0`}>
               <img className={item.w} src={item.icon} alt="" />
             </div>
           </div>
@@ -141,14 +141,14 @@ const Dashboard = () => {
         <div className="lg:col-span-2 space-y-6">
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-800">
+            <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-zinc-800">
               <h3 className="text-sm font-medium text-white">Project Overview</h3>
               <button onClick={viewAllOrg} className="text-xs text-zinc-500 hover:text-white transition cursor-pointer">
                 View all →
               </button>
             </div>
 
-            <div className="px-5 max-h-72 overflow-y-auto">
+            <div className="px-4 sm:px-5 max-h-72 overflow-y-auto">
               {Project.length > 0 ? (
                 Project.map((proj, i) => <ProjectCard key={i} proj={proj} />)
               ) : (
@@ -162,7 +162,7 @@ const Dashboard = () => {
               <AuditLogList orgId={org.id} api={api} compact={true} limit={8} />
             ) : (
               <>
-                <div className="px-5 py-3.5 border-b border-zinc-800">
+                <div className="px-4 sm:px-5 py-3.5 border-b border-zinc-800">
                   <h3 className="text-sm font-medium text-white">Recent Activity</h3>
                 </div>
                 <EmptyState src={clock} label="No recent activity" />
@@ -179,19 +179,19 @@ const Dashboard = () => {
                 key={item.key}
                 className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors"
               >
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-800">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
+                <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-zinc-800">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
                       <img className="w-4 h-4" src={item.icon} alt="" />
                     </div>
-                    <h4 className="text-sm font-medium text-white">{item.title}</h4>
+                    <h4 className="text-sm font-medium text-white truncate">{item.title}</h4>
                   </div>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${item.badge}`}>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-md shrink-0 ${item.badge}`}>
                     {list.length}
                   </span>
                 </div>
 
-                <div className="px-5">
+                <div className="px-4 sm:px-5">
                   {list.length > 0 ? (
                     list.slice(0, 4).map((task) => (
                       <TaskMiniCard key={task.id} task={task} />

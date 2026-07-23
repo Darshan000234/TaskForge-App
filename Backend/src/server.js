@@ -20,6 +20,7 @@ import projectRoute from "./routes/Project/projectRoute.js";
 import orgRoute from "./routes/Organization/OrgRoute.js";
 import ChatRoute from "./routes/Chat/ChatRoute.js";
 import AuditRoute from "./routes/Audit/AuditRoute.js";
+import SettingRoute from "./routes/Setting/SettingRoute.js";
 import authMiddleware from "./middlewares/authMiddleWare.js";
 
 dotenv.config();
@@ -29,7 +30,7 @@ const port = 3000;
 const URL = process.env.CLIENT_URL;
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { 
+  cors: {
     origin: URL,
     credentials: true
   }
@@ -44,14 +45,14 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 app.use("/user", userRoute);
-app.use("/orgs", authMiddleware,orgRoute);
-app.use("/invites", authMiddleware,inviteRoute);
-app.use("/orgs/proj", authMiddleware,projectRoute);
-app.use("/proj/task", authMiddleware,TaskRoute);
-app.use("/proj/team", authMiddleware,projectTeamRoute);
-app.use("/proj/task/chat", authMiddleware,ChatRoute);
-app.use("/audit", authMiddleware,AuditRoute);
-
+app.use("/orgs", authMiddleware, orgRoute);
+app.use("/invites", authMiddleware, inviteRoute);
+app.use("/orgs/proj", authMiddleware, projectRoute);
+app.use("/proj/task", authMiddleware, TaskRoute);
+app.use("/proj/team", authMiddleware, projectTeamRoute);
+app.use("/proj/task/chat", authMiddleware, ChatRoute);
+app.use("/audit", authMiddleware, AuditRoute);
+app.use("/setting", authMiddleware, SettingRoute);
 
 io.use(async (socket, next) => {
   try {
@@ -86,116 +87,156 @@ io.on("connection", async (socket) => {
   const userId = socket.user.id;
 
   if (!userSockets.has(userId)) {
-    userSockets.set(userId, new Set());
+    userSockets.set(userId, {
+      sockets: new Set(),
+      orgs: new Set(),
+      orgMembers: new Set(),
+      projects: new Set(),
+      tasks: new Set(),
+    });
   }
 
-  const userSet = userSockets.get(userId);
+  const userData = userSockets.get(userId);
 
-  if (userSet.size >= 5) {
+  if (userData.sockets.size >= 5) {
     socket.disconnect();
     return;
   }
 
-  userSet.add(socket.id);
-  const projects = await prisma.proj_member.findMany({
-    where: { member_id: userId }
-  });
-
-  projects.forEach(p => {
-    socket.join(`project_${p.proj_id}`);
-  });
+  userData.sockets.add(socket.id);
 
   socket.join(`user:${socket.user.id}`);
 
   socket.on("join_org", async ({ id }) => {
-    const userId = socket.user.id;
+    const orgId = Number(id);
 
-    const isLimited = await socketRateLimiter({
-      redis,
-      key: `join_org:${userId}`,
-      limit: 5,
-      windowSec: 60
-    });
+    if (userData.orgs.has(orgId)) return;
 
-    if (isLimited) {
-      return socket.emit("rate_limited", {
-        message: "Too many org joins"
+    try {
+      const isLimited = await socketRateLimiter({
+        redis,
+        key: `rate:socket:join_org:user:${userId}`,
+        limit: 10,
+        windowSec: 60,
       });
-    }
 
-    socket.join(`org_${Number(id)}`);
+      if (isLimited) {
+        return socket.emit("rate_limited", {
+          message: "Too many organization joins.",
+        });
+      }
+
+      userData.orgs.add(orgId);
+      socket.join(`org_${orgId}`);
+    } catch (err) {
+      console.error("join_org limiter:", err);
+    }
   });
 
   socket.on("join_org_member", async ({ id }) => {
-    const userId = socket.user.id;
+    const orgId = Number(id);
 
-    const isLimited = await socketRateLimiter({
-      redis,
-      key: `join_org_member:${userId}`,
-      limit: 5,
-      windowSec: 60
-    });
-
-    if (isLimited) {
-      return socket.emit("rate_limited", {
-        message: "Too many member joins"
-      });
-    }
-
-    const org_member = await prisma.org_member.findUnique({
+    const orgMember = await prisma.org_member.findUnique({
       where: {
         member_id_org_id: {
           member_id: userId,
-          org_id: id
-        }
-      }
+          org_id: orgId,
+        },
+      },
     });
 
-    if (!org_member) return;
+    if (!orgMember) return;
 
-    socket.join(`org_member_${org_member.id}`);
+    if (userData.orgMembers.has(orgMember.id)) return;
+
+    try {
+      const isLimited = await socketRateLimiter({
+        redis,
+        key: `rate:socket:join_org_member:user:${userId}`,
+        limit: 20,
+        windowSec: 60,
+      });
+
+      if (isLimited) {
+        return socket.emit("rate_limited", {
+          message: "Too many member joins.",
+        });
+      }
+
+      userData.orgMembers.add(orgMember.id);
+      socket.join(`org_member_${orgMember.id}`);
+    } catch (err) {
+      console.error("join_org_member limiter:", err);
+    }
   });
 
   socket.on("join_proj", async ({ id }) => {
-    const userId = socket.user.id;
+    const projectId = Number(id);
 
-    const isLimited = await socketRateLimiter({
-      redis,
-      key: `join_proj:${userId}`,
-      limit: 10,
-      windowSec: 60
-    });
+    if (userData.projects.has(projectId)) return;
 
-    if (isLimited) {
-      return socket.emit("rate_limited", {
-        message: "Too many project joins"
+    try {
+      const isLimited = await socketRateLimiter({
+        redis,
+        key: `rate:socket:join_project:user:${userId}`,
+        limit: 30,
+        windowSec: 60,
       });
-    }
 
-    socket.join(`project_${id}`);
+      if (isLimited) {
+        return socket.emit("rate_limited", {
+          message: "Too many project joins.",
+        });
+      }
+
+      userData.projects.add(projectId);
+      socket.join(`project_${projectId}`);
+    } catch (err) {
+      console.error("join_proj limiter:", err);
+    }
   });
 
   socket.on("join_task", async ({ id }) => {
-    const userId = socket.user.id;
+    const taskId = Number(id);
 
-    const isLimited = await socketRateLimiter({
-      redis,
-      key: `join_task:${userId}`,
-      limit: 10,
-      windowSec: 60
-    });
+    if (userData.tasks.has(taskId)) return;
 
-    if (isLimited) {
-      return socket.emit("rate_limited", {
-        message: "Too many task joins"
+    try {
+      const isLimited = await socketRateLimiter({
+        redis,
+        key: `rate:socket:join_task:user:${userId}`,
+        limit: 50,
+        windowSec: 60,
       });
-    }
 
-    socket.join(`task_${id}`);
+      if (isLimited) {
+        return socket.emit("rate_limited", {
+          message: "Too many task joins.",
+        });
+      }
+
+      userData.tasks.add(taskId);
+      socket.join(`task_${taskId}`);
+    } catch (err) {
+      console.error("join_task limiter:", err);
+    }
   });
 
   socket.on("disconnect", () => {
-    userSockets.get(userId)?.delete(socket.id);
+    const userData = userSockets.get(userId);
+
+    if (!userData) return;
+
+    userData.sockets.delete(socket.id);
+
+    if (userData.sockets.size === 0) {
+      userSockets.delete(userId);
+    } else {
+      userData.orgs.clear();
+      userData.orgMembers.clear();
+      userData.projects.clear();
+      userData.tasks.clear();
+    }
   });
 
 });

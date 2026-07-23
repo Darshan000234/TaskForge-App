@@ -4,19 +4,17 @@ import {
     rejectInvite, DeleteInvite
 } from "../../controllers/InviteController.js";
 import { OrgcheckRole } from "../../middlewares/RBACMiddleware.js";
-import { readLimiter, writeLimiter, sensitiveLimiter } from "../../middlewares/rateLimiter.js";
+import { methodLimiter, sensitiveLimiter } from "../../middlewares/RateLimiter.js";
 
 const router = express.Router();
 
-// router.post("/",            OrgcheckRole, writeLimiter, sendInvite);
-// router.get("/data",         readLimiter, inviteData);
-// router.post("/:id/accept",  sensitiveLimiter, acceptInvite);
-// router.post("/:id/reject",  sensitiveLimiter, rejectInvite);
-// router.delete("/delete/:id",OrgcheckRole, writeLimiter, DeleteInvite);
+router.post("/", methodLimiter, OrgcheckRole(), sendInvite);
+router.get("/data", methodLimiter, inviteData);
 
-router.post("/", OrgcheckRole(), sendInvite);
-router.get("/data", inviteData);
-router.post("/:id/accept", acceptInvite);
-router.post("/:id/reject", rejectInvite);
-router.delete("/delete/:id", OrgcheckRole(), DeleteInvite);
+// accept/reject -> sensitiveLimiter
+router.post("/:id/accept", sensitiveLimiter, acceptInvite);
+router.post("/:id/reject", sensitiveLimiter, rejectInvite);
+
+router.delete("/delete/:id", methodLimiter, OrgcheckRole(), DeleteInvite);
+
 export default router;

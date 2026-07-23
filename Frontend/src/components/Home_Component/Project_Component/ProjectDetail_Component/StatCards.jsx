@@ -3,13 +3,13 @@ import { CheckCheck, Clock, Flag, AlertTriangle } from "lucide-react";
 const StatCard = ({ icon, label, value, accent, onClick }) => (
   <div
     onClick={onClick}
-    className={`bg-zinc-900 border border-zinc-800 rounded-xl px-5 py-4 flex items-center justify-between gap-4 transition ${onClick ? "cursor-pointer hover:border-zinc-700" : ""}`}
+    className={`bg-zinc-900 border border-zinc-800 rounded-xl px-4 sm:px-5 py-4 flex items-center justify-between gap-3 sm:gap-4 transition ${onClick ? "cursor-pointer hover:border-zinc-700" : ""}`}
   >
-    <div>
-      <p className="text-xs text-zinc-500 font-medium">{label}</p>
-      <p className="text-2xl font-bold text-white mt-0.5">{value}</p>
+    <div className="min-w-0">
+      <p className="text-xs text-zinc-500 font-medium truncate">{label}</p>
+      <p className="text-xl sm:text-2xl font-bold text-white mt-0.5">{value}</p>
     </div>
-    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>
+    <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>
       {icon}
     </div>
   </div>
@@ -18,10 +18,9 @@ const StatCard = ({ icon, label, value, accent, onClick }) => (
 const StatCards = ({ tasks = [], onOverdueClick }) => {
   const isOverdue = (t) =>
     t.dueDate && t.Status !== "done" && new Date(t.dueDate) < new Date();
-  // console.log(tasks);
   
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6">
       <StatCard
         label="Completed"
         value={tasks.filter((t) => t.Status === "done").length}

@@ -1,7 +1,7 @@
 import prisma from '../config/prisma.js';
 import { getIO } from "../utils/socket.js";
 import { auditService } from "../services/audit.service.js";
-
+import { redis } from '../config/redis.js';
 const RT = { MEMBER: "MEMBER", ORG: "ORG" };
 const meta = (req) => ({ ip: req.ip, userAgent: req.headers["user-agent"] ?? null });
 
@@ -23,9 +23,9 @@ export const addOrganization = async (req, res) => {
         name: name,
         userId: id
       }
-    })
+    });
 
-    if (exist) res.status(409).json({ message: "name already exist" });
+    if (exist) return res.status(409).json({ message: "name already exist" });
 
     const org = await prisma.org.create({
       data: {
@@ -35,6 +35,7 @@ export const addOrganization = async (req, res) => {
         proj_count: 0
       }
     });
+    await redis.del(`user:${id}:organizations`);
     await prisma.org_member.create({
       data: {
         org_id: org.id,
@@ -79,6 +80,14 @@ export const updateOrganization = async (req, res) => {
       metadata: { diff: { name: { from: oldOrg.name, to: name } }, ...meta(req) },
     });
 
+    const members = await prisma.org_member.findMany({
+      where: { org_id },
+      select: { member_id: true },
+    });
+    await Promise.all(
+      members.map((m) => redis.del(`user:${m.member_id}:organizations`))
+    );
+
     return res.status(204).json({ message: "updated successfully" });
   } catch (error) {
     console.error("updateOrganization:", error.message);
@@ -88,47 +97,180 @@ export const updateOrganization = async (req, res) => {
 
 export const deleteOrganization = async (req, res) => {
   const org_id = Number(req.params.org_id);
+  const userId = req.user.id;
   const io = getIO();
+  // console.log(org_id);
+  if (!Number.isInteger(org_id)) {
+    return res.status(400).json({ message: "Invalid organization id" });
+  }
+ 
   try {
-    await prisma.org.delete({
-      where: {
-        id: org_id
-      }
-    })
+    const membership = await prisma.org_member.findUnique({
+      where: { member_id_org_id: { member_id: userId, org_id } },
+    });
+ 
+    if (!membership) {
+      return res.status(404).json({ message: "Membership not found for this organization" });
+    }
+ 
+    const { role } = membership;
+ 
+    if (role === "admin") {
+      const members = await prisma.org_member.findMany({
+        where: { org_id },
+        select: { member_id: true },
+      });
+ 
+      await prisma.org.delete({ where: { id: org_id } });
+ 
+      await Promise.all(
+        members.map((m) => redis.del(`user:${m.member_id}:organizations`))
+      );
+ 
+      io.to(`org_${org_id}`).emit("org deleted", { org_id });
 
-    io.to(`org_${org_id}`).emit("org deleted");
-    res.status(204).json({ message: "Deleted successfully" });
+      await prisma.AuditLog.create({
+        data: {
+          orgId: null,
+          userId,
+          action: "DELETED",
+          resourceType: "ORG",
+          resourceId: String(org_id),
+          metadata: { reason: "Organization deleted by admin" },
+        },
+      });
+ 
+      return res.status(200).json({ message: "Organization deleted successfully" });
+    }
+ 
+    if (role === "member") {
+      const [projectMemberships, taskAssignments] = await Promise.all([
+        prisma.proj_member.findMany({
+          where: { org_id, member_id: userId }, 
+          select: { proj_id: true },
+        }),
+        prisma.task_assignee.findMany({
+          where: { org_id, user_id: userId },
+          select: { task_id: true,user_id : true },
+        }),
+      ]);
+ 
+      const projectIds = projectMemberships.map((p) => p.proj_id);
+      const taskIds = taskAssignments.map((t) => t.task_id);
+ 
+      await prisma.$transaction(async (tx) => {
+        await tx.project.updateMany({
+          where: { org_id, assigned_to: userId },
+          data: { assigned_to: null },
+        });
+ 
+        await tx.proj_member.deleteMany({
+          where: { org_id, member_id: userId },
+        });
+ 
+        await tx.task_assignee.deleteMany({
+          where: { org_id, user_id: userId },
+        });
+ 
+        await tx.org_member.delete({
+          where: { member_id_org_id: { member_id: userId, org_id } },
+        });
+ 
+        await tx.org.update({
+          where: { id: org_id },
+          data: { member_count: { decrement: 1 } },
+        });
+ 
+        await tx.User.updateMany({
+          where: { id: userId, activeorg: org_id },
+          data: { activeorg: null },
+        });
+      });
+ 
+      await redis.del(`user:${userId}:organizations`);
+      
+      const roomsToLeave = [
+        `org_${org_id}`,
+        `org_member_${org_id}`,
+        ...projectIds.map((id) => `project_${id}`),
+        ...taskIds.map((id) => `task_${id}`),
+      ];
+      
+      const data = {
+        id : userId,
+        email : req.user.email,
+        updatedProjects : projectIds,
+        updatedTasks : taskIds
+      }
+
+      io.in(`user_${userId}`).socketsLeave(roomsToLeave);
+      io.to(`org_${org_id}`).emit("member left", { data });
+      await prisma.AuditLog.create({
+        data: {
+          orgId: org_id,
+          userId,
+          action: "DELETED",
+          resourceType: "MEMBER",
+          resourceId: String(userId),
+          metadata: { reason: "Member left organization" },
+        },
+      });
+ 
+      return res.status(200).json({ message: "You have left the organization" });
+    }
+ 
+    return res.status(400).json({ message: "Unrecognized role for this membership" });
   } catch (error) {
-    console.log(error.message);
-    res.status(400).json({ message: "something went wrong" });
+    console.error("deleteOrganization error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
   }
 };
-
+ 
 export const DataOrganization = async (req, res) => {
+  const userId = req.user.id;
+  const cacheKey = `user:${userId}:organizations`;
   try {
-    const org = await getUserOrganizations(req.user.id);
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+    const org = await getUserOrganizations(userId);
+    await redis.set(cacheKey, JSON.stringify(org), "EX", 60);
     res.status(200).json(org);
   } catch (error) {
     console.log(error.message);
+    console.log("Data organization");
     res.status(500).json({ message: "Something went wrong" });
   }
 };
 
 export const DataOrganizationMembers = async (req, res) => {
   const id = Number(req.params.id);
+  const cacheKey = `org:${id}:members`;
+
   try {
+
+    const cached = await redis.get(cacheKey);
+
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+
     const data = await prisma.teaminvitation.findMany({
       where: {
         org_id: id
       }
 
     });
+
+    await redis.set(cacheKey, JSON.stringify(data), "EX", 60);
+
     res.status(200).json(data);
   } catch (error) {
     console.log(error.message);
     res.status(400).json({ message: "something went wrong" });
   }
-}
+};
 
 export const updateactiveOrgs = async (req, res) => {
   const id = Number(req.params.id);
@@ -142,89 +284,126 @@ export const updateactiveOrgs = async (req, res) => {
         activeorg: id
       }
     });
+    
+    await redis.del(`user:${userID}:activeOrg`);
+
     const data = await prisma.org.findUnique({
       where: {
         id: id
       }
-    })
+    });
+
     res.status(200).json(data);
   } catch (error) {
     console.log(error.message);
     console.log("updateactiveOrgs");
     res.status(400).json({ message: "something went wrong" });
   }
-}
+};
 
 export const getActiveOrgs = async (req, res) => {
   const userID = req.user.id;
+  const cacheKey = `user:${userID}:activeOrg`;
+
   try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+
     let data = await prisma.user.findUnique({
       where: {
-        id: userID
+        id: userID,
       },
       include: {
-        org: true
-      }
+        org: true,
+      },
     });
+
     if (!data.org) {
       const org = await getUserOrganizations(userID);
-      if (!org || org.length === 0) return res.status(400).json({ message: "No organization found" });
+      if (!org || org.length === 0) {
+        return res.status(400).json({
+          message: "No organization found",
+        });
+      }
       await prisma.user.update({
         where: {
-          id: userID
+          id: userID,
         },
         data: {
-          activeorg: org[0].id
-        }
-      })
+          activeorg: org[0].id,
+        },
+      });
+
       data = await prisma.user.findUnique({
-        where: { id: userID },
-        include: { org: true }
+        where: {
+          id: userID,
+        },
+        include: {
+          org: true,
+        },
       });
     }
-    if (userID !== data.org.userId) data.org.role = 'member';
-    res.status(200).json(data.org);
+    if (userID !== data.org.userId) {
+      data.org.role = "member";
+    }
+    await redis.set(cacheKey, JSON.stringify(data.org), "EX", 60);
+    return res.status(200).json(data.org);
+
   } catch (error) {
     console.log(error.message);
-    res.status(400).json({ message: "something went wrong" });
+    return res.status(400).json({
+      message: "Something went wrong",
+    });
   }
-}
+};
 
 export const StatsData = async (req, res) => {
   const org_id = Number(req.params.id);
-  const user_id = Number(req.user.id);
-
+  const user_id = req.user.id;
+  const cacheKey = `stats:${user_id}:${org_id}`;
   try {
+    const cached = await redis.get(cacheKey);
+
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+
     const [projcount] = await prisma.$queryRaw`
-      SELECT 
+      SELECT
         COUNT(*) AS total_proj,
         COUNT(*) FILTER (WHERE p."status" = 'Completed') AS completed_projects
       FROM project p
-      INNER JOIN proj_member pm 
+      INNER JOIN proj_member pm
         ON pm."proj_id" = p.id
-      WHERE 
+      WHERE
         pm."org_id" = ${org_id}
         AND pm."member_id" = ${user_id};
     `;
 
     const [taskcount] = await prisma.$queryRaw`
-      SELECT 
+      SELECT
         COUNT(DISTINCT t.id) AS total_task,
         COUNT(DISTINCT t.id) FILTER (
-          WHERE t."dueDate" < NOW() 
+          WHERE t."dueDate" < NOW()
           AND t."Status" != 'completed'
         ) AS overdue_task
       FROM task t
-      LEFT JOIN org o 
+      LEFT JOIN org o
         ON o.id = t.org_id
-      LEFT JOIN project p 
+      LEFT JOIN project p
         ON p.id = t.project_id
-      LEFT JOIN task_assignee ta 
-        ON ta.task_id = t.id 
+      LEFT JOIN task_assignee ta
+        ON ta.task_id = t.id
         AND ta.user_id = ${user_id}
-      WHERE 
+      WHERE
         t.org_id = ${org_id}
-        AND ( o."userId" = ${user_id} OR p."assigned_to" = ${user_id} OR ta.user_id = ${user_id} );
+        AND (
+          o."userId" = ${user_id}
+          OR p."assigned_to" = ${user_id}
+          OR ta.user_id = ${user_id}
+        );
     `;
 
     const result = {
@@ -234,11 +413,16 @@ export const StatsData = async (req, res) => {
       overdue_task: Number(taskcount.overdue_task),
     };
 
-    res.status(200).json(result);
+    await redis.set(cacheKey, JSON.stringify(result), "EX", 30);
+
+    return res.status(200).json(result);
 
   } catch (error) {
     console.log("StatsData error:", error.message);
-    res.status(500).json({ message: error.message });
+
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };
 
@@ -257,6 +441,12 @@ export const getOrgTasks = async (req, res) => {
     const status = req.query.status?.trim() || null;
     const priority = req.query.priority?.trim() || null;
     const due = req.query.due?.trim() || null;
+
+    const cacheKey = `orgTasks:${orgId}:${userId}:${cursor || 0}:${limit}:${search || ""}:${status || ""}:${priority || ""}:${due || ""}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
 
     const [orgData, managedProjects] = await Promise.all([
       prisma.org.findUnique({
@@ -378,11 +568,15 @@ export const getOrgTasks = async (req, res) => {
 
     const nextCursor = hasNext ? tasks[tasks.length - 1]?.id : null;
 
-    return res.status(200).json({
+    const result = {
       formattedTasks,
       nextCursor,
       total
-    });
+    };
+
+    await redis.set(cacheKey, JSON.stringify(result), "EX", 60);
+
+    return res.status(200).json(result);
 
   } catch (err) {
     console.error("[getOrgTasks]", err);

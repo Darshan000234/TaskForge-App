@@ -14,6 +14,7 @@ import {
   TASK_STATUS_STYLE, PRIORITY_COLOR, PRIORITY_DOT,
   isOverdue, TASK_STATUS_LABEL,
 } from "./constants";
+import useDebounce from "../../../../utils/debounce.js";
 import api from "../../../../api/api.js";
 import socket from "../../../../socket/socket.js";
 import toast from "react-hot-toast";
@@ -64,7 +65,7 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
       <p className="text-xs text-zinc-500 mt-1.5 line-clamp-2 ml-5">{task.Description}</p>
     )}
 
-    <div className="mt-3 flex items-center justify-between gap-2">
+    <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
       <AssigneeCell
         taskId={task.id}
         assignees={task.assignees}
@@ -78,7 +79,7 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
           {task.priority}
         </span>
         {task.dueDate && (
-          <span className={`flex items-center gap-1 ${isOverdue(task) ? "text-red-400" : "text-zinc-500"}`}>
+          <span className={`flex items-center gap-1 whitespace-nowrap ${isOverdue(task) ? "text-red-400" : "text-zinc-500"}`}>
             <Calendar size={11} />
             {new Date(task.dueDate).toLocaleDateString("en-IN", {
               day: "2-digit", month: "short", year: "numeric",
@@ -98,7 +99,7 @@ const TaskGridCard = ({ task, org, onDeleteTask, onRemoveMember, onOpenAddMember
 
 const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenAddMember, onClick, isAdmin, onAssigneesLoaded }) => (
   <tr onClick={() => onClick?.()} className="group border-b border-zinc-800/60 last:border-b-0">
-    <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
+    <td className={`px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
       <div className="flex items-center gap-2.5">
         {STATUS_ICON[task.Status]}
         <span className={`font-medium ${task.Status === "done" ? "line-through text-zinc-500" : "text-white"}`}>
@@ -110,20 +111,20 @@ const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenA
       )}
     </td>
 
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
+    <td className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
       <span className={`flex items-center gap-1.5 text-xs font-medium capitalize ${PRIORITY_COLOR[task.priority]}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[task.priority]}`} />
         {task.priority}
       </span>
     </td>
 
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
+    <td className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
       <span className={`text-xs px-2.5 py-1 rounded-md font-medium capitalize ${TASK_STATUS_STYLE[task.Status]}`}>
         {TASK_STATUS_LABEL[task.Status] ?? task.Status}
       </span>
     </td>
 
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 relative cursor-pointer">
+    <td className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 relative cursor-pointer">
       <AssigneeCell
         taskId={task.id}
         assignees={task.assignees}
@@ -133,17 +134,14 @@ const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenA
         onAssigneesLoaded={onAssigneesLoaded}
       />
     </td>
-
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
-      {isAdmin ? (
+    {isAdmin && (
+      <td className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 whitespace-nowrap">
         <AddMemberButton onClick={() => onOpenAddMember(task)} />
-      ) : (
-        <span className="text-zinc-600 text-xs">—</span>
-      )}
-    </td>
+      </td>
+    )}
 
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
-      <span className={`text-xs flex items-center gap-1 ${isOverdue(task) ? "text-red-400 font-medium" : "text-zinc-400"}`}>
+    <td className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
+      <span className={`text-xs flex items-center gap-1 whitespace-nowrap ${isOverdue(task) ? "text-red-400 font-medium" : "text-zinc-400"}`}>
         {isOverdue(task) && <AlertTriangle size={11} />}
         {task.dueDate
           ? new Date(task.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
@@ -152,7 +150,7 @@ const TaskTableRow = ({ task, org, isLast, onDeleteTask, onRemoveMember, onOpenA
     </td>
 
     {isAdmin && (
-      <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-br-xl" : ""}`}>
+      <td className={`px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-br-xl" : ""}`}>
         <button
           onClick={(e) => { e.stopPropagation(); onDeleteTask?.(task.id); }}
           className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md cursor-pointer hover:bg-red-500/15 text-zinc-500 hover:text-red-400 transition"
@@ -179,7 +177,8 @@ const TaskSection = ({
   const [loadingTasks, setLoadingTasks] = useState(false)
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [addMemberTarget, setAddMemberTarget] = useState(null);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput, 300);
   const [filters, setFilters] = useState({});
   const [filterOpen, setFilterOpen] = useState(false);
   const [view, setView] = useState("list");
@@ -191,11 +190,14 @@ const TaskSection = ({
 
   useEffect(() => {
     if (!proj_id) return;
+
     setTasks([]);
     setNextCursor(null);
     setHasMore(false);
+
     fetchTasks(null);
-  }, [proj_id]);
+
+  }, [proj_id, filters, search]);
 
 
   const fetchTasks = async (cursorValue) => {
@@ -210,10 +212,9 @@ const TaskSection = ({
 
       if (filters.status) params.set("status", filters.status);
       if (filters.priority) params.set("priority", filters.priority);
-      if (filters.assignee) params.set("assignee", filters.assignee);
       if (search) params.set("search", search);
-      // console.log(proj_id);
-      
+      if (filters.due) params.set("due", filters.due);
+
       const res = await api.get(`proj/task/${proj_id}?${params}`);
 
       const { result, nextCursor: nc, hasMore: hm } = res.data;
@@ -236,26 +237,10 @@ const TaskSection = ({
     if (hasMore && !loadingTasks) fetchTasks(nextCursor);
   };
 
-
   useEffect(() => {
-    if (!proj_id) return;
-
-    setTasks([]);
-    setNextCursor(null);
-    setHasMore(false);
-
-    fetchTasks(null);
-
-  }, [proj_id, filters, search]);
-
-  // console.log(tasks.length);
-  
-
-  useEffect(() => {
-    const onAddTask = async ({ taskId }) => {
+    const onAddTask = async ({ task }) => {
       try {
-        const res = await api.get(`proj/task/${taskId}/one`);
-        setTasks((prev) => [res.data.result, ...(Array.isArray(prev) ? prev : [])]);
+        setTasks((prev) => [task, ...(Array.isArray(prev) ? prev : [])]);
       } catch (err) {
         toast.error(err.message);
       }
@@ -319,11 +304,35 @@ const TaskSection = ({
       );
     };
 
+    const handleDeleteMember = ({ data }) => {
+      const { id, updatedTasks } = data;
+
+      const affectedTasks = new Set(
+        updatedTasks.map((t) => t.task_id)
+      );
+
+      setTasks((prev) =>
+        prev.map((task) => {
+          if (!affectedTasks.has(task.id)) return task;
+
+          const updatedAssignees =
+            task.assignees?.filter((a) => a.id !== id) ?? null;
+
+          return {
+            ...task,
+            assignees: updatedAssignees,
+            assigneeCount: Math.max((task.assigneeCount || 1) - 1, 0),
+          };
+        })
+      );
+    };
+    
     socket.on("add_task", onAddTask);
     socket.on("task_deleted", onDeleteTask);
     socket.on("removed member", onRemovedMember);
     socket.on("member added", onMemberAdded);
     socket.on("delete member", onDeleteMember);
+    socket.on("member left", handleDeleteMember);
 
     return () => {
       socket.off("add_task", onAddTask);
@@ -331,6 +340,7 @@ const TaskSection = ({
       socket.off("removed member", onRemovedMember);
       socket.off("member added", onMemberAdded);
       socket.off("delete member", onDeleteMember);
+      socket.off("member left", handleDeleteMember);
     };
   }, []);
 
@@ -349,7 +359,8 @@ const TaskSection = ({
     try {
       await api.post(`/proj/task/delete`, { id: taskId, proj_id: proj_id });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
-      if(tasks.length < 1) loadMore();
+      if (tasks.length < 1) loadMore();
+      toast.success("Task Deleted");
     } catch (err) {
       toast.error(err.message);
     }
@@ -369,7 +380,7 @@ const TaskSection = ({
     try {
       const res = await api.post(`proj/task/${taskId}/addmember`, {
         users: members,
-        org_id: org.org_id,
+        org_id: org.id,
         proj_id,
       });
       const { taskId: tid, members: newMembers } = res.data.result;
@@ -421,6 +432,7 @@ const TaskSection = ({
           };
         })
       );
+      toast.success("Member Removed from Task")
     } catch (err) {
       toast.error(err.message);
     }
@@ -436,12 +448,12 @@ const TaskSection = ({
     <div className="flex-1 min-w-0">
 
       <div className="flex items-center gap-3 flex-wrap mb-5">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 min-w-45 max-w-sm">
           <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search tasks..."
             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:border-zinc-600 transition"
           />
@@ -490,7 +502,7 @@ const TaskSection = ({
         {isAdmin && (
           <button
             onClick={() => setAddTaskOpen(true)}
-            className="cursor-pointer ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-4 py-2.5 rounded-lg text-sm font-medium"
+            className="cursor-pointer sm:ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition px-4 py-2.5 rounded-lg text-sm font-medium"
           >
             <Plus size={16} />Add Task
           </button>
@@ -555,15 +567,17 @@ const TaskSection = ({
       {tasks.length > 0 && view === "list" && (
         <>
           <div className="border border-zinc-800 rounded-xl">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-220 text-sm">
               <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
                 <tr className="text-left">
-                  <th className="px-5 py-3.5 font-medium rounded-tl-xl">Task</th>
-                  <th className="px-5 py-3.5 font-medium">Priority</th>
-                  <th className="px-5 py-3.5 font-medium">Status</th>
-                  <th className="px-5 py-3.5 font-medium">Assignees</th>
-                  <th className="px-5 py-3.5 font-medium">Add Member</th>
-                  <th className="px-5 py-3.5 font-medium">Due Date</th>
+                  <th className="px-5 py-3.5 font-medium rounded-tl-xl whitespace-nowrap">Task</th>
+                  <th className="px-5 py-3.5 font-medium whitespace-nowrap">Priority</th>
+                  <th className="px-5 py-3.5 font-medium whitespace-nowrap">Status</th>
+                  <th className="px-5 py-3.5 font-medium whitespace-nowrap">Assignees</th>
+                  {isAdmin &&
+                    <th className="px-5 py-3.5 font-medium whitespace-nowrap">Add Member</th>
+                  }
+                  <th className="px-5 py-3.5 font-medium whitespace-nowrap">Due Date</th>
                   {isAdmin && <th className={`px-5 py-3.5 font-medium w-12 rounded-tr-xl`} />}
                 </tr>
               </thead>

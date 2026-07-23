@@ -52,8 +52,7 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
       field: "due",
       options: [
         { value: "overdue", label: "Overdue" },
-        { value: "today", label: "Due Today" },
-        { value: "week", label: "Due This Week" },
+        { value: "today", label: "Due Today" }
       ],
     },
   ];
@@ -61,7 +60,7 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-2 z-40 w-72 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4 space-y-4"
+      className="absolute right-0 top-full mt-2 z-40 w-72 max-w-[calc(100vw-2rem)] bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4 space-y-4"
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-white">Filters</span>
@@ -82,17 +81,7 @@ const FilterPanel = ({ filters, onChange, members, onClose }) => {
           onChange={(val) => handleChange(item.field, val)}
         />
       ))}
-
-      <CustomSelect
-        label="Assignee"
-        value={filters.assigneeId}
-        options={members.map((m) => ({
-          value: m.id,
-          label: m.name,
-        }))}
-        onChange={(val) => handleChange("assigneeId", val)}
-      />
-
+      
       <div className="grid grid-cols-2 gap-3">
         <CustomSelect
           label="Sort By"

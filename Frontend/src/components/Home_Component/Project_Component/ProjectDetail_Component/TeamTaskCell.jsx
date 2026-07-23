@@ -82,7 +82,7 @@ const TeamTaskCell = ({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-lg z-50">
+        <div className="absolute left-0 top-full mt-2 w-64 max-w-[calc(100vw-2rem)] bg-zinc-900 border border-zinc-700 rounded-xl shadow-lg z-50">
           <p className="px-3 py-2 text-[10px] text-zinc-500 uppercase border-b border-zinc-800">
             Assigned Tasks
           </p>

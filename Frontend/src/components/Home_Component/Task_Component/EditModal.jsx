@@ -109,12 +109,12 @@ const EditModal = ({ type, entity, onClose, onSave }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-zinc-800">
           <div className="flex items-center gap-2.5">
             <Pencil size={15} className="text-zinc-400" />
             <h3 className="text-sm font-semibold text-white">{cfg.title}</h3>
@@ -127,7 +127,7 @@ const EditModal = ({ type, entity, onClose, onSave }) => {
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+        <div className="px-4 sm:px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
 
           <div>
             <Label>{cfg.nameLabel}</Label>
@@ -182,17 +182,17 @@ const EditModal = ({ type, entity, onClose, onSave }) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-zinc-800">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 px-4 sm:px-6 py-4 border-t border-zinc-800">
           <button
             onClick={onClose}
-            className="cursor-pointer px-4 py-2 rounded-xl text-sm text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 transition"
+            className="cursor-pointer w-full sm:w-auto px-4 py-2 rounded-xl text-sm text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 transition"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !form.name.trim()}
-            className="cursor-pointer flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="cursor-pointer w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
             {saving ? "Saving..." : "Save Changes"}

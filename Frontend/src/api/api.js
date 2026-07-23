@@ -4,7 +4,7 @@ import {
     setAccessToken,
     clearAccessToken
 } from '../utils/authStore';
-
+import toast from 'react-hot-toast';
 const URL = import.meta.env.VITE_URL;
 
 const api = axios.create({
@@ -50,6 +50,21 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
+        if (error.response.status === 429) {
+            const retryAfter = error.response.headers["retry-after"];
+
+            toast.error(
+                retryAfter
+                    ? `Too many requests. Please try again in ${retryAfter} seconds.`
+                    : "Too many requests. Please wait a moment and try again.",
+                {
+                    id: "rate-limit-toast",
+                }
+            );
+
+            return Promise.reject(error);
+        }
+
         if (error.response.status !== 401) {
             return Promise.reject(error);
         }
@@ -60,7 +75,6 @@ api.interceptors.response.use(
 
         originalRequest._retry = true;
 
-        // 🔴 If refresh already running → wait
         if (refreshPromise) {
             return new Promise((resolve, reject) => {
                 refreshQueue.push({
@@ -68,7 +82,7 @@ api.interceptors.response.use(
                         originalRequest.headers.Authorization = `Bearer ${token}`;
                         resolve(api(originalRequest));
                     },
-                    reject
+                    reject,
                 });
             });
         }
@@ -78,16 +92,18 @@ api.interceptors.response.use(
             {},
             { withCredentials: true }
         );
+
         try {
             const res = await refreshPromise;
 
             const newToken = res.data.accessToken;
-            // console.log(newToken);
+            // console.log(res);
+            
             setAccessToken(newToken);
-            // if(newToken) console.log("refresh was successfull");
             processQueue(null, newToken);
 
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
             return api(originalRequest);
 
         } catch (err) {

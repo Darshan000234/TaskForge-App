@@ -41,7 +41,7 @@ const TaskInfoCard = ({ task: initialTask, onUpdate, role }) => {
 
   return (
     <>
-      <div className="bg-linear-to-br from-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl p-5 space-y-5 shadow-lg shadow-black/30">
+      <div className="bg-linear-to-br from-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-5 shadow-lg shadow-black/30">
 
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -77,7 +77,7 @@ const TaskInfoCard = ({ task: initialTask, onUpdate, role }) => {
             <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
               <User size={13} className="text-zinc-400" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-medium">Assignees</p>
               {assignees.length === 0 ? (
                 <p className="text-xs text-zinc-500 mt-1">Unassigned</p>
@@ -88,10 +88,10 @@ const TaskInfoCard = ({ task: initialTask, onUpdate, role }) => {
                       key={user.id}
                       className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-800/60 border border-zinc-700 hover:border-zinc-600 transition"
                     >
-                      <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[11px] text-blue-400 font-semibold">
+                      <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[11px] text-blue-400 font-semibold shrink-0">
                         {user.name?.[0]?.toUpperCase()}
                       </div>
-                      <span className="text-xs text-zinc-200">{user.name}</span>
+                      <span className="text-xs text-zinc-200 truncate">{user.name}</span>
                     </div>
                   ))}
                   {assignees.length > 3 && (

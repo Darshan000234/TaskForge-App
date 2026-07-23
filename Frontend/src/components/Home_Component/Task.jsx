@@ -7,6 +7,7 @@ import {
 import api from "../../api/api.js";
 import AssigneeCell from "./Project_Component/ProjectDetail_Component/AssigneeCell.jsx";
 import { useNavigate, useOutletContext } from "react-router-dom";
+import useDebounce from "../../utils/debounce.js"
 const STATUS_ICON = {
   todo: <Circle size={14} className="text-zinc-500" />,
   inprogress: <Loader2 size={14} className="text-blue-400 animate-spin" />,
@@ -122,7 +123,7 @@ const FilterPanel = ({ filters, onChange, onClose }) => {
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-2 z-40 w-72 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4 space-y-4"
+      className="absolute right-0 top-full mt-2 z-40 w-72 max-w-[calc(100vw-2rem)] bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4 space-y-4"
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-white">Filters</span>
@@ -174,9 +175,10 @@ const FilterPanel = ({ filters, onChange, onClose }) => {
     </div>
   );
 };
-const TaskTableRow = ({ task, isLast, click }) => (
+
+const TaskTableRow = ({ task, isLast, click, onAssigneesLoaded, assignees, assigneeCount }) => (
   <tr onClick={() => click(task)} className="group border-b border-zinc-800/60 last:border-b-0">
-    <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
+    <td className={`px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-bl-xl" : ""}`}>
       <div className="flex items-center gap-2.5">
         {STATUS_ICON[task.Status]}
         <span className={`font-medium ${task.Status === "done" ? "line-through text-zinc-500" : "text-white"}`}>
@@ -188,25 +190,27 @@ const TaskTableRow = ({ task, isLast, click }) => (
       )}
     </td>
 
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
+    <td className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
       <span className={`flex items-center gap-1.5 text-xs font-medium capitalize ${PRIORITY_COLOR[task.priority]}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[task.priority]}`} />
         {task.priority}
       </span>
     </td>
 
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
+    <td className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
       <span className={`text-xs px-2.5 py-1 rounded-md font-medium capitalize ${TASK_STATUS_STYLE[task.Status]}`}>
         {TASK_STATUS_LABEL[task.Status] ?? task.Status}
       </span>
     </td>
 
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
+    <td onClick={(e) => e.stopPropagation()} className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
       {task.assigneeCount > 0 ? (
         <div>
           <AssigneeCell
             taskId={task.id}
+            assignees={task.assignees ?? null}
             assigneeCount={task.assigneeCount}
+            onAssigneesLoaded={onAssigneesLoaded}
           />
         </div>
       ) : (
@@ -214,8 +218,8 @@ const TaskTableRow = ({ task, isLast, click }) => (
       )}
     </td>
 
-    <td className="px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
-      <span className={`text-xs flex items-center gap-1 ${isOverdue(task) ? "text-red-400 font-medium" : "text-zinc-400"}`}>
+    <td className="px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50">
+      <span className={`text-xs flex items-center gap-1 whitespace-nowrap ${isOverdue(task) ? "text-red-400 font-medium" : "text-zinc-400"}`}>
         {isOverdue(task) && <AlertTriangle size={11} />}
         {task.dueDate
           ? new Date(task.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
@@ -223,7 +227,7 @@ const TaskTableRow = ({ task, isLast, click }) => (
       </span>
     </td>
 
-    <td className={`px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-br-xl" : ""}`}>
+    <td className={`px-4 sm:px-5 py-3.5 bg-zinc-900 group-hover:bg-zinc-900/50 ${isLast ? "rounded-br-xl" : ""}`}>
       <span className="text-xs text-zinc-500 truncate max-w-35 block">
         {task.project?.name ?? "—"}
       </span>
@@ -237,7 +241,8 @@ const Task = () => {
   const { org } = useOutletContext();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput, 300);
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
   const [filterOpen, setFilterOpen] = useState(false);
   const [cursorStack, setCursorStack] = useState([undefined]);
@@ -246,7 +251,6 @@ const Task = () => {
   const [total, setTotal] = useState(0);
   const navigate = useNavigate();
   const filterRef = useRef(null);
-  const searchTimer = useRef(null);
   const activeCount = Object.values(filters).filter(Boolean).length;
   const orgId = org?.id;
 
@@ -293,11 +297,6 @@ const Task = () => {
     fetchTasks(cursorStack[currentPage]);
   }, [currentPage, cursorStack, filters, search, orgId]);
 
-  const handleSearch = (val) => {
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => setSearch(val), 300);
-  };
-
   const handleNext = () => {
     if (!nextCursor) return;
     setCursorStack((prev) => [...prev.slice(0, currentPage + 1), nextCursor]);
@@ -313,11 +312,21 @@ const Task = () => {
     navigate(`/user/dashboard/task/${task.id}`)
   }
 
+  const handleAssigneesLoaded = useCallback((taskId, users) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, assignees: users, assigneeCount: users.length }
+          : t
+      )
+    );
+  }, []);
+
   const pageStart = currentPage * LIMIT + 1;
   const pageEnd = Math.min(pageStart + tasks.length - 1, total);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6 md:p-8">
+    <div className="min-h-screen bg-zinc-950 text-white p-4 sm:p-6 md:p-8">
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-white tracking-tight">All Tasks</h1>
         <p className="text-sm text-zinc-500 mt-0.5">
@@ -328,11 +337,12 @@ const Task = () => {
       </div>
 
       <div className="flex items-center gap-3 flex-wrap mb-5">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 min-w-50 max-w-sm">
           <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
-            onChange={(e) => handleSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search tasks..."
             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:border-zinc-600 transition text-white placeholder-zinc-500"
           />
@@ -342,8 +352,8 @@ const Task = () => {
           <button
             onClick={() => setFilterOpen((o) => !o)}
             className={`cursor-pointer flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition ${activeCount > 0
-                ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
-                : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
+              ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
+              : "border-zinc-800 text-zinc-400 bg-zinc-900 hover:border-zinc-600 hover:text-zinc-300"
               }`}
           >
             <SlidersHorizontal size={15} />
@@ -364,7 +374,7 @@ const Task = () => {
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-800">
+      <div className="rounded-xl border border-zinc-800 overflow-x-auto">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-zinc-500 gap-2">
             <Loader2 size={18} className="animate-spin" />
@@ -384,13 +394,13 @@ const Task = () => {
             )}
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <table className="w-full min-w-205 border-collapse">
             <thead>
               <tr className="border-b border-zinc-800">
                 {["Task", "Priority", "Status", "Assignees", "Due Date", "Project"].map((h) => (
                   <th
                     key={h}
-                    className="px-5 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider bg-zinc-900/80"
+                    className="px-4 sm:px-5 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider bg-zinc-900/80 whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -400,10 +410,13 @@ const Task = () => {
             <tbody>
               {tasks.map((task, idx) => (
                 <TaskTableRow
-                    key={task.id}
-                    task={task}
-                    isLast={idx === tasks.length - 1}
-                    click={handleClickTask}
+                  key={task.id}
+                  task={task}
+                  isLast={idx === tasks.length - 1}
+                  click={handleClickTask}
+                  onAssigneesLoaded={handleAssigneesLoaded}
+                  assignees={task.assignees ?? null}
+                  assigneeCount={task.assigneeCount}
                 />
               ))}
             </tbody>
@@ -412,7 +425,7 @@ const Task = () => {
       </div>
 
       {!loading && tasks.length > 0 && (
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
           <span className="text-xs text-zinc-500">
             Showing {pageStart}–{pageEnd}{total > 0 ? ` of ${total}` : ""}
           </span>

@@ -96,7 +96,7 @@ const AuditLogRow = ({ log }) => {
   return (
     <div className="border-b border-zinc-800/60 last:border-b-0 hover:bg-zinc-900/40 transition">
       <div
-        className={`flex items-start gap-4 px-5 py-4 ${hasDiff || hasJson ? "cursor-pointer" : ""}`}
+        className={`flex items-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 ${hasDiff || hasJson ? "cursor-pointer" : ""}`}
         onClick={() => (hasDiff || hasJson) && setExpanded((e) => !e)}
       >
         <div className={`w-8 h-8 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0 mt-0.5`}>
@@ -106,7 +106,7 @@ const AuditLogRow = ({ log }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-[9px] font-bold text-blue-400">
+              <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-[9px] font-bold text-blue-400 shrink-0">
                 {log.user?.name?.[0]?.toUpperCase() ?? "?"}
               </div>
               <span className="text-sm font-medium text-white">
@@ -126,7 +126,7 @@ const AuditLogRow = ({ log }) => {
           {expanded && hasDiff && <DiffViewer diff={diff} />}
 
           {expanded && !hasDiff && hasJson && (
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {log.oldValue && (
                 <div>
                   <p className="text-[10px] text-zinc-600 mb-1 uppercase tracking-wider">Before</p>
@@ -147,10 +147,10 @@ const AuditLogRow = ({ log }) => {
           )}
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="text-right">
-            <p className="text-xs text-zinc-400">{timeAgo(log.createdAt)}</p>
-            <p className="text-[10px] text-zinc-600">{date} · {time}</p>
+            <p className="text-xs text-zinc-400 whitespace-nowrap">{timeAgo(log.createdAt)}</p>
+            <p className="text-[10px] text-zinc-600 whitespace-nowrap hidden sm:block">{date} · {time}</p>
           </div>
           {(hasDiff || hasJson) && (
             <div className="text-zinc-600 hover:text-zinc-400 transition">
@@ -188,7 +188,7 @@ const FilterBar = ({ filters, onChange }) => {
           }`}
       >
         <Filter size={13} />
-        Filters
+        <span className="hidden sm:inline">Filters</span>
         {activeCount > 0 && (
           <span className="bg-blue-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
             {activeCount}
@@ -197,7 +197,7 @@ const FilterBar = ({ filters, onChange }) => {
       </button>
 
       {open && (
-        <div className="fixed z-[9999] w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-4 space-y-3"
+        <div className="fixed z-9999 w-64 max-w-[calc(100vw-2rem)] bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-4 space-y-3"
           style={{
             top: ref.current
               ? ref.current.getBoundingClientRect().bottom + 8
@@ -330,22 +330,30 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
     <div className={compact ? "" : "flex-1 min-w-0"}>
 
       {!compact && (
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <History size={16} className="text-zinc-400" />
             <h2 className="text-sm font-semibold text-white">Audit Logs</h2>
+            {!loading && (
+              <span className="text-xs text-zinc-500">
+                ({logs.length}{hasMore ? "+" : ""})
+              </span>
+            )}
           </div>
-
           <FilterBar filters={filters} onChange={setFilters} />
-
         </div>
       )}
 
       {compact && (
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-zinc-800 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <History size={14} className="text-zinc-400" />
             <h3 className="text-white text-[14px]">Recent Activity</h3>
+            {!loading && (
+              <span className="text-xs text-zinc-500">
+                ({logs.length}{hasMore ? "+" : ""} entries)
+              </span>
+            )}
           </div>
 
           <FilterBar filters={filters} onChange={setFilters} />
@@ -355,7 +363,7 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
       {loading && (
         <div className="space-y-0.5">
           {Array.from({ length: compact ? 4 : 8 }).map((_, i) => (
-            <div key={i} className={`flex items-start gap-4 ${compact ? "px-6 py-4" : "px-5 py-4"}`}>
+            <div key={i} className={`flex items-start gap-4 ${compact ? "px-4 sm:px-6 py-4" : "px-4 sm:px-5 py-4"}`}>
               <div className="w-8 h-8 rounded-lg bg-zinc-800 animate-pulse shrink-0" />
               <div className="flex-1 space-y-2 pt-1">
                 <div className="h-3 bg-zinc-800 animate-pulse rounded w-2/3" />
@@ -368,7 +376,7 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
       )}
 
       {!loading && error && (
-        <div className={`flex items-center gap-2 ${compact ? "px-6 py-8" : "py-12"} justify-center`}>
+        <div className={`flex items-center gap-2 ${compact ? "px-4 sm:px-6 py-8" : "py-12"} justify-center`}>
           <AlertCircle size={16} className="text-red-400" />
           <p className="text-sm text-red-400">{error}</p>
         </div>
@@ -386,7 +394,7 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
             {logs.map((log) => <AuditLogRow key={log.id} log={log} />)}
 
             {loadingMore && Array.from({ length: 3 }).map((_, i) => (
-              <div key={`skel-${i}`} className="flex items-start gap-4 px-5 py-4 border-t border-zinc-800/40">
+              <div key={`skel-${i}`} className="flex items-start gap-4 px-4 sm:px-5 py-4 border-t border-zinc-800/40">
                 <div className="w-8 h-8 rounded-lg bg-zinc-800 animate-pulse shrink-0" />
                 <div className="flex-1 space-y-2 pt-1">
                   <div className="h-3 bg-zinc-800 animate-pulse rounded w-1/2" />
@@ -397,7 +405,7 @@ const AuditLogList = ({ orgId = null, proj_id = null, api, compact = false, limi
           </div>
 
           {hasMore && (
-            <div className="flex justify-center pt-5">
+            <div className="flex justify-center pt-3 mb-1">
               <button
                 onClick={loadMore}
                 disabled={loadingMore}

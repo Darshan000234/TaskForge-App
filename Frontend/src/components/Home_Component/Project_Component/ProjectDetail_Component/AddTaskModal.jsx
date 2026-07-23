@@ -172,9 +172,8 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
     if(!org_id) return;
     const fetchTeamembers = async () => {
       try {
-        const res = await api.post(`/orgs/proj/members/${id}`, { org_id : org_id});
+        const res = await api.get(`/orgs/proj/members/${id}/${org_id}`);
         setTeamMembers(res.data.data);
-        // console.log(res.data.data);
         
       } catch (error) {
         toast.error(error.message);
@@ -235,7 +234,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
     >
       <div className="relative w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-zinc-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-blue-600/15 flex items-center justify-center">
               <Plus size={15} className="text-blue-400" />
@@ -252,7 +251,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
-          <div className="px-6 py-5 space-y-5">
+          <div className="px-4 sm:px-6 py-5 space-y-5">
 
             <Field icon={Type} label="Task Title" required>
               <input
@@ -302,7 +301,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
                 type="date"
                 value={form.dueDate}
                 onChange={(e) => set("dueDate", e.target.value)}
-                className="bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition scheme-dark"
+                className="w-full sm:w-auto bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition scheme-dark"
               />
               {errors.dueDate && (
                 <p className="text-xs text-red-400 mt-1">{errors.dueDate}</p>
@@ -320,7 +319,7 @@ const AddTaskModal = ({ open, onClose, onSubmit, org_id, id }) => {
             )}
           </div>
 
-          <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-end gap-3 shrink-0">
+          <div className="px-4 sm:px-6 py-4 border-t border-zinc-800 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
