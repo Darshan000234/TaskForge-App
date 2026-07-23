@@ -7,67 +7,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum AuthProvider {
-  local
-  google
-}
-
-enum Status {
-  pending
-  accepted 
-  rejected
-}
-
-enum Role {
-  admin
-  manager
-  member 
-}  
-
-enum MessageType {
-  TEXT
-  IMAGE
-  FILE
-}
-
-
 model User {
-  id           Int          @id @default(autoincrement())
-  name         String       @unique
-  email        String       @unique
-  password     String?
-  googleId     String?      @unique
-  activeorg    Int?          
-  org org? @relation(fields: [activeorg], references: [id], onDelete: SetNull)
-  authProvider AuthProvider @default(local)
-  createdAt    DateTime     @default(now())
-
-  projectMemberships proj_member[]
-  projectAssigner    project[]
-  createdTasks       task[] @relation("TaskCreator")
+  id                  Int             @id @default(autoincrement())
+  name                String          @unique
+  createdAt           DateTime        @default(now())
+  email               String          @unique
+  password            String?
+  authProvider        AuthProvider    @default(local)
+  googleId            String?         @unique
+  activeorg           Int?
+  AuditLog            AuditLog[]
+  org                 org?            @relation(fields: [activeorg], references: [id])
   createdTasksmessage message[]
-  task_assignee task_assignee[]
-  org_member   org_member[]
-  AuditLog     AuditLog[]
+  org_member          org_member[]
+  projectMemberships  proj_member[]
+  projectAssigner     project[]
+  createdTasks        task[]          @relation("TaskCreator")
+  task_assignee       task_assignee[]
 }
 
 model org {
-  id           Int          @id @default(autoincrement())
-  name         String       
-  userId       Int 
-  member_count Int 
-  proj_count   Int 
-  role         String       @default("admin")
-  createdAt    DateTime     @default(now())
-
-  members      org_member[]
-  user         User[]
-  task         task[]
-  project      project[]
-  task_assignee task_assignee[]
+  id            Int             @id @default(autoincrement())
+  name          String
+  userId        Int
+  createdAt     DateTime        @default(now())
+  member_count  Int
+  proj_count    Int
+  role          String          @default("admin")
   AuditLog      AuditLog[]
+  user          User[]
+  members       org_member[]
+  project       project[]
+  task          task[]
+  task_assignee task_assignee[]
 
-  @@index([userId]) 
+  @@index([userId])
   @@index([id])
 }
 
@@ -75,106 +49,101 @@ model org_member {
   id           Int    @id @default(autoincrement())
   org_id       Int
   member_id    Int
-  member_email String
   role         String @default("member")
-
-  org          org    @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  member_email String
   user         User   @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  org          org    @relation(fields: [org_id], references: [id], onDelete: Cascade)
 
+  @@unique([member_id, org_id])
   @@index([member_id])
-  @@unique([member_id,org_id])
   @@index([org_id])
 }
 
 model project {
-  id           Int          @id @default(autoincrement())
-  name         String
-  org_id       Int
-  assigned_to  Int?
-  Description  String 
-  status       String 
-  priority     String
-  endDate      DateTime 
-  last_update  DateTime    @default(now()) 
-  members      proj_member[]
-  tasks        task[]
+  id            Int             @id @default(autoincrement())
+  org_id        Int
+  createdAt     DateTime        @default(now())
+  name          String
+  assigned_to   Int?
+  last_update   DateTime        @default(now())
+  priority      String
+  status        String
+  endDate       DateTime
+  Description   String
+  members       proj_member[]
+  member        User?           @relation(fields: [assigned_to], references: [id])
+  org           org             @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  tasks         task[]
   task_assignee task_assignee[]
 
-  member       User?    @relation(fields: [assigned_to], references: [id], onDelete: SetNull)
-  org          org     @relation(fields: [org_id], references: [id], onDelete: Cascade )
-
-  createdAt    DateTime     @default(now())
   @@index([org_id])
 }
 
 model proj_member {
-  id           Int         @id @default(autoincrement())
-  proj_id      Int 
-  org_id       Int 
-  member_id    Int 
-  role         Role 
+  id        Int     @id @default(autoincrement())
+  proj_id   Int
+  org_id    Int
+  member_id Int
+  role      Role
+  member    User    @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  project   project @relation(fields: [proj_id], references: [id], onDelete: Cascade)
 
-  project      project     @relation(fields: [proj_id], references: [id], onDelete: Cascade)
-  member       User    @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  @@unique([proj_id, member_id])
   @@index([org_id, member_id])
   @@index([proj_id, member_id])
   @@index([proj_id])
-  @@unique([proj_id, member_id])
 }
 
 model task {
-  id           Int    @id @default(autoincrement())
-  name         String
-  Description  String 
-  Status       String 
-  priority     String 
-  dueDate      DateTime
-  created_by   Int?
+  id           Int             @id @default(autoincrement())
   project_id   Int
-  org_id       Int 
-
-  creator  User?    @relation("TaskCreator", fields: [created_by], references: [id], onDelete: SetNull)
-
-  project  project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
-  org      org      @relation(fields: [org_id], references: [id], onDelete: Cascade)
-
-  assignees task_assignee[]
-  task_message   message[]
+  createdAt    DateTime        @default(now())
+  name         String
+  org_id       Int
+  created_by   Int?
+  Description  String
+  Status       String
+  dueDate      DateTime
+  priority     String
+  task_message message[]
+  creator      User?           @relation("TaskCreator", fields: [created_by], references: [id])
+  org          org             @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  project      project         @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  assignees    task_assignee[]
 
   @@index([project_id])
   @@index([org_id])
   @@index([org_id, Status])
-  @@index([org_id, dueDate])    
-  createdAt DateTime @default(now())
+  @@index([org_id, dueDate])
 }
 
 model task_assignee {
-  id        Int  @id @default(autoincrement())
-  task_id   Int
-  user_id   Int
-  proj_id   Int 
-  org_id    Int
-
-  project   project @relation(fields: [proj_id], references: [id], onDelete: Cascade)
-  task      task @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  user      User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  org       org @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  id      Int     @id @default(autoincrement())
+  task_id Int
+  user_id Int
+  proj_id Int
+  org_id  Int
+  org     org     @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  project project @relation(fields: [proj_id], references: [id], onDelete: Cascade)
+  task    task    @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([task_id, user_id])
   @@index([proj_id])
   @@index([user_id, org_id])
-  @@index([task_id])    
+  @@index([task_id])
 }
 
 model teaminvitation {
-  id           Int          @id @default(autoincrement()) 
-  sender_id    Int 
-  receiver_id  Int
-  receiver_email String 
-  org_id       Int
-  message      String 
-  status       Status       @default(pending)             
-  createdAt    DateTime     @default(now())               
+  id             Int      @id @default(autoincrement())
+  status         Status   @default(pending)
+  createdAt      DateTime @default(now())
+  org_id         Int
+  message        String
+  sender_id      Int
+  receiver_id    Int
+  receiver_email String
+
   @@unique([receiver_id, org_id])
   @@index([receiver_id])
   @@index([sender_id])
@@ -182,20 +151,19 @@ model teaminvitation {
 }
 
 model message {
-  id        Int      @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   task_id   Int
   user_id   Int?
-
   type      MessageType
   content   String?
-
-  fileUrl   String? 
+  fileUrl   String?
   fileName  String?
   mimeType  String?
-  task      task @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  user      User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  createdAt DateTime    @default(now())
+  task      task        @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user      User?       @relation(fields: [user_id], references: [id])
+
   @@index([task_id])
-  createdAt DateTime @default(now())
 }
 
 model AuditLog {
@@ -203,17 +171,15 @@ model AuditLog {
   orgId        Int?
   proj_id      Int?
   userId       Int?
-  action       String?   // CREATED | UPDATED | DELETED | ASSIGNED | UNASSIGNED | STATUS_CHANGED | PRIORITY_CHANGED
-  resourceType String?   // ORG | PROJECT | TASK | MEMBER
-  resourceId   String?   // store as string — works for both Int IDs and UUIDs
-  
+  action       String?
+  resourceType String?
+  resourceId   String?
   oldValue     Json?
   newValue     Json?
-  metadata     Json?    // ip, userAgent
+  metadata     Json?
   createdAt    DateTime @default(now())
-
-  org  org?   @relation(fields: [orgId],  references: [id], onDelete: Cascade)
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  org          org?     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User?    @relation(fields: [userId], references: [id])
 
   @@index([orgId])
   @@index([orgId, createdAt(sort: Desc)])
@@ -222,4 +188,27 @@ model AuditLog {
   @@index([orgId, action])
   @@index([proj_id])
   @@index([proj_id, createdAt(sort: Desc)])
+}
+
+enum AuthProvider {
+  local
+  google
+}
+
+enum Status {
+  pending
+  accepted
+  rejected
+}
+
+enum Role {
+  manager
+  member
+  admin
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
 }

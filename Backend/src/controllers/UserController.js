@@ -8,6 +8,7 @@ import { redis } from '../config/redis.js';
 import crypto from 'crypto';
 
 const URL = process.env.GOOGLE_URL;
+const isProduction = process.env.NODE_ENV === "production";
 
 
 export const registerUser = async (req, res) => {
@@ -38,11 +39,11 @@ export const registerUser = async (req, res) => {
     const accesstoken = generateAccessToken(newUser);
     const refreshToken = await generateRefreshToken(newUser);
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({ accesstoken });
@@ -61,13 +62,12 @@ export const LoginUser = async (req, res) => {
     const refreshToken = await generateRefreshToken(user);
     console.log(refreshToken);
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
     res.json({ accesstoken });
 };
 
@@ -133,8 +133,8 @@ export const google = async (req, res) => {
 
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
@@ -216,7 +216,7 @@ export const DeleteAccount = async (req, res) => {
 
         await redis.del(`user:${id}`);
 
-        for (const o of org ) {
+        for (const o of org) {
             const taskAssignments = await prisma.task_assignee.findMany({
                 where: {
                     org_id: o.org_id,
@@ -239,7 +239,7 @@ export const DeleteAccount = async (req, res) => {
 
             io.to(`org_${o.org_id}`).emit("member left", {
                 data: {
-                    email : req.user.email,
+                    email: req.user.email,
                     userId: id,
                     updatedProjects: projectMemberships,
                     updatedTasks: taskAssignments,

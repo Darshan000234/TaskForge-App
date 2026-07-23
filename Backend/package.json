@@ -4,8 +4,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"nodemon src/server.js\" \"nodemon src/workers/inviteWorker.js\" \"nodemon src/workers/reminderWorker.js\""
+    "dev": "concurrently \"nodemon src/server.js\" \"nodemon src/workers/inviteWorker.js\" \"nodemon src/workers/reminderWorker.js\"",
+    "start": "node src/server.js",
+    "worker:invite": "node src/workers/inviteWorker.js",
+    "worker:reminder": "node src/workers/reminderWorker.js"
   },
   "keywords": [],
   "author": "",
