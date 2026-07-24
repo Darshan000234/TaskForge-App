@@ -44,15 +44,12 @@ const Signup_login = () => {
 
   const handlePostAuth = async () => {
     try {
-      const res = await api.get('/orgs/mine');
-      const orgs = res.data ?? [];
-      if (orgs) {
-        navigate('/user/dashboard');
-      } else {
-        setOrgModalOpen(true);
-      }
+      const res = await api.get("/orgs/mine");
+      navigate("/user/dashboard");
     } catch (err) {
-      console.log(err);
+        if (err.response?.status === 404) {
+            setOrgModalOpen(true);
+        }
     }
   };
 
