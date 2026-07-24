@@ -24,8 +24,6 @@ router.get('/mine', async (req, res) => {
         const data = await prisma.org.findFirst({
             where: { userId: req.user.id }
         });
-
-        if (!data) return res.status(404).json({ message: "Org not found" });
         return res.json(data);
     } catch (error) {
         res.status(500).json({ message: error.message });
