@@ -47,6 +47,7 @@ const Signup_login = () => {
       const res = await api.get("/orgs/mine");
       navigate("/user/dashboard");
     } catch (err) {
+        console.log(err);
         if (err.response?.status === 404) {
             setOrgModalOpen(true);
         }
