@@ -6,8 +6,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import prisma from "./config/prisma.js";
-import authmiddleware from "./middlewares/authMiddleWare.js";
-import { globalLimiter } from './middlewares/rateLimiter.js';
+import authmiddleware from "./middlewares/authMiddleware.js";
+import { globalLimiter } from './middlewares/RateLimiter.js';
 import { userSockets } from "./utils/userSockets.js";
 import { redis } from './config/redis.js';
 import { setIO } from "./utils/socket.js";
@@ -21,7 +21,6 @@ import orgRoute from "./routes/Organization/OrgRoute.js";
 import ChatRoute from "./routes/Chat/ChatRoute.js";
 import AuditRoute from "./routes/Audit/AuditRoute.js";
 import SettingRoute from "./routes/Setting/SettingRoute.js";
-import authMiddleware from "./middlewares/authMiddleWare.js";
 
 dotenv.config();
 

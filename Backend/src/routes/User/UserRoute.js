@@ -3,7 +3,7 @@ import {
     registerUser, LoginUser, google,
     LogoutUser, userData, DeleteAccount
 } from '../../controllers/UserController.js';
-import authMiddleware from '../../middlewares/authMiddleWare.js';
+import authMiddleware from '../../middlewares/authMiddleware.js';
 import { refreshToken } from '../../utils/generateTokens.js';
 import {
     authLimiter, readLimiter, sensitiveLimiter,RefreshLimiter
