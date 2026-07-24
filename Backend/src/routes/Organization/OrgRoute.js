@@ -21,10 +21,17 @@ router.get('/:id/members', DataOrganizationMembers);
 router.get('/:orgId/tasks/', getOrgTasks);
 router.get('/mine', async (req, res) => {
     try {
-        const data = await prisma.org.findFirst({
+         const data = await prisma.org.findFirst({
             where: { userId: req.user.id }
         });
-        return res.json(data);
+
+        if (!data) {
+            return res.status(404).json({
+                message: "Organization not found"
+            });
+        }
+
+        res.json(data);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
