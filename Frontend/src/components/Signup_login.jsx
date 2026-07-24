@@ -45,6 +45,7 @@ const Signup_login = () => {
   const handlePostAuth = async () => {
     try {
       const res = await api.get("/orgs/mine");
+      console.log(res);
       navigate("/user/dashboard");
     } catch (err) {
         console.log(err);
