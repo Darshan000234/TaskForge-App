@@ -6,7 +6,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import prisma from "./config/prisma.js";
-import authmiddleware from "./middlewares/authMiddleware.js";
+import authMiddleware from "./middlewares/authMiddleware.js";
 import { globalLimiter } from './middlewares/RateLimiter.js';
 import { userSockets } from "./utils/userSockets.js";
 import { redis } from './config/redis.js';
