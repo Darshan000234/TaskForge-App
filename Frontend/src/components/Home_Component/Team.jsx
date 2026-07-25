@@ -40,7 +40,7 @@ const Team = () => {
       })
     }
     const handleMemberExist = (data) => {
-      const id = data.userId;
+      const id = data.id;
       setMembers((prevmember) => {
         return prevmember.map((member) => {
           if (member.id === id) {
