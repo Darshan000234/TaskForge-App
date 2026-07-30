@@ -39,19 +39,18 @@ const Team = () => {
         })
       })
     }
-
-    const handleMemberExist = ({ data }) => {
-  const id = data.userId;
-
-  setMembers((prevMembers) => {
-    return prevMembers.map((member) => {
-      if (member.id === id) {
-        return { ...member, status: "rejected" };
-      }
-      return member;
-    });
-  });
-};
+    
+    const handleMemberExist = ({data}) => {
+      const id = data.id;      
+      setMembers((prevmember) => {
+        return prevmember.map((member) => {
+          if (member.id === id) {
+            return { ...member, status: "rejected" }
+          }
+          return member;
+        })
+      })
+    }
 
     const handleDeleteInvite = (data) => {
       const id = data;
