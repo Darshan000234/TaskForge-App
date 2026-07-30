@@ -39,24 +39,19 @@ const Team = () => {
         })
       })
     }
-<<<<<<< HEAD
-    
-    const handleMemberExist = ({data}) => {
-      const id = data.id;
-=======
+
     const handleMemberExist = ({ data }) => {
-      const id = data.userId;
-      
->>>>>>> da20083 (changed needed because find bug in deployment)
-      setMembers((prevmember) => {
-        return prevmember.map((member) => {
-          if (member.id === id) {
-            return { ...member, status: "rejected" }
-          }
-          return member;
-        })
-      })
-    }
+  const id = data.userId;
+
+  setMembers((prevMembers) => {
+    return prevMembers.map((member) => {
+      if (member.id === id) {
+        return { ...member, status: "rejected" };
+      }
+      return member;
+    });
+  });
+};
 
     const handleDeleteInvite = (data) => {
       const id = data;
