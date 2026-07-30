@@ -94,7 +94,7 @@ export const sentMessage = async (req, res) => {
           task_id: Number(task_id),
           user_id,
           type,
-          content: type === "TEXT" ? content : null,
+          content: content?.trim() || null,
           fileUrl,
           fileName,
           mimeType,
@@ -113,6 +113,7 @@ export const sentMessage = async (req, res) => {
         }
       }
     });
+    
     await redis.del(`task:${task_id}:messages`);
     io.to(`task_${task_id}`).emit("message", data);
     res.status(200).json({ result: msg });

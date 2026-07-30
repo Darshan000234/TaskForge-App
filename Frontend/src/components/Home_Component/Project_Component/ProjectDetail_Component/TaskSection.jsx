@@ -285,7 +285,7 @@ const TaskSection = ({
       );
     };
 
-    const onDeleteMember = ({ memberId }) => {
+    const onDeleteMember = ({ id }) => {
       setTasks((prev) =>
         prev.map((t) => {
           const wasAssigned =
@@ -305,7 +305,7 @@ const TaskSection = ({
     };
 
     const handleDeleteMember = ({ data }) => {
-      const { id, updatedTasks } = data;
+      const { userId, updatedTasks } = data;
 
       const affectedTasks = new Set(
         updatedTasks.map((t) => t.task_id)
@@ -331,7 +331,7 @@ const TaskSection = ({
     socket.on("task_deleted", onDeleteTask);
     socket.on("removed member", onRemovedMember);
     socket.on("member added", onMemberAdded);
-    socket.on("delete member", onDeleteMember);
+    socket.on("Member Deleted", onDeleteMember);
     socket.on("member left", handleDeleteMember);
 
     return () => {

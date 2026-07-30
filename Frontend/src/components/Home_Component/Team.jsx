@@ -39,9 +39,15 @@ const Team = () => {
         })
       })
     }
+<<<<<<< HEAD
     
     const handleMemberExist = ({data}) => {
       const id = data.id;
+=======
+    const handleMemberExist = ({ data }) => {
+      const id = data.userId;
+      
+>>>>>>> da20083 (changed needed because find bug in deployment)
       setMembers((prevmember) => {
         return prevmember.map((member) => {
           if (member.id === id) {
@@ -56,6 +62,7 @@ const Team = () => {
       const id = data;
       setMembers((prev) => prev.filter((p) => p.id !== id));
     }
+    
     socket.on("invite_accepted", handlestatuschange);
     socket.on("invite_rejected", handlestatuschange);
     socket.on("member left", handleMemberExist);

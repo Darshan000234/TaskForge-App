@@ -227,11 +227,12 @@ export const deleteOrganization = async (req, res) => {
       ];
 
       const data = {
-        id: userId,
+        userId: userId,
         email: req.user.email,
         updatedProjects: projectIds,
-        updatedTasks: taskIds
-      }
+        updatedTasks: taskIds,
+        orgId : org_id
+      };
 
       io.in(`user_${userId}`).socketsLeave(roomsToLeave);
       io.to(`org_${org_id}`).emit("member left", { data });

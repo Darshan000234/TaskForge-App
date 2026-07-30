@@ -99,8 +99,8 @@ const TeamSection = ({ org, proj_id, onTaskAssigneeRemoved, role }) => {
   };
 
   useEffect(() => {
-    const handleDeleteMember = ({ data }) => {
-      setTeamMembers((prev) => prev.filter((m) => m.memberId !== data.id));
+    const handleDeleteMember = ({ id }) => {
+      setTeamMembers((prev) => prev.filter((m) => m.memberId !== id));
     };
 
     const handleMembersUpdate = async ({ memberIds }) => {
@@ -143,12 +143,13 @@ const TeamSection = ({ org, proj_id, onTaskAssigneeRemoved, role }) => {
       );
     };
 
-    socket.on("delete Member", handleDeleteMember);
+    socket.on("Member Deleted", handleDeleteMember);
     socket.on("add task", handleMembersUpdate);
     socket.on("task_deleted", handleMembersUpdate);
     socket.on("Add member", handleMembersUpdate);
     socket.on("removed member", handleRemovedMember);
     socket.on("member left", handleDeleteMember);
+    socket.on("invite Deleted",handleDeleteMember);
 
     return () => {
       socket.off("delete Member", handleDeleteMember);
@@ -157,6 +158,7 @@ const TeamSection = ({ org, proj_id, onTaskAssigneeRemoved, role }) => {
       socket.off("Add member", handleMembersUpdate);
       socket.off("removed member", handleRemovedMember);
       socket.off("member left", handleDeleteMember);
+      socket.off("invite Deleted",handleDeleteMember);
     };
   }, [proj_id]);
 

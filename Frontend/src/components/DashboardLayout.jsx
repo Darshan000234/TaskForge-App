@@ -118,17 +118,26 @@ const DashboardLayout = () => {
     const handleCreated = async (data) => {
       setOrgs((prev) => [...prev, data.org])
     }
+    
     const handleOrgDeleted = () => {
       socket.on("org_deleted", () => {
         socket.disconnect();
         navigate("/user/dashboard");
       });
     }
+
+    const handleMemberOrg = ({ orgId }) => {
+      setOrgs((prev) => prev.filter((o) => o.id !== orgId));
+    }
+
     socket.on("joined_org", handleCreated);
     socket.on("org deleted", handleOrgDeleted);
+    socket.on("member left", handleMemberOrg);
+    
     return () => {
       socket.off("joined_org", handleCreated);
       socket.off("org deleted", handleOrgDeleted);
+      socket.off("member left", handleMemberOrg);
     }
   }, [])
 
@@ -144,7 +153,7 @@ const DashboardLayout = () => {
       return;
     }
     try {
-      console.log(orgId);
+      // console.log(orgId);
 
       const res = await api.delete(`/orgs/delete/${orgId}`);
       const updated = orgs.filter((o) => o.id !== orgId);

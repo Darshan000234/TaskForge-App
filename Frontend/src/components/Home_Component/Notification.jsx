@@ -30,8 +30,7 @@ const Notification = () => {
       toast.success(`New invite from ${invite.from}`);
     };
 
-    const handleDeleteInvite = (data) => {
-      const id = data;
+    const handleDeleteInvite = ({ id }) => {
       setNotifications((prev)=> prev.filter((i) => i.id !== id));
     }
 

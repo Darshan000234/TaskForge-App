@@ -173,11 +173,43 @@ export const DeleteInvite = async (req, res) => {
   const io = getIO();
 
   try {
-    const invite = await prisma.teaminvitation.findUnique({ where: { id } });
+    const invite = await prisma.teaminvitation.findUnique({
+      where: { id },
+    });
 
-    await prisma.teaminvitation.delete({ where: { id: invite.id } });
+    if (!invite) {
+      return res.status(404).json({ message: "Invite not found" });
+    }
+
+    let projectIds = [];
+    let taskIds = [];
 
     if (invite.status === "accepted") {
+      const [projectMemberships, taskAssignments] = await Promise.all([
+        prisma.proj_member.findMany({
+          where: {
+            org_id: invite.org_id,
+            member_id: invite.receiver_id,
+          },
+          select: {
+            proj_id: true,
+          },
+        }),
+
+        prisma.task_assignee.findMany({
+          where: {
+            org_id: invite.org_id,
+            user_id: invite.receiver_id,
+          },
+          select: {
+            task_id: true,
+          },
+        }),
+      ]);
+
+      projectIds = projectMemberships.map((p) => p.proj_id);
+      taskIds = taskAssignments.map((t) => t.task_id);
+
       await prisma.$transaction([
         prisma.project.updateMany({
           where: {
@@ -211,55 +243,96 @@ export const DeleteInvite = async (req, res) => {
             },
           },
         }),
+
+        prisma.teaminvitation.delete({
+          where: {
+            id: invite.id,
+          },
+        }),
       ]);
+    } else {
+      await prisma.teaminvitation.delete({
+        where: {
+          id: invite.id,
+        },
+      });
     }
 
     await redis.del(`invites:${invite.receiver_id}`);
+
     if (invite.status === "accepted") {
       await redis.del(`user:${invite.receiver_id}:organizations`);
     }
 
     auditService.log({
-      orgId: invite.org_id, userId,
-      action: "DELETED", resourceType: RT.MEMBER, resourceId: invite.id,
-      oldValue: { email: invite.receiver_email, status: invite.status },
+      orgId: invite.org_id,
+      userId,
+      action: "DELETED",
+      resourceType: RT.MEMBER,
+      resourceId: String(invite.receiver_id),
+      oldValue: {
+        email: invite.receiver_email,
+        status: invite.status,
+      },
       metadata: meta(req),
     });
-    
+
+    if (invite.status === "accepted") {
+      io.to(`org_${invite.org_id}`).emit("member left", {
+        userId: invite.receiver_id,
+        email: invite.receiver_email,
+        updatedProjects: projectIds,
+        updatedTasks: taskIds,
+      });
+
+      io.to(`user_${invite.receiver_id}`).emit("member left", {
+        orgId: invite.org_id,
+      });
+    } else {
+      io.to(`org_${invite.org_id}`).emit("invite Deleted", {
+        id: invite.id,
+      });
+
+      io.to(`user_${invite.receiver_id}`).emit("invite Deleted", {
+        id: invite.id,
+      });
+    }
+
     const userData = userSockets.get(invite.receiver_id);
-    
-    io.to(`org_${invite.org_id}`).emit("invite Deleted", { id: invite.id });
-    io.to(`user:${receiver.id}`).emit("invite Deleted", { id : invite.id });
+
     if (userData) {
       for (const socketId of userData.sockets) {
         const socket = io.sockets.sockets.get(socketId);
-        
+
         if (!socket) continue;
-        
+
         socket.leave(`org_${invite.org_id}`);
-        
-        for (const orgMemberId of userData.orgMembers) {
-          socket.leave(`org_member_${orgMemberId}`);
+
+        for (const roomId of projectIds) {
+          socket.leave(`project_${roomId}`);
         }
 
-        for (const projectId of userData.projects) {
-          socket.leave(`project_${projectId}`);
+        for (const roomId of taskIds) {
+          socket.leave(`task_${roomId}`);
         }
-        
-        for (const taskId of userData.tasks) {
-          socket.leave(`task_${taskId}`);
-        }
+
+        socket.leave(`org_member_${invite.org_id}`);
       }
-      
-      userData.orgs.clear();
-      userData.orgMembers.clear();
-      userData.projects.clear();
-      userData.tasks.clear();
+
+      userData.orgs.delete(invite.org_id);
+      userData.orgMembers.delete(invite.org_id);
+
+      projectIds.forEach((id) => userData.projects.delete(id));
+      taskIds.forEach((id) => userData.tasks.delete(id));
     }
-    
-    return res.status(200).json({ message: "successfully Deleted" });
+
+    return res.status(200).json({
+      message: "Successfully deleted",
+    });
   } catch (error) {
-    console.error("DeleteInvite:", error.message);
-    return res.status(500).json({ message: error.message });
+    console.error("DeleteInvite:", error);
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };

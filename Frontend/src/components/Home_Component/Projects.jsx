@@ -112,12 +112,13 @@ const Projects = () => {
       setProjects((prev) => prev.filter((p) => p.id !== data.id));
     };
 
-    const handleProjectReassign = async (data) => {
-      const project = data;
-      setProjects((prev) => prev.map((p) => (p.id === project.id ? project : p)));
+    const handleProjectUpdate = ({ proj }) => {
+      setProjects((prev) =>
+        prev.map((p) => (p.id === proj.id ? proj : p))
+      );
     };
 
-    const handleMemberDeleted = async (data) => {
+    const handleMemberDeleted = async ({ data }) => {
       const updatedProjectIds = new Set(data.updatedProjects);
       setProjects(prev =>
         prev.map(project =>
@@ -126,17 +127,32 @@ const Projects = () => {
             : project
         )
       );
-    }
+    };
+
+    const handleDelete = (payload) => {
+      const { id, updatedProjects } = payload.data;
+
+      setProjects((prev) =>
+        prev
+          .filter((project) => project.assigned_to !== id)
+          .map((project) =>
+            updatedProjects.includes(project.id)
+              ? { ...project, assigned_to: null }
+              : project
+          )
+      );
+    };
 
     socket.on("project_created", handleProjectCreated);
     socket.on("project_deleted", handleProjectDeleted);
-    socket.on("project_reassign", handleProjectReassign);
-    socket.on("member deleted", handleMemberDeleted);
+    socket.on("project_Update", handleProjectUpdate);
+    socket.on("member left", handleMemberDeleted);
+    // socket.on("invite Deleted", handleDelete);
     return () => {
       socket.off("project_created", handleProjectCreated);
       socket.off("project_deleted", handleProjectDeleted);
-      socket.off("project_reassign", handleProjectReassign);
-      socket.on("member deleted", handleMemberDeleted);
+      socket.off("project_Update", handleProjectUpdate);
+      socket.off("member left",handleMemberDeleted);
     };
   }, []);
 

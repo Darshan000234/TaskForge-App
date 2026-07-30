@@ -59,7 +59,7 @@ const ProjectDetail = () => {
     }
 
     const handleMemberDeleted = ({ data }) => {
-      const { email } = data;
+      const email = data.email;
 
       setTask((prev) => ({
         ...prev,

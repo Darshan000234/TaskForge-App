@@ -140,7 +140,7 @@ export const OneProjData = async (req, res) => {
             });
         }
 
-        data.email = data.member.email;
+        data.email = data?.member?.email || null;
 
         const org = await prisma.org_member.findUnique({
             where: {
@@ -228,86 +228,180 @@ export const reassignProject = async (req, res) => {
 
     try {
         const [user, project] = await Promise.all([
-            prisma.user.findUnique({ where: { email } }),
+            prisma.user.findFirst({ where: { email } }),
             prisma.project.findUnique({ where: { id } }),
         ]);
 
-        if(!user){
-            return res.status(404).json({ message :
-                "user does not exist"
+        if (!user) {
+            return res.status(404).json({
+                message: "user does not exist",
             });
         }
 
-        const [prevManager, org_member, prevOrgMember] = await Promise.all([
-            prisma.user.findUnique({
-                where: { id: project.assigned_to },
-                select: { id: true, name: true, email: true },
-            }),
-            prisma.org_member.findUnique({ where: { member_id_org_id: { member_id: user.id, org_id: Number(org.id) } } }),
-            prisma.org_member.findUnique({ where: { member_id_org_id: { member_id: project.assigned_to, org_id: Number(org.id) } } }),
-        ]);
+        if (!project) {
+            return res.status(404).json({
+                message: "Project not found",
+            });
+        }
 
-        await prisma.$transaction([
-            prisma.proj_member.delete({ where: { proj_id_member_id: { proj_id: id, member_id: project.assigned_to } } }),
-            prisma.proj_member.create({ data: { proj_id: id, org_id: project.org_id, member_id: user.id, role: "manager" } }),
-        ]);
+        let prevManager = null;
+        let prevOrgMember = null;
 
-        const proj = await prisma.project.update({ where: { id }, data: { assigned_to: user.id } });
+        const org_member = await prisma.org_member.findUnique({
+            where: {
+                member_id_org_id: {
+                    member_id: user.id,
+                    org_id: Number(org.id),
+                },
+            },
+        });
+
+        if (project.assigned_to) {
+            [prevManager, prevOrgMember] = await Promise.all([
+                prisma.user.findUnique({
+                    where: { id: project.assigned_to },
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                }),
+
+                prisma.org_member.findUnique({
+                    where: {
+                        member_id_org_id: {
+                            member_id: project.assigned_to,
+                            org_id: Number(org.id),
+                        },
+                    },
+                }),
+            ]);
+        }
+
+        const operations = [];
+
+        if (project.assigned_to) {
+            operations.push(
+                prisma.proj_member.delete({
+                    where: {
+                        proj_id_member_id: {
+                            proj_id: id,
+                            member_id: project.assigned_to,
+                        },
+                    },
+                })
+            );
+        }
+
+        operations.push(
+            prisma.proj_member.create({
+                data: {
+                    proj_id: id,
+                    org_id: project.org_id,
+                    member_id: user.id,
+                    role: "manager",
+                },
+            })
+        );
+
+        await prisma.$transaction(operations);
+
+        const proj = await prisma.project.update({
+            where: { id },
+            data: {
+                assigned_to: user.id,
+            },
+        });
 
         const projKeys = await redis.keys(`project:${proj.id}:user:*`);
         if (projKeys.length) await redis.del(...projKeys);
+
         await redis.del(`projectMembers:${id}`);
 
         const listKeys = await redis.keys(`projectList:${project.org_id}:*`);
         if (listKeys.length) await redis.del(...listKeys);
 
         proj.email = email;
+
         const taskIds = await prisma.task.findMany({
             where: {
-                project_id: id
+                project_id: id,
             },
             select: {
-                id: true
-            }
+                id: true,
+            },
         });
 
-        const sockets = userSockets.get(project.assigned_to);
+        if (project.assigned_to) {
+            const sockets = userSockets.get(project.assigned_to);
 
-        if (sockets) {
-            for (const socketId of sockets) {
-                const socket = io.sockets.sockets.get(socketId);
+            if (sockets) {
+                for (const socketId of sockets) {
+                    const socket = io.sockets.sockets.get(socketId);
 
-                if (!socket) continue;
+                    if (!socket) continue;
 
-                socket.leave(`project_${id}`);
+                    socket.leave(`project_${id}`);
 
-                for (const task of taskIds) {
-                    socket.leave(`task_${task.id}`);
+                    for (const task of taskIds) {
+                        socket.leave(`task_${task.id}`);
+                    }
                 }
             }
         }
 
-        const members = await prisma.proj_member.findMany({
-            where: {
-                proj_id: id
+        auditService.log({
+            orgId: project.org_id,
+            proj_id: id,
+            userId,
+            action: A.ASSIGNED,
+            resourceType: RT.PROJECT,
+            resourceId: id,
+            oldValue: prevManager
+                ? {
+                    assignedTo: {
+                        id: prevManager.id,
+                        name: prevManager.name,
+                        email: prevManager.email,
+                    },
+                }
+                : {
+                    assignedTo: null,
+                },
+            newValue: {
+                assignedTo: {
+                    id: user.id,
+                    name: user.name ?? null,
+                    email: user.email,
+                },
             },
-            select: {
-                member_id: true
-            }
+            metadata: {
+                diff: {
+                    assignedTo: {
+                        from: prevManager?.email ?? null,
+                        to: user.email,
+                    },
+                },
+                ...meta(req),
+            },
         });
 
-        auditService.log({
-            orgId: project.org_id, proj_id: id, userId,
-            action: A.ASSIGNED, resourceType: RT.PROJECT, resourceId: id,
-            oldValue: { assignedTo: { id: prevManager.id, name: prevManager.name, email: prevManager.email } },
-            newValue: { assignedTo: { id: user.id, name: user.name ?? null, email } },
-            metadata: { diff: { assignedTo: { from: prevManager.email, to: email } }, ...meta(req) },
-        });
         io.to(`project_${id}`).emit("project_Update", { proj });
+        io.to(`org_${Number(org.id)}`).emit("project_Update", { proj });
         io.to(`org_member_${org_member.org_id}`).emit("project_created", { proj });
-        io.to(`org_member_${prevOrgMember.id}`).emit("project_deleted", { id });
+
+        if (prevOrgMember) {
+            io.to(`org_member_${prevOrgMember.org_id}`).emit(
+                "project_deleted",
+                { id }
+            );
+        }
+
         await redis.del(cacheKey);
-        return res.status(204).json({ message: "assigned to another user successfully" });
+
+        return res
+            .status(204)
+            .json({ message: "assigned to another user successfully" });
     } catch (error) {
         console.error("reassignProject:", error.message);
         return res.status(500).json({ message: error.message });
@@ -380,13 +474,18 @@ export const getMember = async (req, res) => {
         });
 
         if (!check) return res.status(404).json({ message: "not found" });
-        let data = await prisma.teaminvitation.findMany({
-            where: {
-                org_id: org_id,
-                receiver_id: {
-                    not: check.assigned_to
-                }
-            }
+        const where = {
+            org_id,
+        };
+
+        if (check.assigned_to) {
+            where.receiver_id = {
+                not: check.assigned_to,
+            };
+        }
+
+        const data = await prisma.teaminvitation.findMany({
+            where,
         });
 
         await redis.set(cacheKey, JSON.stringify({ data }), "EX", 60);
@@ -409,10 +508,10 @@ export const projectDelete = async (req, res) => {
             select: { id: true, name: true, status: true, priority: true, org_id: true },
         });
 
-        if(!oldProject){
-            return res.status(404).json({ message : `${oldProject.name} does not exist` });
+        if (!oldProject) {
+            return res.status(404).json({ message: `${oldProject.name} does not exist` });
         }
-        
+
         const proj = await prisma.project.delete({ where: { id: pid } });
 
         const cacheKey = `managerData:${proj.org_id}:${pid}`;

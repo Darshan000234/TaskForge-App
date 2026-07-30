@@ -39,93 +39,98 @@ const formatTime = (date) => {
     " · " + d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-const MessageItem = ({ msg, isOwn }) => (
-  <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-3`}>
+const MessageItem = ({ msg, isOwn }) => {
+  const bubbleClass = isOwn
+    ? "bg-blue-600 text-white rounded-br-sm"
+    : "bg-zinc-800 text-zinc-200 rounded-bl-sm border border-zinc-700/50";
 
-    <div className="max-w-[85%] sm:max-w-[75%] flex flex-col gap-1">
+  return (
+    <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-3`}>
+      <div className="max-w-[85%] sm:max-w-[75%] flex flex-col gap-1">
 
-      {!isOwn && (
-        <span className="text-xs text-zinc-400">
-          {msg.user?.name}
-        </span>
-      )}
+        {!isOwn && (
+          <span className="text-xs text-zinc-400">
+            {msg.user?.name}
+          </span>
+        )}
 
-      {msg.content && (
-        <div
-          className={`px-4 py-2.5 text-sm rounded-2xl wrap-break-word ${isOwn
-            ? "bg-blue-600 text-white rounded-br-sm"
-            : "bg-zinc-800 text-zinc-200 rounded-bl-sm border border-zinc-700/50"
-            }`}
-        >
-          {msg.content}
+        <div className={`px-4 py-2.5 rounded-2xl text-sm ${bubbleClass}`}>
 
-          <div className="text-[10px] mt-1 text-right opacity-70">
-            {formatTime(msg.createdAt)}
-          </div>
-        </div>
-      )}
-
-      {msg.fileUrl && msg.mimeType?.startsWith("image/") && (
-        <a
-          href={msg.fileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block"
-        >
-          <div
-            className={`px-3 py-2 rounded-xl text-xs cursor-pointer ${isOwn
-              ? "bg-blue-700/40 text-blue-200"
-              : "bg-zinc-800 text-zinc-300 border border-zinc-700"
-              }`}
-          >
-            🖼 Image - Click to open
-
-            <div className="text-[10px] mt-1 text-right opacity-70">
-              {formatTime(msg.createdAt)}
-            </div>
-          </div>
-        </a>
-      )}
-
-      {msg.fileUrl && msg.mimeType === "application/pdf" && (
-        <a
-          href={msg.fileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block"
-        >
-          <div
-            className={`px-3 py-2 rounded-xl text-xs cursor-pointer ${isOwn
-              ? "bg-blue-700/40 text-blue-200"
-              : "bg-zinc-800 text-zinc-300 border border-zinc-700"
-              }`}
-          >
-            📄 {msg.fileName}
-
-            <div className="text-[10px] mt-1 text-right opacity-70">
-              {formatTime(msg.createdAt)}
-            </div>
-          </div>
-        </a>
-      )}
-
-      {msg.fileUrl &&
-        !msg.mimeType?.startsWith("image/") &&
-        msg.mimeType !== "application/pdf" && (
-          <div className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-xs break-all">
+          {/* PDF */}
+          {msg.fileUrl && msg.mimeType === "application/pdf" && (
             <a
               href={msg.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline break-all"
+              className="block"
             >
-              {msg.fileName}
+              <div
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl mb-${msg.content ? "3" : "0"}
+                  ${isOwn
+                    ? "bg-blue-700/40 text-blue-100"
+                    : "bg-zinc-900 border border-zinc-700 text-zinc-300"
+                  }`}
+              >
+                <span className="text-base">📄</span>
+
+                <div className="flex flex-col overflow-hidden">
+                  <span className="truncate text-xs font-medium">
+                    {msg.fileName}
+                  </span>
+                  <span className="text-[10px] opacity-70">
+                    Click to open
+                  </span>
+                </div>
+              </div>
             </a>
+          )}
+
+          {/* Image */}
+          {msg.fileUrl && msg.mimeType?.startsWith("image/") && (
+            <a
+              href={msg.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src={msg.fileUrl}
+                alt=""
+                className="rounded-xl mb-2 max-h-72"
+              />
+            </a>
+          )}
+
+          {/* Other Files */}
+          {msg.fileUrl &&
+            !msg.mimeType?.startsWith("image/") &&
+            msg.mimeType !== "application/pdf" && (
+              <a
+                href={msg.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline break-all block mb-2"
+              >
+                {msg.fileName}
+              </a>
+            )}
+
+          {/* Caption */}
+          {msg.content && (
+            <div className="whitespace-pre-wrap wrap-break-word">
+              {msg.content}
+            </div>
+          )}
+
+          {/* Time */}
+          <div className="text-[10px] mt-1 text-right opacity-70">
+            {formatTime(msg.createdAt)}
           </div>
-        )}
+
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const FilePreview = ({ file, onRemove }) => (
   <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-zinc-300 max-w-full sm:max-w-xs">
@@ -159,6 +164,7 @@ const TaskDetail = ({
   const navigate = useNavigate();
 
   useEffect(() => {
+
     const getAuthorData = async () => {
       try {
         const res = await api.get("/user/userdata");
@@ -231,12 +237,14 @@ const TaskDetail = ({
     }
 
     const handleDeleteMember = ({ data }) => {
-      const { id } = data;
+      const { userId, updatedTasks } = data;
+
+      if (!updatedTasks.includes(Number(id))) return;
 
       setTask((prev) => ({
         ...prev,
         assignees: prev.assignees.filter(
-          (m) => m.id !== id
+          (m) => m.id !== userId
         ),
         assigneeCount: Math.max((prev.assigneeCount || 1) - 1, 0),
       }));
@@ -284,21 +292,25 @@ const TaskDetail = ({
     if (!trimmed && !file) return;
     try {
       const formData = new FormData();
+
       formData.append("task_id", id);
-      formData.append("proj_id", task?.projectId);
+      formData.append("proj_id", task.projectId);
+
+
       if (file) {
-        if (file.type.startsWith("image/")) {
-          formData.append("type", "IMAGE");
-        } else {
-          formData.append("type", "FILE");
-        }
+        formData.append(
+          "type",
+          file.type.startsWith("image/") ? "IMAGE" : "FILE"
+        );
 
         formData.append("file", file);
       } else {
         formData.append("type", "TEXT");
-        formData.append("content", trimmed);
       }
 
+      if (trimmed) {
+        formData.append("content", trimmed);
+      }
       const res = await api.post("/proj/task/chat/message/sent", formData);
       setMessages((prev) => [...prev, res.data.result]);
       setInput("");
