@@ -116,7 +116,7 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     const handleCreated = async (data) => {
-      setorgs((prev) => [...prev,data])
+      setOrgs((prev) => [...prev, data.org])
     }
     const handleOrgDeleted = () => {
       socket.on("org_deleted", () => {
@@ -145,7 +145,7 @@ const DashboardLayout = () => {
     }
     try {
       console.log(orgId);
-      
+
       const res = await api.delete(`/orgs/delete/${orgId}`);
       const updated = orgs.filter((o) => o.id !== orgId);
       setOrgs(updated);
@@ -163,7 +163,7 @@ const DashboardLayout = () => {
       toast.error("Delete failed");
     }
   };
-  
+
   return (
     <div className="text-white min-h-screen flex overflow-x-hidden">
 
@@ -405,7 +405,7 @@ const DashboardLayout = () => {
                 )}
               </div>
             </Link>
-            
+
             <Link to="/user/dashboard/notification" onClick={closeMobileDrawer}>
               <div
                 title={collapsed ? "Invites" : ""}

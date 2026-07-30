@@ -65,7 +65,8 @@ export const sendInvite = async (req, res) => {
         data: { sender_id: userId, receiver_id: receiver.id, receiver_email: email, org_id, status: "pending", message: `${sender.name} has invited you to join the organization` },
       });
     }
-
+    // console.log(invite);
+    
     io.to(`user:${receiver.id}`).emit("invite_received", { invite });
     await redis.del(`invites:${receiver.id}`);
 
@@ -227,6 +228,8 @@ export const DeleteInvite = async (req, res) => {
     
     const userData = userSockets.get(invite.receiver_id);
     
+    io.to(`org_${invite.org_id}`).emit("invite Deleted", { id: invite.id });
+    io.to(`user:${receiver.id}`).emit("invite Deleted", { id : invite.id });
     if (userData) {
       for (const socketId of userData.sockets) {
         const socket = io.sockets.sockets.get(socketId);
@@ -254,7 +257,6 @@ export const DeleteInvite = async (req, res) => {
       userData.tasks.clear();
     }
     
-    io.to(`org_${invite.org_id}`).emit("invite Deleted", { id: invite.id });
     return res.status(200).json({ message: "successfully Deleted" });
   } catch (error) {
     console.error("DeleteInvite:", error.message);

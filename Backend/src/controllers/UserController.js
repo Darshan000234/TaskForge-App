@@ -240,7 +240,7 @@ export const DeleteAccount = async (req, res) => {
             io.to(`org_${o.org_id}`).emit("member left", {
                 data: {
                     email: req.user.email,
-                    userId: id,
+                    id: id,
                     updatedProjects: projectMemberships,
                     updatedTasks: taskAssignments,
                 },

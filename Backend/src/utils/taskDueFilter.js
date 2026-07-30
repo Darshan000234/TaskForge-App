@@ -1,5 +1,3 @@
-
-
 const ALLOWED_DUE = ["overdue", "today"];
 
 const startOfDay = (date) => {

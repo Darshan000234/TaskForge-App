@@ -99,34 +99,34 @@ export const deleteOrganization = async (req, res) => {
   const org_id = Number(req.params.org_id);
   const userId = req.user.id;
   const io = getIO();
-  // console.log(org_id);
+
   if (!Number.isInteger(org_id)) {
     return res.status(400).json({ message: "Invalid organization id" });
   }
- 
+
   try {
     const membership = await prisma.org_member.findUnique({
       where: { member_id_org_id: { member_id: userId, org_id } },
     });
- 
+
     if (!membership) {
       return res.status(404).json({ message: "Membership not found for this organization" });
     }
- 
+
     const { role } = membership;
- 
+
     if (role === "admin") {
       const members = await prisma.org_member.findMany({
         where: { org_id },
         select: { member_id: true },
       });
- 
+
       await prisma.org.delete({ where: { id: org_id } });
- 
+
       await Promise.all(
         members.map((m) => redis.del(`user:${m.member_id}:organizations`))
       );
- 
+
       io.to(`org_${org_id}`).emit("org deleted", { org_id });
 
       await prisma.AuditLog.create({
@@ -139,68 +139,98 @@ export const deleteOrganization = async (req, res) => {
           metadata: { reason: "Organization deleted by admin" },
         },
       });
- 
+
       return res.status(200).json({ message: "Organization deleted successfully" });
     }
- 
+
     if (role === "member") {
       const [projectMemberships, taskAssignments] = await Promise.all([
         prisma.proj_member.findMany({
-          where: { org_id, member_id: userId }, 
+          where: { org_id, member_id: userId },
           select: { proj_id: true },
         }),
         prisma.task_assignee.findMany({
           where: { org_id, user_id: userId },
-          select: { task_id: true,user_id : true },
+          select: { task_id: true, user_id: true },
         }),
       ]);
- 
+
       const projectIds = projectMemberships.map((p) => p.proj_id);
       const taskIds = taskAssignments.map((t) => t.task_id);
- 
+
       await prisma.$transaction(async (tx) => {
-        await tx.project.updateMany({
-          where: { org_id, assigned_to: userId },
-          data: { assigned_to: null },
-        });
- 
-        await tx.proj_member.deleteMany({
-          where: { org_id, member_id: userId },
-        });
- 
-        await tx.task_assignee.deleteMany({
-          where: { org_id, user_id: userId },
-        });
- 
+        await Promise.all([
+          tx.project.updateMany({
+            where: { org_id, assigned_to: userId },
+            data: { assigned_to: null },
+          }),
+
+          tx.proj_member.deleteMany({
+            where: { org_id, member_id: userId },
+          }),
+
+          tx.task_assignee.deleteMany({
+            where: { org_id, user_id: userId },
+          }),
+        ]);
+
         await tx.org_member.delete({
-          where: { member_id_org_id: { member_id: userId, org_id } },
+          where: {
+            member_id_org_id: {
+              member_id: userId,
+              org_id,
+            },
+          },
         });
- 
+
         await tx.org.update({
           where: { id: org_id },
-          data: { member_count: { decrement: 1 } },
+          data: {
+            member_count: {
+              decrement: 1,
+            },
+          },
         });
- 
-        await tx.User.updateMany({
-          where: { id: userId, activeorg: org_id },
-          data: { activeorg: null },
-        });
+
+        await Promise.all([
+          tx.User.updateMany({
+            where: {
+              id: userId,
+              activeorg: org_id,
+            },
+            data: {
+              activeorg: null,
+            },
+          }),
+
+          tx.teaminvitation.update({
+            where: {
+              receiver_id_org_id: {
+                receiver_id: userId,
+                org_id,
+              },
+            },
+            data: {
+              status: "rejected",
+            },
+          }),
+        ]);
       });
- 
+
       await redis.del(`user:${userId}:organizations`);
-      
+
       const roomsToLeave = [
         `org_${org_id}`,
         `org_member_${org_id}`,
         ...projectIds.map((id) => `project_${id}`),
         ...taskIds.map((id) => `task_${id}`),
       ];
-      
+
       const data = {
-        id : userId,
-        email : req.user.email,
-        updatedProjects : projectIds,
-        updatedTasks : taskIds
+        id: userId,
+        email: req.user.email,
+        updatedProjects: projectIds,
+        updatedTasks: taskIds
       }
 
       io.in(`user_${userId}`).socketsLeave(roomsToLeave);
@@ -215,17 +245,17 @@ export const deleteOrganization = async (req, res) => {
           metadata: { reason: "Member left organization" },
         },
       });
- 
+
       return res.status(200).json({ message: "You have left the organization" });
     }
- 
+
     return res.status(400).json({ message: "Unrecognized role for this membership" });
   } catch (error) {
     console.error("deleteOrganization error:", error);
     return res.status(500).json({ message: "Something went wrong" });
   }
 };
- 
+
 export const DataOrganization = async (req, res) => {
   const userId = req.user.id;
   const cacheKey = `user:${userId}:organizations`;
@@ -284,7 +314,7 @@ export const updateactiveOrgs = async (req, res) => {
         activeorg: id
       }
     });
-    
+
     await redis.del(`user:${userID}:activeOrg`);
 
     const data = await prisma.org.findUnique({

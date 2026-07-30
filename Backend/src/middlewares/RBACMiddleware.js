@@ -1,6 +1,5 @@
 import prisma from '../config/prisma.js';
 
-
 export const OrgcheckRole = () => {
     return async (req, res, next) => {
         const userId = req.user.id;

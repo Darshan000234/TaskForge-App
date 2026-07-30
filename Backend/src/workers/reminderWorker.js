@@ -6,7 +6,6 @@ import prisma from "../config/prisma.js";
 const worker = new Worker(
     "reminder",
     async (job) => {
-        // console.log("JOB RECEIVED:", job.id, job.data);
         const { taskId } = job.data;
 
         const task = await prisma.task.findUnique({

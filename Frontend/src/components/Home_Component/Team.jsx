@@ -39,7 +39,8 @@ const Team = () => {
         })
       })
     }
-    const handleMemberExist = (data) => {
+    
+    const handleMemberExist = ({data}) => {
       const id = data.id;
       setMembers((prevmember) => {
         return prevmember.map((member) => {
@@ -47,23 +48,30 @@ const Team = () => {
             return { ...member, status: "rejected" }
           }
           return member;
-        })      
+        })
       })
+    }
+
+    const handleDeleteInvite = (data) => {
+      const id = data;
+      setMembers((prev) => prev.filter((p) => p.id !== id));
     }
     socket.on("invite_accepted", handlestatuschange);
     socket.on("invite_rejected", handlestatuschange);
-    socket.on("member left",handleMemberExist);
+    socket.on("member left", handleMemberExist);
+    socket.on("invite Deleted", handleDeleteInvite);
     return () => {
       socket.off("invite_accepted", handlestatuschange);
       socket.off("invite_rejected", handlestatuschange);
-      socket.off("member left",handleMemberExist);
+      socket.off("member left", handleMemberExist);
+      socket.off("invite Deleted", handleDeleteInvite);
     }
   }, []);
 
   const handleDelete = async (id) => {
     try {
       setLoading(true);
-      const res = await api.delete(`/invites/delete/${id}`, {data : { org_id: org.id }});
+      const res = await api.delete(`/invites/delete/${id}`, { data: { org_id: org.id } });
       setMembers((prev) => prev.filter((p) => p.id !== id));
       setLoading(false);
       toast.success(res.data.message);

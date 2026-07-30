@@ -30,8 +30,17 @@ const Notification = () => {
       toast.success(`New invite from ${invite.from}`);
     };
 
+    const handleDeleteInvite = (data) => {
+      const id = data;
+      setNotifications((prev)=> prev.filter((i) => i.id !== id));
+    }
+
     socket.on("invite_received", handleInvite);
-    return () => socket.off("invite_received", handleInvite);
+    socket.on("invite Deleted", handleDeleteInvite);
+    return () => {
+      socket.off("invite_received", handleInvite);
+      socket.off("invite Deleted", handleDeleteInvite);
+    }
   }, []);
 
   const acceptInvite = async (invite) => {
