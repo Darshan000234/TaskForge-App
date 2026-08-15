@@ -25,7 +25,7 @@ import SettingRoute from "./routes/Setting/SettingRoute.js";
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 const URL = process.env.CLIENT_URL;
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -245,7 +245,7 @@ io.on("connection", async (socket) => {
 
 });
 
-server.listen(port, () => {
+server.listen(port, "0.0.0.0", () => {
   console.log(`Server running on port ${port}`);
 });
 
