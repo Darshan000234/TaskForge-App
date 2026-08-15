@@ -43,6 +43,10 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+// health router to wake up render when he try to shut down 
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok" });
+});
 app.use("/user", userRoute);
 app.use("/orgs", authMiddleware, orgRoute);
 app.use("/invites", authMiddleware, inviteRoute);
@@ -53,10 +57,6 @@ app.use("/proj/task/chat", authMiddleware, ChatRoute);
 app.use("/audit", authMiddleware, AuditRoute);
 app.use("/setting", authMiddleware, SettingRoute);
 
-// health router to wake up render when he try to shut down 
-app.get("/health", (req, res) => {
-    res.status(200).json({ status: "ok" });
-});
 
 io.use(async (socket, next) => {
   try {
