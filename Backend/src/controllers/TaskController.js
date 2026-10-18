@@ -6,6 +6,7 @@ import { diffObjects, diffAssignees } from "../utils/diff.js";
 import { reminderQueue } from "../queue/reminderQueue.js";
 import { redis } from "../config/redis.js";
 import { buildDueWhere } from "../utils/taskDueFilter.js";
+import { perfNow, elapsedMs, logPerformance } from "../utils/performance.js";
 
 const invalidateTaskCaches = async ({ taskId, projectId, orgId }) => {
   const keys = [];
@@ -612,13 +613,27 @@ export const StatsData = async (req, res) => {
   const org_id = Number(req.params.id);
   const user_id = Number(req.user.id);
   const cacheKey = `taskStats:${org_id}:${user_id}`;
+  const startedAt = perfNow();
+  const stages = {};
 
   try {
+    let stageStartedAt = perfNow();
     const cached = await redis.get(cacheKey);
+    stages.redisGetMs = elapsedMs(stageStartedAt);
+
     if (cached) {
+      logPerformance({
+        req,
+        endpoint: "GET /proj/task/stats/:id",
+        statusCode: 200,
+        startedAt,
+        stages,
+        extra: { cacheHit: true },
+      });
       return res.status(200).json(JSON.parse(cached));
     }
 
+    stageStartedAt = perfNow();
     const [orgMember, projectMemberships] = await Promise.all([
       prisma.org_member.findUnique({
         where: {
@@ -641,6 +656,7 @@ export const StatsData = async (req, res) => {
         },
       }),
     ]);
+    stages.membershipQueriesMs = elapsedMs(stageStartedAt);
 
     const isOrgAdmin = orgMember?.role === "admin";
 
@@ -726,6 +742,7 @@ export const StatsData = async (req, res) => {
       return mergeTasks(assignedTasks, managedTasks).slice(0, 7);
     };
 
+    stageStartedAt = perfNow();
     const [myTasks, overdueTasks, inProgressTasks] = await Promise.all([
       getTasks(
         { Status: { not: "Done" } },
@@ -745,6 +762,9 @@ export const StatsData = async (req, res) => {
         { dueDate: "asc" }
       ),
     ]);
+    stages.taskListQueriesMs = elapsedMs(stageStartedAt);
+
+    stageStartedAt = perfNow();
     const Data = await prisma.proj_member.findMany({
       take: 8,
       where: {
@@ -773,6 +793,8 @@ export const StatsData = async (req, res) => {
         }
       }
     });
+    stages.projectSummaryQueryMs = elapsedMs(stageStartedAt);
+
     const projData = Data.map((p) => {
       return {
         name: p.project.name,
@@ -784,6 +806,7 @@ export const StatsData = async (req, res) => {
         username: p.project.member?.name
       }
     });
+
     const statsResult = {
       tasks: {
         my: myTasks,
@@ -793,13 +816,31 @@ export const StatsData = async (req, res) => {
       projData
     };
 
+    stageStartedAt = perfNow();
     await redis.set(cacheKey, JSON.stringify(statsResult), "EX", 30);
+    stages.redisSetMs = elapsedMs(stageStartedAt);
 
-    res.status(200).json(statsResult);
+    logPerformance({
+      req,
+      endpoint: "GET /proj/task/stats/:id",
+      statusCode: 200,
+      startedAt,
+      stages,
+      extra: { cacheHit: false },
+    });
 
+    return res.status(200).json(statsResult);
   } catch (error) {
+    logPerformance({
+      req,
+      endpoint: "GET /proj/task/stats/:id",
+      statusCode: 500,
+      startedAt,
+      stages,
+      extra: { cacheHit: false },
+    });
     console.log("StatsData error:", error.message);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
