@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { randomUUID } from "node:crypto";
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
@@ -11,6 +12,7 @@ import { globalLimiter } from './middlewares/RateLimiter.js';
 import { userSockets } from "./utils/userSockets.js";
 import { redis } from './config/redis.js';
 import { setIO } from "./utils/socket.js";
+import { perfNow, logPerformance } from "./utils/performance.js";
 import { socketRateLimiter } from "./utils/socketRateLimiter.js";
 import userRoute from "./routes/User/UserRoute.js";
 import inviteRoute from "./routes/User/inviteRoute.js";
@@ -39,11 +41,52 @@ setIO(io);
 
 app.use(cors({
   origin: URL,
-  credentials: true
+  credentials: true,
+  exposedHeaders: ["X-Request-Id"],
 }));
 app.use(express.json());
 app.use(cookieParser());
-// health router to wake up render when he try to shut down 
+
+// Opt-in timings for the startup and dashboard API path.
+// The request ID is returned to the browser so its round-trip time can be
+// compared with the time spent inside Express.
+const isStartupPerformanceRoute = (req) => {
+  if (req.method === "POST" && req.path === "/user/refresh") return true;
+
+  return req.method === "GET" && (
+    req.path === "/orgs" ||
+    req.path === "/orgs/activeorgs" ||
+    /^\/orgs\/stats\/[^/]+$/.test(req.path) ||
+    /^\/proj\/task\/stats\/[^/]+$/.test(req.path)
+  );
+};
+
+app.use((req, res, next) => {
+  if (
+    process.env.PERFORMANCE_LOGS !== "true" ||
+    !isStartupPerformanceRoute(req)
+  ) {
+    return next();
+  }
+
+  const startedAt = perfNow();
+  const requestId = randomUUID();
+  req.performanceRequestId = requestId;
+  res.setHeader("X-Request-Id", requestId);
+
+  res.once("finish", () => {
+    logPerformance({
+      req,
+      endpoint: `${req.method} ${req.path}`,
+      statusCode: res.statusCode,
+      startedAt,
+    });
+  });
+
+  next();
+});
+
+// Health endpoint.
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
 });
