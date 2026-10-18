@@ -196,6 +196,17 @@ The Prisma schema models users, organizations, organization memberships, project
 
 This repository is a learning and portfolio project. Automated test scripts are not currently configured in the package manifests.
 
+## Diagnosing Startup and Dashboard Latency
+
+Performance timing logs are opt-in. Enable them temporarily when investigating a slow deployed session:
+
+- In Vercel, set `VITE_PERFORMANCE_LOGS=true` for the frontend and redeploy. The browser console logs the end-to-end duration of `POST /user/refresh` and the dashboard API requests to `/orgs`, `/orgs/activeorgs`, `/orgs/stats/:id`, and `/proj/task/stats/:id`.
+- In the backend host (for example, Render), set `PERFORMANCE_LOGS=true` and redeploy/restart the service. Backend logs include total Express processing time and a request ID. The refresh handler also logs JWT verification and Redis GET/DEL/SET-related timings; dashboard statistics handlers log cache and query-stage timings.
+- Open DevTools Console and reload the app. Compare browser `durationMs` with backend `totalMs` for the same `requestId`. A slow browser duration with low backend time suggests delay outside handler processing (for example, startup/cold-start or network/preflight). High backend time means the handler or its awaited dependencies need investigation. A slow cache-miss stage points toward Redis/database work; compare cache-hit and cache-miss requests.
+- For a first versus repeat comparison, test once after inactivity, then reload immediately. Use the Network panel's Timing view as well; the browser duration alone does not split server wait, connection setup, and download time.
+
+Disable the variables (or set them to `false`) after diagnosis to avoid unnecessary production log volume. These logs measure latency; they do not alter caching, authentication, or response behavior.
+
 ## Author
 
 **Darshan Desale**

@@ -12,6 +12,45 @@ const api = axios.create({
     withCredentials: true
 });
 
+const PERFORMANCE_LOGS =
+    import.meta.env.DEV || import.meta.env.VITE_PERFORMANCE_LOGS === "true";
+
+const getRequestPath = (config) => {
+    try {
+        return new URL(
+            config.url || "",
+            config.baseURL || window.location.origin
+        ).pathname;
+    } catch {
+        return String(config.url || "").split("?")[0];
+    }
+};
+
+const isStartupLatencyEndpoint = (config) => {
+    const path = getRequestPath(config);
+
+    return (
+        path === "/orgs" ||
+        path === "/orgs/activeorgs" ||
+        /^\/orgs\/stats\/[^/]+$/.test(path) ||
+        /^\/proj\/task\/stats\/[^/]+$/.test(path)
+    );
+};
+
+const logRequestLatency = (config, status, headers = {}) => {
+    if (!PERFORMANCE_LOGS || typeof config?.__taskForgeStartedAt !== "number") {
+        return;
+    }
+
+    console.info("[TaskForge perf] api", {
+        method: String(config.method || "get").toUpperCase(),
+        path: getRequestPath(config),
+        status,
+        durationMs: Math.round(performance.now() - config.__taskForgeStartedAt),
+        requestId: headers["x-request-id"] ?? null,
+    });
+};
+
 // 🔴 ONLY THIS (no isRefreshing)
 let refreshPromise = null;
 let refreshQueue = [];
@@ -30,8 +69,11 @@ const processQueue = (error, token = null) => {
 api.interceptors.request.use(
     (config) => {
         const token = getAccessToken();
-        // console.log(token);
-        
+
+        if (PERFORMANCE_LOGS && isStartupLatencyEndpoint(config)) {
+            config.__taskForgeStartedAt = performance.now();
+        }
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -41,10 +83,18 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        logRequestLatency(response.config, response.status, response.headers);
+        return response;
+    },
 
     async (error) => {
         const originalRequest = error.config;
+        logRequestLatency(
+            originalRequest,
+            error.response?.status ?? "network-error",
+            error.response?.headers
+        );
 
         if (!error.response || !originalRequest) {
             return Promise.reject(error);

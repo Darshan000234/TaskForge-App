@@ -2,6 +2,7 @@ import prisma from '../config/prisma.js';
 import { getIO } from "../utils/socket.js";
 import { auditService } from "../services/audit.service.js";
 import { redis } from '../config/redis.js';
+import { perfNow, elapsedMs, logPerformance } from '../utils/performance.js';
 const RT = { MEMBER: "MEMBER", ORG: "ORG" };
 const meta = (req) => ({ ip: req.ip, userAgent: req.headers["user-agent"] ?? null });
 
@@ -394,13 +395,27 @@ export const StatsData = async (req, res) => {
   const org_id = Number(req.params.id);
   const user_id = req.user.id;
   const cacheKey = `stats:${user_id}:${org_id}`;
+  const startedAt = perfNow();
+  const stages = {};
+
   try {
+    let stageStartedAt = perfNow();
     const cached = await redis.get(cacheKey);
+    stages.redisGetMs = elapsedMs(stageStartedAt);
 
     if (cached) {
+      logPerformance({
+        req,
+        endpoint: "GET /orgs/stats/:id",
+        statusCode: 200,
+        startedAt,
+        stages,
+        extra: { cacheHit: true },
+      });
       return res.status(200).json(JSON.parse(cached));
     }
 
+    stageStartedAt = perfNow();
     const [projcount] = await prisma.$queryRaw`
       SELECT
         COUNT(*) AS total_proj,
@@ -412,7 +427,9 @@ export const StatsData = async (req, res) => {
         pm."org_id" = ${org_id}
         AND pm."member_id" = ${user_id};
     `;
+    stages.projectCountQueryMs = elapsedMs(stageStartedAt);
 
+    stageStartedAt = perfNow();
     const [taskcount] = await prisma.$queryRaw`
       SELECT
         COUNT(DISTINCT t.id) AS total_task,
@@ -436,6 +453,7 @@ export const StatsData = async (req, res) => {
           OR ta.user_id = ${user_id}
         );
     `;
+    stages.taskCountQueryMs = elapsedMs(stageStartedAt);
 
     const result = {
       total_proj: Number(projcount.total_proj),
@@ -444,11 +462,29 @@ export const StatsData = async (req, res) => {
       overdue_task: Number(taskcount.overdue_task),
     };
 
+    stageStartedAt = perfNow();
     await redis.set(cacheKey, JSON.stringify(result), "EX", 30);
+    stages.redisSetMs = elapsedMs(stageStartedAt);
+
+    logPerformance({
+      req,
+      endpoint: "GET /orgs/stats/:id",
+      statusCode: 200,
+      startedAt,
+      stages,
+      extra: { cacheHit: false },
+    });
 
     return res.status(200).json(result);
-
   } catch (error) {
+    logPerformance({
+      req,
+      endpoint: "GET /orgs/stats/:id",
+      statusCode: 500,
+      startedAt,
+      stages,
+      extra: { cacheHit: false },
+    });
     console.log("StatsData error:", error.message);
 
     return res.status(500).json({
