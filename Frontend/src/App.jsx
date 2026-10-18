@@ -27,6 +27,8 @@ const TaskDetail = lazy(() =>
 const Task = lazy(() => import('./components/Home_Component/Task.jsx'));
 
 const URL = import.meta.env.VITE_URL;
+const PERFORMANCE_LOGS =
+  import.meta.env.DEV || import.meta.env.VITE_PERFORMANCE_LOGS === "true";
 
 const RouteLoadingFallback = () => (
   <div
@@ -52,6 +54,10 @@ const App = () => {
     didInit.current = true;
 
     const initAuth = async () => {
+      const startedAt = performance.now();
+      let status = "network-error";
+      let requestId = null;
+
       try {
         const res = await axios.post(
           `${URL}/user/refresh`,
@@ -59,10 +65,21 @@ const App = () => {
           { withCredentials: true }
         );
 
+        status = res.status;
+        requestId = res.headers?.["x-request-id"] ?? null;
         setAccessToken(res.data.accessToken);
-      } catch {
+      } catch (error) {
+        status = error.response?.status ?? "network-error";
+        requestId = error.response?.headers?.["x-request-id"] ?? null;
         clearAccessToken();
       } finally {
+        if (PERFORMANCE_LOGS) {
+          console.info("[TaskForge perf] startup.auth_refresh", {
+            durationMs: Math.round(performance.now() - startedAt),
+            status,
+            requestId,
+          });
+        }
         setLoading(false);
       }
     };
