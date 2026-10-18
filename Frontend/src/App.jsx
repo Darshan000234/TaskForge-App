@@ -1,35 +1,66 @@
-import { lazy, Suspense, useRef, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import axios from 'axios';
+
+import { lazy, Suspense, useRef, useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import axios from "axios";
 import {
   setAccessToken,
   clearAccessToken,
-} from './utils/authStore.js';
-import { Toaster } from 'react-hot-toast';
-import ProtectedRoute from './components/ProtectedRoute.jsx';
+} from "./utils/authStore.js";
+import { Toaster } from "react-hot-toast";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
-// Route components are loaded only when their routes are needed.
-// This keeps the landing page's initial JavaScript smaller.
-const Home = lazy(() => import('./components/Home.jsx'));
-const Signup_login = lazy(() => import('./components/Signup_login.jsx'));
-const DashboardLayout = lazy(() => import('./components/DashboardLayout.jsx'));
-const Dashboard = lazy(() => import('./components/Home_Component/Dashboard.jsx'));
-const Projects = lazy(() => import('./components/Home_Component/Projects.jsx'));
-const Team = lazy(() => import('./components/Home_Component/Team.jsx'));
-const Settings = lazy(() => import('./components/Home_Component/Settings.jsx'));
-const Notification = lazy(() => import('./components/Home_Component/Notification.jsx'));
+// Load pages only when their routes are visited.
+const Home = lazy(() => import("./components/Home.jsx"));
+
+const Signup_login = lazy(() =>
+  import("./components/Signup_login.jsx")
+);
+
+const DashboardLayout = lazy(() =>
+  import("./components/DashboardLayout.jsx")
+);
+
+const Dashboard = lazy(() =>
+  import("./components/Home_Component/Dashboard.jsx")
+);
+
+const Projects = lazy(() =>
+  import("./components/Home_Component/Projects.jsx")
+);
+
+const Team = lazy(() =>
+  import("./components/Home_Component/Team.jsx")
+);
+
+const Settings = lazy(() =>
+  import("./components/Home_Component/Settings.jsx")
+);
+
+const Notification = lazy(() =>
+  import("./components/Home_Component/Notification.jsx")
+);
+
 const ProjectDetail = lazy(() =>
-  import('./components/Home_Component/Project_Component/ProjectDetail_Component/ProjectDetail.jsx')
+  import(
+    "./components/Home_Component/Project_Component/ProjectDetail_Component/ProjectDetail.jsx"
+  )
 );
+
 const TaskDetail = lazy(() =>
-  import('./components/Home_Component/Task_Component/TaskDetail.jsx')
+  import("./components/Home_Component/Task_Component/TaskDetail.jsx")
 );
-const Task = lazy(() => import('./components/Home_Component/Task.jsx'));
+
+const Task = lazy(() =>
+  import("./components/Home_Component/Task.jsx")
+);
 
 const URL = import.meta.env.VITE_URL;
-const PERFORMANCE_LOGS =
-  import.meta.env.DEV || import.meta.env.VITE_PERFORMANCE_LOGS === "true";
 
+const PERFORMANCE_LOGS =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_PERFORMANCE_LOGS === "true";
+
+// Display while a lazy-loaded component is downloading.
 const RouteLoadingFallback = () => (
   <div
     className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-300"
@@ -40,14 +71,18 @@ const RouteLoadingFallback = () => (
   </div>
 );
 
+// Reusable Suspense boundary for route components.
 const LazyRoute = ({ children }) => (
-  <Suspense fallback={<RouteLoadingFallback />}>{children}</Suspense>
+  <Suspense fallback={<RouteLoadingFallback />}>
+    {children}
+  </Suspense>
 );
 
 const App = () => {
   const [loading, setLoading] = useState(true);
   const didInit = useRef(false);
 
+  // Restore authentication during application startup.
   useEffect(() => {
     if (didInit.current) return;
 
@@ -67,10 +102,13 @@ const App = () => {
 
         status = res.status;
         requestId = res.headers?.["x-request-id"] ?? null;
+
         setAccessToken(res.data.accessToken);
       } catch (error) {
         status = error.response?.status ?? "network-error";
-        requestId = error.response?.headers?.["x-request-id"] ?? null;
+        requestId =
+          error.response?.headers?.["x-request-id"] ?? null;
+
         clearAccessToken();
       } finally {
         if (PERFORMANCE_LOGS) {
@@ -80,6 +118,7 @@ const App = () => {
             requestId,
           });
         }
+
         setLoading(false);
       }
     };
@@ -94,17 +133,18 @@ const App = () => {
         toastOptions={{
           duration: 3000,
           style: {
-            background: '#1f2937',
-            color: '#f9fafb',
-            fontSize: '14px',
-            fontWeight: '500',
-            borderRadius: '8px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+            background: "#1f2937",
+            color: "#f9fafb",
+            fontSize: "14px",
+            fontWeight: "500",
+            borderRadius: "8px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
           },
         }}
       />
 
       <Routes>
+        {/* Public routes */}
         <Route
           path="/"
           element={
@@ -113,6 +153,7 @@ const App = () => {
             </LazyRoute>
           }
         />
+
         <Route
           path="/Signup_login"
           element={
@@ -122,6 +163,7 @@ const App = () => {
           }
         />
 
+        {/* Protected dashboard and nested routes */}
         <Route
           path="/user/dashboard"
           element={
@@ -140,6 +182,7 @@ const App = () => {
               </LazyRoute>
             }
           />
+
           <Route
             path="projects"
             element={
@@ -148,6 +191,7 @@ const App = () => {
               </LazyRoute>
             }
           />
+
           <Route
             path="projects/:id"
             element={
@@ -156,6 +200,7 @@ const App = () => {
               </LazyRoute>
             }
           />
+
           <Route
             path="team"
             element={
@@ -164,6 +209,7 @@ const App = () => {
               </LazyRoute>
             }
           />
+
           <Route
             path="settings"
             element={
@@ -172,6 +218,7 @@ const App = () => {
               </LazyRoute>
             }
           />
+
           <Route
             path="notification"
             element={
@@ -180,6 +227,7 @@ const App = () => {
               </LazyRoute>
             }
           />
+
           <Route
             path="task"
             element={
@@ -188,6 +236,7 @@ const App = () => {
               </LazyRoute>
             }
           />
+
           <Route
             path="task/:id"
             element={

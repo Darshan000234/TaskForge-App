@@ -65,7 +65,6 @@ export const sendInvite = async (req, res) => {
         data: { sender_id: userId, receiver_id: receiver.id, receiver_email: email, org_id, status: "pending", message: `${sender.name} has invited you to join the organization` },
       });
     }
-    // console.log(invite);
     
     io.to(`user:${receiver.id}`).emit("invite_received", { invite });
     await redis.del(`invites:${receiver.id}`);
@@ -107,36 +106,118 @@ export const acceptInvite = async (req, res) => {
   const userId = req.user.id;
   const io = getIO();
 
+  if (!Number.isSafeInteger(invite_id) || invite_id <= 0) {
+    return res.status(400).json({ message: "Invalid invitation ID" });
+  }
+
   try {
-    const invite = await prisma.teaminvitation.update({
-      where: { id: invite_id }, data: { status: "accepted" },
-    });
+    const { invite, org } = await prisma.$transaction(async (tx) => {
+      const invite = await tx.teaminvitation.findUnique({
+        where: { id: invite_id },
+      });
 
-    const org = await prisma.org.update({
-      where: { id: invite.org_id }, data: { member_count: { increment: 1 } },
-    });
+      if (!invite) {
+        const error = new Error("Invite not found");
+        error.statusCode = 404;
+        throw error;
+      }
 
-    await prisma.org_member.create({
-      data: { org_id: invite.org_id, member_id: invite.receiver_id, member_email: invite.receiver_email },
+      if (Number(invite.receiver_id) !== Number(userId)) {
+        const error = new Error(
+          "You are not authorized to accept this invitation"
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+
+      if (invite.status !== "pending") {
+        const error = new Error(
+          "This invitation has already been processed"
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const updatedInvite = await tx.teaminvitation.updateMany({
+        where: {
+          id: invite_id,
+          receiver_id: userId,
+          status: "pending",
+        },
+        data: {
+          status: "accepted",
+        },
+      });
+
+      if (updatedInvite.count !== 1) {
+        const error = new Error(
+          "This invitation has already been processed"
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await tx.org_member.create({
+        data: {
+          org_id: invite.org_id,
+          member_id: invite.receiver_id,
+          member_email: invite.receiver_email,
+        },
+      });
+
+      const org = await tx.org.update({
+        where: { id: invite.org_id },
+        data: {
+          member_count: {
+            increment: 1,
+          },
+        },
+      });
+
+      return { invite, org };
     });
 
     org.role = "member";
-    io.to(`org_${org.id}`).emit("invite_accepted", { id: invite_id, status: "accepted" });
-    io.to(`user:${invite.receiver_id}`).emit("joined_org", { org });
 
-    await redis.del(`invites:${invite.receiver_id}`, `user:${invite.receiver_id}:organizations`);
-
-    auditService.log({
-      orgId: invite.org_id, userId,
-      action: "CREATED", resourceType: RT.MEMBER, resourceId: invite.receiver_id,
-      newValue: { joinedEmail: invite.receiver_email, role: "member" },
-      metadata: { inviteId: invite_id, ...meta(req) },
+    io.to(`org_${org.id}`).emit("invite_accepted", {
+      id: invite_id,
+      status: "accepted",
     });
 
-    return res.status(200).json({ message: "successfully joined" });
+    io.to(`user:${invite.receiver_id}`).emit("joined_org", { org });
+
+    await redis.del(
+      `invites:${invite.receiver_id}`,
+      `user:${invite.receiver_id}:organizations`
+    );
+
+    await auditService.log({
+      orgId: invite.org_id,
+      userId,
+      action: "CREATED",
+      resourceType: RT.MEMBER,
+      resourceId: invite.receiver_id,
+      newValue: {
+        joinedEmail: invite.receiver_email,
+        role: "member",
+      },
+      metadata: {
+        inviteId: invite_id,
+        ...meta(req),
+      },
+    });
+
+    return res.status(200).json({
+      message: "Successfully joined",
+    });
   } catch (error) {
     console.error("acceptInvite:", error.message);
-    return res.status(500).json({ message: error.message });
+
+    return res.status(error.statusCode || 500).json({
+      message: error.statusCode
+        ? error.message
+        : "Something went wrong",
+    });
   }
 };
 
@@ -181,6 +262,26 @@ export const DeleteInvite = async (req, res) => {
       return res.status(404).json({ message: "Invite not found" });
     }
 
+    const requesterMembership = await prisma.org_member.findUnique({
+      where: {
+        member_id_org_id: {
+          member_id: userId,
+          org_id: invite.org_id,
+        },
+      },
+      select: {
+        role: true,
+      },
+    });
+
+    if (
+      !requesterMembership ||
+      requesterMembership.role.toLowerCase() !== "admin"
+    ) {
+      return res.status(403).json({
+        message: "Only organization admins can delete invitations or remove members",
+      });
+    }
     let projectIds = [];
     let taskIds = [];
 
@@ -336,3 +437,4 @@ export const DeleteInvite = async (req, res) => {
     });
   }
 };
+

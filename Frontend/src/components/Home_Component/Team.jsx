@@ -27,7 +27,6 @@ const Team = () => {
     getMembers();
   }, [org]);
 
-
   useEffect(() => {
     const handlestatuschange = (data) => {
       setMembers((prevmember) => {

@@ -1,7 +1,9 @@
 let io;
 
-export const setIO = (_io) => {
-  io = _io;
-};
+export function setIO(instance) {
+  io = instance;
+}
 
-export const getIO = () => io;
+export function getIO() {
+  return io;
+}

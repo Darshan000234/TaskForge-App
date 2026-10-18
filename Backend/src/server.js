@@ -44,6 +44,7 @@ app.use(cors({
   credentials: true,
   exposedHeaders: ["X-Request-Id"],
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -101,11 +102,114 @@ app.use("/audit", authMiddleware, AuditRoute);
 app.use("/setting", authMiddleware, SettingRoute);
 
 
+async function canAccessOrganization(userId, orgId) {
+  const org = await prisma.org.findUnique({
+    where: { id: orgId },
+    select: { id: true, userId: true },
+  });
+
+  if (!org) return false;
+
+  if (org.userId === userId) return true;
+
+  const membership = await prisma.org_member.findUnique({
+    where: {
+      member_id_org_id: {
+        member_id: userId,
+        org_id: orgId,
+      },
+    },
+    select: { role: true },
+  });
+
+  return Boolean(membership);
+}
+
+async function canAccessProject(userId, projectId) {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, org_id: true },
+  });
+
+  if (!project) return false;
+
+  const org = await prisma.org.findUnique({
+    where: { id: project.org_id },
+    select: { userId: true },
+  });
+
+  if (!org) return false;
+
+  if (org.userId === userId) return true;
+
+  const membership = await prisma.org_member.findUnique({
+    where: {
+      member_id_org_id: {
+        member_id: userId,
+        org_id: project.org_id,
+      },
+    },
+    select: { role: true },
+  });
+
+  if (!membership) return false;
+
+  if (["admin", "manager"].includes(membership.role.toLowerCase())) {
+    return true;
+  }
+
+  const projectMembership = await prisma.proj_member.findFirst({
+    where: {
+      proj_id: projectId,
+      org_id: project.org_id,
+      member_id: userId,
+    },
+    select: { id: true },
+  });
+
+  return Boolean(projectMembership);
+}
+
+async function canAccessTask(userId, taskId) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      org_id: true,
+      project_id: true,
+      created_by: true,
+    },
+  });
+
+  if (!task) return false;
+
+  if (await canAccessProject(userId, task.project_id)) {
+    return true;
+  }
+
+  if (!(await canAccessOrganization(userId, task.org_id))) {
+    return false;
+  }
+
+  if (task.created_by === userId) return true;
+
+  const assignment = await prisma.task_assignee.findFirst({
+    where: {
+      task_id: taskId,
+      user_id: userId,
+      org_id: task.org_id,
+      proj_id: task.project_id,
+    },
+    select: { task_id: true },
+  });
+
+  return Boolean(assignment);
+}
+
+
 io.use(async (socket, next) => {
   try {
-    // console.log("use");
     const token = socket.handshake.auth.token;
-    // console.log(token);
     if (!token) return next(new Error("Unauthorized"));
 
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_TOKEN);
@@ -121,7 +225,6 @@ io.use(async (socket, next) => {
       name: user.name,
       id: user.id
     };
-    // console.log(user);
 
     next();
 
@@ -180,21 +283,14 @@ io.on("connection", async (socket) => {
     }
   });
 
-  socket.on("join_org_member", async ({ id }) => {
+  socket.on("join_org_member", async ({ id } = {}) => {
     const orgId = Number(id);
 
-    const orgMember = await prisma.org_member.findUnique({
-      where: {
-        member_id_org_id: {
-          member_id: userId,
-          org_id: orgId,
-        },
-      },
-    });
-
-    if (!orgMember) return;
-
-    if (userData.orgMembers.has(orgMember.id)) return;
+    if (!Number.isSafeInteger(orgId) || orgId <= 0) {
+      return socket.emit("socket_error", {
+        message: "Invalid organization ID",
+      });
+    }
 
     try {
       const isLimited = await socketRateLimiter({
@@ -210,17 +306,41 @@ io.on("connection", async (socket) => {
         });
       }
 
+      const orgMember = await prisma.org_member.findUnique({
+        where: {
+          member_id_org_id: {
+            member_id: userId,
+            org_id: orgId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!orgMember) {
+        return socket.emit("socket_error", {
+          message: "You do not have membership access to this organization",
+        });
+      }
+
+      const room = `org_member_${orgMember.id}`;
+
+      if (socket.rooms.has(room)) return;
+
       userData.orgMembers.add(orgMember.id);
-      socket.join(`org_member_${orgMember.id}`);
+      socket.join(room);
     } catch (err) {
-      console.error("join_org_member limiter:", err);
+      console.error("join_org_member error:", err);
     }
   });
 
-  socket.on("join_proj", async ({ id }) => {
+  socket.on("join_proj", async ({ id } = {}) => {
     const projectId = Number(id);
 
-    if (userData.projects.has(projectId)) return;
+    if (!Number.isSafeInteger(projectId) || projectId <= 0) {
+      return socket.emit("socket_error", {
+        message: "Invalid project ID",
+      });
+    }
 
     try {
       const isLimited = await socketRateLimiter({
@@ -236,17 +356,32 @@ io.on("connection", async (socket) => {
         });
       }
 
+      // NEW: authorize project access
+      if (!(await canAccessProject(userId, projectId))) {
+        return socket.emit("socket_error", {
+          message: "You do not have access to this project",
+        });
+      }
+
+      const room = `project_${projectId}`;
+
+      if (socket.rooms.has(room)) return;
+
       userData.projects.add(projectId);
-      socket.join(`project_${projectId}`);
+      socket.join(room);
     } catch (err) {
-      console.error("join_proj limiter:", err);
+      console.error("join_proj error:", err);
     }
   });
 
-  socket.on("join_task", async ({ id }) => {
+  socket.on("join_task", async ({ id } = {}) => {
     const taskId = Number(id);
 
-    if (userData.tasks.has(taskId)) return;
+    if (!Number.isSafeInteger(taskId) || taskId <= 0) {
+      return socket.emit("socket_error", {
+        message: "Invalid task ID",
+      });
+    }
 
     try {
       const isLimited = await socketRateLimiter({
@@ -262,10 +397,21 @@ io.on("connection", async (socket) => {
         });
       }
 
+      // NEW: authorize task access
+      if (!(await canAccessTask(userId, taskId))) {
+        return socket.emit("socket_error", {
+          message: "You do not have access to this task",
+        });
+      }
+
+      const room = `task_${taskId}`;
+
+      if (socket.rooms.has(room)) return;
+
       userData.tasks.add(taskId);
-      socket.join(`task_${taskId}`);
+      socket.join(room);
     } catch (err) {
-      console.error("join_task limiter:", err);
+      console.error("join_task error:", err);
     }
   });
 
@@ -293,3 +439,5 @@ server.listen(port, "0.0.0.0", () => {
 });
 
 export { io };
+
+

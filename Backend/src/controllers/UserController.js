@@ -201,55 +201,90 @@ export const userData = async (req, res) => {
 export const DeleteAccount = async (req, res) => {
     const id = req.user.id;
     const io = getIO();
+
     try {
-        const org = await prisma.org_member.findMany({
+        const orgMemberships = await prisma.org_member.findMany({
             where: {
-                member_id: id
-            }
+                member_id: id,
+            },
+            select: {
+                id: true,
+                org_id: true,
+            },
         });
+
+        const orgUpdates = await Promise.all(
+            orgMemberships.map(async (org) => {
+                const [projectMemberships, taskAssignments] =
+                    await Promise.all([
+                        prisma.proj_member.findMany({
+                            where: {
+                                org_id: org.org_id,
+                                member_id: id,
+                            },
+                            select: {
+                                proj_id: true,
+                            },
+                        }),
+
+                        prisma.task_assignee.findMany({
+                            where: {
+                                org_id: org.org_id,
+                                user_id: id,
+                            },
+                            select: {
+                                task_id: true,
+                            },
+                        }),
+                    ]);
+
+                return {
+                    orgId: org.org_id,
+                    orgMemberId: org.id,
+                    projectMemberships,
+                    taskAssignments,
+                };
+            })
+        );
 
         await prisma.user.delete({
             where: {
-                id: id
-            }
+                id,
+            },
         });
 
         await redis.del(`user:${id}`);
-
-        for (const o of org) {
-            const taskAssignments = await prisma.task_assignee.findMany({
-                where: {
-                    org_id: o.org_id,
-                    user_id: id,
-                },
-                select: {
-                    task_id: true,
-                },
-            });
-
-            const projectMemberships = await prisma.proj_member.findMany({
-                where: {
-                    org_id: o.org_id,
-                    member_id: id,
-                },
-                select: {
-                    proj_id: true,
-                },
-            });
-
-            io.to(`org_${o.org_id}`).emit("member left", {
+        for (const org of orgUpdates) {
+            io.to(`org_${org.orgId}`).emit("member left", {
                 data: {
                     email: req.user.email,
-                    id: id,
-                    updatedProjects: projectMemberships,
-                    updatedTasks: taskAssignments,
+                    id,
+                    updatedProjects: org.projectMemberships,
+                    updatedTasks: org.taskAssignments,
+                },
+            });
+
+            io.to(`org_member_${org.orgMemberId}`).emit("member left", {
+                data: {
+                    email: req.user.email,
+                    id,
+                    updatedProjects: org.projectMemberships,
+                    updatedTasks: org.taskAssignments,
                 },
             });
         }
+        io.in(`user:${id}`).disconnectSockets(true);
 
-        res.clearCookie('refreshToken');
-        res.status(202).json({ message: "deleted account successfully " });
+        res.clearCookie("refreshToken");
+
+        return res.status(200).json({
+            message: "Account deleted successfully.",
+        });
     } catch (error) {
-        res.status(404).json({ message: error.message });
+        console.error("DeleteAccount error:", error);
+
+        return res.status(500).json({
+            message: "Failed to delete account.",
+        });
     }
-}
+};

@@ -14,7 +14,7 @@ export class AuditService {
     metadata     = null,
   }) {
     try {
-      await prisma.auditLog.create({
+      await prisma.AuditLog.create({
         data: {
           orgId,
           proj_id,

@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "AuditLog" ALTER COLUMN "action" DROP NOT NULL,
+ALTER COLUMN "resourceType" DROP NOT NULL,
+ALTER COLUMN "resourceId" DROP NOT NULL;

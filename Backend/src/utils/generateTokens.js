@@ -95,7 +95,6 @@ export const refreshToken = async (req, res) => {
                 message: "refresh token already used"
             });
         }
-
         const user = { id: decoded.id, email: decoded.email };
 
         stageStartedAt = perfNow();
