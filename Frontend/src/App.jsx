@@ -1,36 +1,56 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { useRef } from 'react';
+import { lazy, Suspense, useRef, useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import {
   setAccessToken,
-  clearAccessToken
+  clearAccessToken,
 } from './utils/authStore.js';
-import { Toaster } from 'react-hot-toast'
-import { useEffect, useState } from 'react';
-import Home from './components/Home.jsx'
-import Signup_login from './components/Signup_login.jsx'
-import DashboardLayout from "./components/DashboardLayout.jsx";
-import Dashboard from "./components/Home_Component/Dashboard.jsx";
-import Projects from "./components/Home_Component/Projects.jsx";
-import Team from "./components/Home_Component/Team.jsx";
-import Settings from "./components/Home_Component/Settings.jsx";
-import Notification from "./components/Home_Component/Notification.jsx";
-import ProjectDetail from './components/Home_Component/Project_Component/ProjectDetail_Component/ProjectDetail.jsx';
-import TaskDetail from './components/Home_Component/Task_Component/TaskDetail.jsx';
-import Task from './components/Home_Component/Task.jsx';
+import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+
+// Route components are loaded only when their routes are needed.
+// This keeps the landing page's initial JavaScript smaller.
+const Home = lazy(() => import('./components/Home.jsx'));
+const Signup_login = lazy(() => import('./components/Signup_login.jsx'));
+const DashboardLayout = lazy(() => import('./components/DashboardLayout.jsx'));
+const Dashboard = lazy(() => import('./components/Home_Component/Dashboard.jsx'));
+const Projects = lazy(() => import('./components/Home_Component/Projects.jsx'));
+const Team = lazy(() => import('./components/Home_Component/Team.jsx'));
+const Settings = lazy(() => import('./components/Home_Component/Settings.jsx'));
+const Notification = lazy(() => import('./components/Home_Component/Notification.jsx'));
+const ProjectDetail = lazy(() =>
+  import('./components/Home_Component/Project_Component/ProjectDetail_Component/ProjectDetail.jsx')
+);
+const TaskDetail = lazy(() =>
+  import('./components/Home_Component/Task_Component/TaskDetail.jsx')
+);
+const Task = lazy(() => import('./components/Home_Component/Task.jsx'));
 
 const URL = import.meta.env.VITE_URL;
 
+const RouteLoadingFallback = () => (
+  <div
+    className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-300"
+    role="status"
+    aria-live="polite"
+  >
+    <span className="text-sm">Loading page...</span>
+  </div>
+);
+
+const LazyRoute = ({ children }) => (
+  <Suspense fallback={<RouteLoadingFallback />}>{children}</Suspense>
+);
+
 const App = () => {
   const [loading, setLoading] = useState(true);
-
   const didInit = useRef(false);
 
   useEffect(() => {
     if (didInit.current) return;
 
     didInit.current = true;
+
     const initAuth = async () => {
       try {
         const res = await axios.post(
@@ -38,7 +58,6 @@ const App = () => {
           {},
           { withCredentials: true }
         );
-        // console.log(res);
 
         setAccessToken(res.data.accessToken);
       } catch {
@@ -47,9 +66,9 @@ const App = () => {
         setLoading(false);
       }
     };
+
     initAuth();
   }, []);
-
 
   return (
     <Router>
@@ -67,28 +86,103 @@ const App = () => {
           },
         }}
       />
+
       <Routes>
-        <Route path='/' element={<Home />} />
-        <Route path='/Signup_login' element={<Signup_login />} />
-        <Route path="/user/dashboard"
+        <Route
+          path="/"
+          element={
+            <LazyRoute>
+              <Home />
+            </LazyRoute>
+          }
+        />
+        <Route
+          path="/Signup_login"
+          element={
+            <LazyRoute>
+              <Signup_login />
+            </LazyRoute>
+          }
+        />
+
+        <Route
+          path="/user/dashboard"
           element={
             <ProtectedRoute loading={loading}>
-              <DashboardLayout />
+              <LazyRoute>
+                <DashboardLayout />
+              </LazyRoute>
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
-          <Route path="projects" element={<Projects />} />
-          <Route path="projects/:id" element={<ProjectDetail />} />
-          <Route path="team" element={<Team />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="notification" element={<Notification />} />
-          <Route path="task" element={<Task />} />
-          <Route path="task/:id" element={<TaskDetail />} />
+          <Route
+            index
+            element={
+              <LazyRoute>
+                <Dashboard />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="projects"
+            element={
+              <LazyRoute>
+                <Projects />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="projects/:id"
+            element={
+              <LazyRoute>
+                <ProjectDetail />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="team"
+            element={
+              <LazyRoute>
+                <Team />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <LazyRoute>
+                <Settings />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="notification"
+            element={
+              <LazyRoute>
+                <Notification />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="task"
+            element={
+              <LazyRoute>
+                <Task />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="task/:id"
+            element={
+              <LazyRoute>
+                <TaskDetail />
+              </LazyRoute>
+            }
+          />
         </Route>
       </Routes>
     </Router>
-  )
-}
+  );
+};
 
-export default App
+export default App;
